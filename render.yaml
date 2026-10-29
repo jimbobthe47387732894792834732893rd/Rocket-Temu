@@ -1,0 +1,9 @@
+# Lets Render set everything up in one click (New > Blueprint, or the Deploy to Render link)
+services:
+  - type: web
+    name: rocket-temu
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /health

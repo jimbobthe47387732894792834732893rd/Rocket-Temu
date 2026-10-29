@@ -1,0 +1,10 @@
+{
+  "name": "rocket-temu-online",
+  "version": "1.0.0",
+  "description": "Rocket Temu: 3D rocket-powered car soccer with public online lobbies.",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "three": "0.128.0", "ws": "8.18.0" },
+  "license": "MIT"
+}
