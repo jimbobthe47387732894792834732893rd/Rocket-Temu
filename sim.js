@@ -8,25 +8,32 @@ const V3 = THREE.Vector3, QT = THREE.Quaternion;
 const UP = new V3(0, 1, 0);
 
 // ---- Arena ---------------------------------------------------------------
-const HW = 40, HL = 52, CEIL = 20, CH = 10;          // half width, half length, ceiling, corner chamfer
-const GW = 9, GH = 8, GD = 8;                          // goal half-width, height, depth
-const CHAMFER_D = (HW + HL - CH) / Math.SQRT2;
+// Rocket League's Soccar field. Our unit is 2 Rocket League centimetres per... put simply: every
+// length below is Rocket League's value in unreal units divided by 50, and speeds the same, so the
+// car, ball and field have the real proportions.
+const HW = 81.92, HL = 102.4, CEIL = 40.88;    // half width, half length, ceiling height
+const RE = 5.12;                               // radius of the curve where the floor and ceiling meet the walls
+const RC = 23;                                 // corner radius seen from above
+const GW = 17.86, GH = 12.86, GD = 17.6;       // goal half-width, height, depth
 
 // ---- Ball ----------------------------------------------------------------
-const BALL_R = 1.85, BALL_G = 13, BALL_E = 0.6, BALL_DRAG = 0.03, BALL_MAX = 80, BALL_ROLL_FRICTION = 0.3;
+const BALL_R = 1.855, BALL_G = 13, BALL_E = 0.6, BALL_DRAG = 0.03, BALL_MAX = 120, BALL_ROLL_FRICTION = 0.25;
 
-// ---- Car -----------------------------------------------------------------
+// ---- Car (Octane hitbox) ------------------------------------------------------
 const GRAVITY = 13;
-const CAR_HX = 0.84, CAR_HY = 0.36, CAR_HZ = 1.18;   // hitbox half extents (width, height, length)
-const CAR_REST = 0.70;                                 // hitbox center height when on its wheels
-const CAR_WALL_R = 1.25;                               // sphere used against walls and goals
-const CAR_BUMP_R = 1.5;                                // sphere used car-vs-car
-const MAX_DRIVE = 26, MAX_SPEED = 44, SUPERSONIC = 41, BOOST_ACCEL = 19;
-const BRAKE = 70, COAST = 10.5, BOOST_USE = 33.3;
-const JUMP_VEL = 9.5, DOUBLE_JUMP = 7, DODGE_IMPULSE = 11, DODGE_WINDOW = 1.25, FLIP_TIME = 0.6;
-const PITCH_RATE = 5.5, YAW_RATE = 4.5, ROLL_RATE = 5.5;
+const CAR_HX = 0.842, CAR_HY = 0.3616, CAR_HZ = 1.18;  // hitbox half extents (width, height, length)
+const CAR_REST = 0.70;                                  // hitbox centre's distance from the surface when on its wheels
+const WHEEL_DROP = CAR_REST - CAR_HY;                   // gap between the hitbox bottom and the ground
+const CAR_BUMP_R = 1.5;                                 // sphere used car-vs-car
+const MAX_DRIVE = 28.2, MAX_SPEED = 46, SUPERSONIC = 44;
+const BOOST_ACCEL = 19.83, BOOST_ACCEL_AIR = 21.17, AIR_THROTTLE = 1.33;
+const BRAKE = 70, COAST = 10.5, BOOST_USE = 33.3, STICKY = 6.5;
+const JUMP_VEL = 5.83, JUMP_HOLD_ACCEL = 29.17, JUMP_HOLD_TIME = 0.2, DOUBLE_JUMP = 5.83;
+const DODGE_IMPULSE = 10, DODGE_WINDOW = 1.25, FLIP_TIME = 0.65;
+// Air control (Rocket League's measured torque and damping per axis, local frame)
+const T_PITCH = 12.15, T_YAW = 8.92, T_ROLL = 36.08, D_PITCH = -2.80, D_YAW = -1.89, D_ROLL = -4.47, MAX_SPIN = 5.5;
 const CAR_MASS = 180, BALL_MASS = 30;
-const MATCH_TIME = 180, SUBSTEPS = 2, FPS = 60;
+const MATCH_TIME = 300, SUBSTEPS = 2, FPS = 60, RESPAWN_TIME = 3;
 
 const TEAM_NAMES = ["BLU", "ORANG"];
 const GOAL_MSGS = ["GOAL! (DELIVERED)", "GOAL! LEFT AT THE NET", "GOAL! YOUR ORDER HAS ARRIVED",
@@ -58,7 +65,7 @@ class Controls {
   copy() { return Object.assign(new Controls(), this); }
 }
 
-// Steering curvature (1/m) as a function of speed, from the real game's table scaled to these units.
+// Steering curvature (1/m) by speed, from Rocket League's table.
 const CURVE = [[0, 0.345], [10, 0.199], [20, 0.1175], [30, 0.06875], [35, 0.055], [46, 0.044]];
 function curvature(s) {
   s = Math.abs(s);
@@ -70,24 +77,36 @@ function curvature(s) {
   }
   return CURVE[CURVE.length - 1][1];
 }
-function throttleAccel(s) { return s < 25 ? 32 - 28.8 * (s / 25) : s < MAX_DRIVE ? 3.2 : 0; }
+// Throttle acceleration by speed (Rocket League: 1600 uu/s² at rest, falling to 160 at 1400 uu/s, none past 1410)
+function throttleAccel(s) { return s < 28 ? 32 - 28.8 * (s / 28) : s < MAX_DRIVE ? 3.2 : 0; }
 
-// ---- Arena collision for a sphere --------------------------------------------
-// Pushes the sphere out of every surface it overlaps and reflects its velocity.
-// Returns true when it is resting on / touching the floor.
-function pushPlane(pos, vel, r, nx, ny, nz, d, e, fric) {
-  const dist = nx * pos.x + ny * pos.y + nz * pos.z + r - d;
-  if (dist <= 0) return false;
-  pos.x -= nx * dist; pos.y -= ny * dist; pos.z -= nz * dist;
-  const vn = vel.x * nx + vel.y * ny + vel.z * nz;
-  if (vn > 0) {
-    vel.x -= nx * vn; vel.y -= ny * vn; vel.z -= nz * vn;          // remove normal part
-    if (fric && vn > 3) { vel.x *= 1 - fric; vel.y *= 1 - fric; vel.z *= 1 - fric; }   // only on real bounces
-    vel.x -= nx * vn * e; vel.y -= ny * vn * e; vel.z -= nz * vn * e;   // bounce
-  }
-  return true;
+// ---- Arena shape as a signed distance field (negative inside) --------------------------
+// A rounded box: rounded corners seen from above, and curved transitions from the floor and
+// ceiling into the walls, so cars can drive up the walls. Each goal is a box joined onto it.
+function sdRoundRect(x, z, hx, hz, r) {
+  const qx = Math.abs(x) - hx + r, qz = Math.abs(z) - hz + r;
+  return Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0) - r;
 }
-const _seg = new V3(), _cl = new V3(), _d = new V3();
+function sdMain(x, y, z) {
+  const wx = sdRoundRect(x, z, HW, HL, RC) + RE, wy = Math.abs(y - CEIL / 2) - (CEIL / 2 - RE);
+  return Math.min(Math.max(wx, wy), 0) + Math.hypot(Math.max(wx, 0), Math.max(wy, 0)) - RE;
+}
+const GOAL_IN = 6;                               // the goal box starts this far in front of the goal line
+function sdGoal(x, y, z) {
+  const qx = Math.abs(x) - GW, qy = Math.abs(y - GH / 2) - GH / 2, qz = Math.abs(Math.abs(z) - (HL + (GD - GOAL_IN) / 2)) - (GD + GOAL_IN) / 2;
+  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qy, qz), 0);
+}
+function sdArena(x, y, z) { return Math.min(sdMain(x, y, z), sdGoal(x, y, z)); }
+// Inward-pointing surface normal (the direction "away from the nearest wall")
+function arenaNormal(p, out = new V3()) {
+  const e = 0.02;
+  out.set(sdArena(p.x - e, p.y, p.z) - sdArena(p.x + e, p.y, p.z),
+    sdArena(p.x, p.y - e, p.z) - sdArena(p.x, p.y + e, p.z),
+    sdArena(p.x, p.y, p.z - e) - sdArena(p.x, p.y, p.z + e));
+  const l = out.length();
+  return l > 1e-9 ? out.multiplyScalar(1 / l) : out.set(0, 1, 0);
+}
+const _seg = new V3(), _cl = new V3(), _d = new V3(), _n = new V3();
 function pushSegment(pos, vel, r, a, b, e) {
   _seg.subVectors(b, a);
   const t = clamp(_d.subVectors(pos, a).dot(_seg) / _seg.lengthSq(), 0, 1);
@@ -105,26 +124,24 @@ for (const s of [-1, 1]) {
   POSTS.push([new V3(-GW, 0, s * HL), new V3(-GW, GH, s * HL)], [new V3(GW, 0, s * HL), new V3(GW, GH, s * HL)],
     [new V3(-GW, GH, s * HL), new V3(GW, GH, s * HL)]);
 }
-function collideArena(pos, vel, r, e, withFloor, fric = 0) {
-  let floor = false;
-  if (withFloor) floor = pushPlane(pos, vel, r, 0, -1, 0, 0, e, fric);
-  pushPlane(pos, vel, r, 0, 1, 0, CEIL, e, 0);
-  pushPlane(pos, vel, r, 1, 0, 0, HW, e, 0);
-  pushPlane(pos, vel, r, -1, 0, 0, HW, e, 0);
-  const k = Math.SQRT1_2;
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) pushPlane(pos, vel, r, sx * k, 0, sz * k, CHAMFER_D, e, 0);
-  const sz = pos.z >= 0 ? 1 : -1;
-  const inMouth = Math.abs(pos.x) <= GW && pos.y <= GH;
-  if (Math.abs(pos.z) > HL) {                       // inside a goal
-    pushPlane(pos, vel, r, 1, 0, 0, GW, 0.3, 0);
-    pushPlane(pos, vel, r, -1, 0, 0, GW, 0.3, 0);
-    pushPlane(pos, vel, r, 0, 1, 0, GH, 0.3, 0);
-    pushPlane(pos, vel, r, 0, 0, sz, HL + GD, 0.25, 0);
-  } else if (!inMouth) {
-    pushPlane(pos, vel, r, 0, 0, sz, HL, e, 0);
+// Keep a sphere inside the arena. Returns the contact normal, or null if it touched nothing.
+function collideArena(pos, vel, r, e, fric = 0) {
+  let hit = null;
+  for (let it = 0; it < 3; it++) {
+    const d = sdArena(pos.x, pos.y, pos.z);
+    if (d <= -r) break;
+    const n = arenaNormal(pos, new V3());
+    pos.addScaledVector(n, d + r);
+    const vn = vel.dot(n);
+    if (vn < 0) {
+      vel.addScaledVector(n, -vn);
+      if (fric && vn < -3) vel.multiplyScalar(1 - fric);
+      vel.addScaledVector(n, -vn * e);
+    }
+    hit = n;
   }
-  if (Math.abs(pos.z) > HL - r - 0.5) for (const [a, b] of POSTS) pushSegment(pos, vel, r, a, b, e);
-  return floor;
+  if (Math.abs(pos.z) > HL - r - 0.5 && pos.y < GH + r) for (const [a, b] of POSTS) pushSegment(pos, vel, r, a, b, e);
+  return hit;
 }
 
 // ---- Ball ------------------------------------------------------------------
@@ -138,11 +155,15 @@ class Ball {
     const len = this.vel.length();
     if (len > BALL_MAX) this.vel.multiplyScalar(BALL_MAX / len);
     this.pos.addScaledVector(this.vel, dt);
-    const onFloor = collideArena(this.pos, this.vel, this.r, BALL_E * m.ballE, true, 0.04);
-    if (onFloor && Math.abs(this.vel.y) < 1.2) {
-      this.vel.y = 0;
-      this.vel.x *= 1 - BALL_ROLL_FRICTION * dt; this.vel.z *= 1 - BALL_ROLL_FRICTION * dt;
-      this.spin.set(this.vel.z / this.r, 0, -this.vel.x / this.r);     // rolling
+    const n = collideArena(this.pos, this.vel, this.r, BALL_E * m.ballE, 0.04);
+    if (n) {
+      const vn = this.vel.dot(n);
+      if (Math.abs(vn) < 1.2 && n.y > 0.7) {            // rolling on the floor
+        this.vel.addScaledVector(n, -vn);
+        this.vel.multiplyScalar(1 - BALL_ROLL_FRICTION * dt);
+      }
+      // spin to match rolling along whatever surface it touches
+      this.spin.copy(n).cross(this.vel).multiplyScalar(-1 / this.r);
     }
   }
 }
@@ -161,11 +182,20 @@ function predictBall(ball, mods, secs = 3, step = 1 / 30) {
 }
 
 // ---- Car -------------------------------------------------------------------
+const _m4 = new THREE.Matrix4();
+function quatFromBasis(q, fwd, up) {           // car frame: x = left, y = up, z = forward
+  const left = new V3().crossVectors(up, fwd).normalize();
+  const f = new V3().crossVectors(left, up).normalize();
+  _m4.makeBasis(left, up, f);
+  return q.setFromRotationMatrix(_m4);
+}
+// Respawn spots after a demolition (Rocket League's, for blue; orange is mirrored)
+const RESPAWNS = [[-46.08, -92.16], [-53.76, -92.16], [46.08, -92.16], [53.76, -92.16]];
 class Car {
   constructor(team, name) {
     this.team = team; this.name = name;
-    this.pos = new V3(); this.vel = new V3(); this.quat = new QT(); this.angVel = new V3();
-    this.homeZ = team === 0 ? -(HL - 4) : HL - 4;
+    this.pos = new V3(); this.vel = new V3(); this.quat = new QT(); this.angVel = new V3(); this.flipAxis = new V3();
+    this.homeZ = team === 0 ? -(HL - 10) : HL - 10;
     this.boostUse = 1;                                   // premium sellers get premium shipping (boost lasts longer)
     this.spawn(new V3(0, CAR_REST, this.homeZ), team === 0 ? 0 : Math.PI);
     this.boost = 33;
@@ -173,20 +203,37 @@ class Car {
   spawn(pos, yaw) {
     this.pos.copy(pos); this.pos.y = CAR_REST; this.vel.set(0, 0, 0); this.angVel.set(0, 0, 0);
     this.yaw = yaw; this.quat.setFromAxisAngle(UP, yaw);
-    this.onGround = true; this.boosting = false; this.jumpPrev = false; this.airTime = 0;
-    this.canDodge = false; this.hasDoubled = false; this.flipLeft = 0; this.flipAxis = new V3();
+    this.onGround = true; this.boosting = false; this.jumpPrev = false; this.airTime = 0; this.jumpT = 0; this.jumpHeld = false;
+    this.canDodge = false; this.hasDoubled = false; this.flipLeft = 0; this.flipAxis.set(0, 0, 0); this.contactT = 0;
     this.demolished = false; this.respawn = 0; this.supersonicT = 0;
   }
   forward() { return new V3(0, 0, 1).applyQuaternion(this.quat); }
   up() { return new V3(0, 1, 0).applyQuaternion(this.quat); }
   left() { return new V3(1, 0, 0).applyQuaternion(this.quat); }
   speed() { return this.vel.length(); }
+  // Everything needed to continue this car's simulation exactly (used for online play)
+  serialize() {
+    const r = (v) => Math.round(v * 10000) / 10000;
+    return [this.pos.x, this.pos.y, this.pos.z, this.vel.x, this.vel.y, this.vel.z, this.quat.x, this.quat.y, this.quat.z, this.quat.w,
+      this.angVel.x, this.angVel.y, this.angVel.z, this.airTime, this.jumpT, this.flipLeft, this.flipAxis.x, this.flipAxis.y, this.flipAxis.z,
+      this.respawn, this.supersonicT, this.boost, this.contactT].map(r).concat([
+      (this.onGround ? 1 : 0) | (this.canDodge ? 2 : 0) | (this.hasDoubled ? 4 : 0) | (this.jumpPrev ? 8 : 0) | (this.demolished ? 16 : 0) | (this.boosting ? 32 : 0) | (this.jumpHeld ? 64 : 0)]);
+  }
+  deserialize(v) {
+    this.pos.set(v[0], v[1], v[2]); this.vel.set(v[3], v[4], v[5]); this.quat.set(v[6], v[7], v[8], v[9]).normalize();
+    this.angVel.set(v[10], v[11], v[12]); this.airTime = v[13]; this.jumpT = v[14]; this.flipLeft = v[15]; this.flipAxis.set(v[16], v[17], v[18]);
+    this.respawn = v[19]; this.supersonicT = v[20]; this.boost = v[21]; this.contactT = v[22];
+    const f = v[23];
+    this.onGround = !!(f & 1); this.canDodge = !!(f & 2); this.hasDoubled = !!(f & 4); this.jumpPrev = !!(f & 8);
+    this.demolished = !!(f & 16); this.boosting = !!(f & 32); this.jumpHeld = !!(f & 64);
+    const fw = this.forward(); this.yaw = Math.atan2(fw.x, fw.z);
+  }
   update(c, dt, m) {
     if (this.demolished) {
       this.respawn -= dt;
-      if (this.respawn <= 0) {                     // respawn in front of our own goal
-        const boost = this.boost;
-        this.spawn(new V3(uniform(-6, 6), CAR_REST, this.homeZ), this.team === 0 ? 0 : Math.PI);
+      if (this.respawn <= 0) {
+        const boost = this.boost, [rx, rz] = choice(RESPAWNS), s = this.team === 0 ? 1 : -1;
+        this.spawn(new V3(rx * s, CAR_REST, rz * s), this.team === 0 ? 0 : Math.PI);
         this.boost = Math.max(33, boost);
       }
       return;
@@ -194,20 +241,23 @@ class Car {
     const jumpPressed = c.jump && !this.jumpPrev;
     this.jumpPrev = c.jump;
     this.boosting = c.boost && (this.boost > 0 || m.unlimited);
-    const top = MAX_SPEED * m.speed;
     if (this.onGround) this.drive(c, dt, m, jumpPressed);
     else this.fly(c, dt, m, jumpPressed);
     if (this.boosting && !m.unlimited) this.boost = Math.max(0, this.boost - BOOST_USE * dt * this.boostUse);
-    const s = this.vel.length();
+    const top = MAX_SPEED * m.speed, s = this.vel.length();
     if (s > top) this.vel.multiplyScalar(top / s);
     this.supersonicT = s > SUPERSONIC ? this.supersonicT + dt : 0;
     this.pos.addScaledVector(this.vel, dt);
-    this.collide();
+    if (this.onGround) this.stick(dt); else this.collideAir(dt);
+    const fw = this.forward(); this.yaw = Math.atan2(fw.x, fw.z);
   }
+  // On the wheels: works the same on the floor, up the curved walls and on the ceiling.
   drive(c, dt, m, jumpPressed) {
-    const f = new V3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+    const n = this.up();
+    let f = this.forward();
     let s = this.vel.dot(f);
-    const lat = this.vel.clone().addScaledVector(f, -s); lat.y = 0;
+    const vn = this.vel.dot(n);
+    const lat = this.vel.clone().addScaledVector(f, -s).addScaledVector(n, -vn);
     const grip = m.grip * (c.slide ? 0.25 : 1);
     lat.multiplyScalar(Math.exp(-12 * grip * dt));
     const t = c.throttle;
@@ -218,38 +268,51 @@ class Car {
     } else if (!this.boosting) s -= Math.sign(s) * Math.min(Math.abs(s), COAST * dt);
     if (this.boosting) s += BOOST_ACCEL * dt;
     const turn = curvature(s) * s * c.steer * (c.slide ? 1.5 : 1);
-    this.yaw -= turn * dt;
-    const f2 = new V3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
-    this.vel.copy(f2.multiplyScalar(s)).add(lat);
-    this.vel.y = 0;
-    this.quat.setFromAxisAngle(UP, this.yaw);
-    this.angVel.set(0, -turn, 0);
+    f = f.applyAxisAngle(n, -turn * dt);
+    this.vel.copy(f).multiplyScalar(s).add(lat);
+    // Gravity: the part along the surface slides you down a wall; the part into or out of it
+    // decides whether you stay on. Walls hold you (with a little stickiness); the ceiling doesn't.
+    const g = new V3(0, -GRAVITY * m.grav, 0), gn = g.dot(n);
+    this.vel.addScaledVector(g, dt).addScaledVector(n, -gn * dt);
+    this.quat.copy(quatFromBasis(new QT(), f, n));
+    this.angVel.copy(n).multiplyScalar(-turn);
+    if (gn - STICKY > 0 || (n.y < 0.25 && Math.abs(s) < 6 && !this.boosting)) {
+      this.leaveGround(); this.vel.addScaledVector(n, Math.max(gn - STICKY, 2) * dt);
+    }
     if (jumpPressed) {
-      this.onGround = false; this.vel.y = JUMP_VEL; this.pos.y += 0.05;
-      this.airTime = 0; this.canDodge = true; this.hasDoubled = false;
+      this.leaveGround(); this.vel.addScaledVector(n, JUMP_VEL); this.pos.addScaledVector(n, 0.05);
+      this.jumpT = 0; this.jumpHeld = true; this.canDodge = true; this.hasDoubled = false;
     }
   }
+  leaveGround() { this.onGround = false; this.airTime = 0; this.canDodge = true; this.contactT = 0; }
   fly(c, dt, m, jumpPressed) {
-    this.airTime += dt;
-    // Local angular velocity: x = pitch (nose down positive), y = yaw, z = roll
+    this.airTime += dt; this.jumpT += dt;
+    // Holding jump right after jumping makes it higher
+    if (this.jumpHeld) {
+      if (c.jump && this.jumpT < JUMP_HOLD_TIME) this.vel.addScaledVector(this.up(), JUMP_HOLD_ACCEL * dt);
+      else this.jumpHeld = false;
+    }
     const inv = this.quat.clone().invert();
-    const w = this.angVel.clone().applyQuaternion(inv);
+    const w = this.angVel.clone().applyQuaternion(inv);   // local: x = pitch (nose down +), y = yaw (left +), z = roll
     if (this.flipLeft > 0) {
       this.flipLeft -= dt;
       w.copy(this.flipAxis);
-      if (this.flipLeft <= 0) w.multiplyScalar(0.2);
+      if (this.flipLeft <= 0) w.multiplyScalar(0.25);
     } else {
-      const target = new V3(c.throttle * PITCH_RATE, -c.steer * YAW_RATE, c.roll * ROLL_RATE);
-      w.lerp(target, Math.min(1, 9 * dt));
+      const p = c.throttle, y = -c.steer, r = c.roll;
+      w.x += (T_PITCH * p + D_PITCH * (1 - Math.abs(p)) * w.x) * dt;
+      w.y += (T_YAW * y + D_YAW * (1 - Math.abs(y)) * w.y) * dt;
+      w.z += (T_ROLL * r + D_ROLL * w.z) * dt;
+      const l = w.length(); if (l > MAX_SPIN) w.multiplyScalar(MAX_SPIN / l);
     }
     if (jumpPressed && this.canDodge && this.airTime < DODGE_WINDOW) {
-      this.canDodge = false;
+      this.canDodge = false; this.jumpHeld = false;
       if (c.throttle !== 0 || c.steer !== 0) {      // dodge / flip in the pressed direction
-        const yawF = flat(this.forward()).normalize(), yawL = new V3(yawF.z, 0, -yawF.x).negate();
-        const dir = yawF.clone().multiplyScalar(c.throttle).addScaledVector(yawL, -c.steer);
-        if (dir.lengthSq() > 0) dir.normalize();
-        this.vel.addScaledVector(dir, DODGE_IMPULSE);
-        this.vel.y = Math.max(this.vel.y * 0.25, 0);
+        const fw = flat(this.forward()).normalize(), lf = new V3(fw.z, 0, -fw.x);
+        const sp = flat(this.vel).length();
+        const fwd = c.throttle * DODGE_IMPULSE, side = -c.steer * DODGE_IMPULSE * (1 + 0.9 * sp / MAX_SPEED);
+        this.vel.addScaledVector(fw, fwd).addScaledVector(lf, side);
+        this.vel.y = Math.max(this.vel.y * 0.35, 0);
         const fl = Math.hypot(c.throttle, c.steer) || 1;
         this.flipAxis.set((c.throttle / fl) * (Math.PI * 2) / FLIP_TIME, 0, (c.steer / fl) * (Math.PI * 2) / FLIP_TIME);
         this.flipLeft = FLIP_TIME;
@@ -264,25 +327,73 @@ class Car {
       const dq = new QT().setFromAxisAngle(this.angVel.clone().multiplyScalar(1 / ang), ang * dt);
       this.quat.premultiply(dq).normalize();
     }
-    if (this.boosting) this.vel.addScaledVector(this.forward(), BOOST_ACCEL * dt);
+    if (this.boosting) this.vel.addScaledVector(this.forward(), BOOST_ACCEL_AIR * dt);
+    else if (c.throttle) this.vel.addScaledVector(this.forward(), AIR_THROTTLE * c.throttle * dt);
     this.vel.y -= GRAVITY * m.grav * dt;
   }
-  land() {
-    const f = flat(this.forward());
-    if (f.lengthSq() < 1e-4) f.copy(flat(this.up().negate()));   // landed nose-down: use belly direction
-    this.yaw = Math.atan2(f.x, f.z);
-    this.quat.setFromAxisAngle(UP, this.yaw);                     // auto-landing (feature may vary)
-    this.onGround = true; this.flipLeft = 0; this.canDodge = false;
-    this.vel.y = 0; this.pos.y = CAR_REST; this.angVel.set(0, 0, 0);
-  }
-  collide() {
-    collideArena(this.pos, this.vel, CAR_WALL_R, 0.2, false);
-    if (this.onGround) { this.pos.y = CAR_REST; return; }
-    if (this.pos.y <= CAR_REST) {
-      if (this.vel.y <= 0) this.land();
-      else this.pos.y = CAR_REST;
+  // Keep a driving car on its surface; follow the curve of the walls; bump into anything else.
+  stick(dt) {
+    const up = this.up();
+    const wheel = this.pos.clone().addScaledVector(up, -CAR_REST);
+    const d = sdArena(wheel.x, wheel.y, wheel.z);
+    if (d < -0.6) { this.leaveGround(); return; }          // the surface curved away: airborne
+    const n = arenaNormal(wheel, new V3());
+    if (n.dot(up) < 0.5) {                                  // the nearest surface is a wall in front of us, not under us
+      n.copy(up);
+    } else {
+      wheel.addScaledVector(n, d);
+      this.pos.copy(wheel).addScaledVector(n, CAR_REST);
+      this.quat.copy(quatFromBasis(new QT(), this.forward(), n));
     }
-    if (this.pos.y > CEIL - CAR_WALL_R) { this.pos.y = CEIL - CAR_WALL_R; if (this.vel.y > 0) this.vel.y *= -0.2; }
+    const vn = this.vel.dot(n);
+    if (vn < 0) this.vel.addScaledVector(n, -vn);
+    this.bumpCorners(n);
+  }
+  // Corners of the hitbox that poke into a wall get pushed out (e.g. driving into a goal post)
+  bumpCorners(groundN) {
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      const p = this.pos.clone().add(new V3(sx * CAR_HX, CAR_HY, sz * CAR_HZ).applyQuaternion(this.quat));
+      const d = sdArena(p.x, p.y, p.z);
+      if (d <= 0) continue;
+      const n = arenaNormal(p, new V3());
+      if (groundN && n.dot(groundN) > 0.5) continue;
+      this.pos.addScaledVector(n, d);
+      const vn = this.vel.dot(n);
+      if (vn < 0) this.vel.addScaledVector(n, -1.15 * vn);
+    }
+  }
+  // In the air: check the wheels and the corners against the arena; land on the wheels, bounce off anything else
+  collideAir(dt) {
+    const up = this.up();
+    let worst = 0, wp = null, wheelHit = false;
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) for (const sy of [-1, 1]) {
+      const local = new V3(sx * CAR_HX, sy * CAR_HY - (sy < 0 ? WHEEL_DROP : 0), sz * CAR_HZ);
+      const p = this.pos.clone().add(local.applyQuaternion(this.quat));
+      const d = sdArena(p.x, p.y, p.z);
+      if (d > worst) { worst = d; wp = p; wheelHit = sy < 0; }
+    }
+    if (!wp) { this.contactT = 0; return; }
+    const n = arenaNormal(wp, new V3());
+    this.pos.addScaledVector(n, worst);
+    const vn = this.vel.dot(n);
+    if (up.dot(n) > 0.5 && vn <= 2) { this.land(n); return; }
+    if (vn < 0) this.vel.addScaledVector(n, -1.2 * vn);
+    this.contactT += dt;
+    if (this.contactT > 0.35 && Math.abs(vn) < 3) this.land(n);   // stuck on the roof or side: flip back onto the wheels
+  }
+  land(n) {
+    let f = this.forward().addScaledVector(n, -this.forward().dot(n));
+    if (f.lengthSq() < 1e-4) f = this.up().negate().addScaledVector(n, this.up().dot(n));
+    if (f.lengthSq() < 1e-4) f = new V3(n.y, -n.x, 0);
+    f.normalize();
+    this.quat.copy(quatFromBasis(new QT(), f, n));
+    this.onGround = true; this.flipLeft = 0; this.canDodge = false; this.jumpHeld = false; this.contactT = 0;
+    const vn = this.vel.dot(n);
+    if (vn < 0) this.vel.addScaledVector(n, -vn);
+    this.angVel.set(0, 0, 0);
+    const wheel = this.pos.clone().addScaledVector(n, -CAR_REST);
+    const d = sdArena(wheel.x, wheel.y, wheel.z);
+    this.pos.addScaledVector(n, d);
   }
 }
 
@@ -423,7 +534,7 @@ class TemuBot {
     const dist = to.length();
     const ang = Math.abs(wrapAngle(Math.atan2(to.x, to.z) - car.yaw));
     const v = Math.max(flat(car.vel).length(), 8);
-    const top = car.boost > 15 ? 36 : MAX_DRIVE;
+    const top = car.boost > 15 ? 40 : MAX_DRIVE;
     return dist / ((v + top) / 2) + ang * 0.45;
   }
   // Earliest predicted ball position the car can get to (on the ground or with a jump)
@@ -451,7 +562,7 @@ class TemuBot {
       else if (!behind) mode = "retreat";
       else if (myEta < 0.45 && !(threat && oppEta < myEta)) mode = "attack";
       else if (threat && !first) mode = "keeper";
-      else if (ballToGoal < 22 || !oppCanShoot || first || (this.mode === "attack" && myEta < oppEta + 0.25)) mode = "attack";
+      else if (ballToGoal < 32 || !oppCanShoot || first || (this.mode === "attack" && myEta < oppEta + 0.25)) mode = "attack";
       else mode = "shadow";
     } else if (role === "attack") {                // first man: challenge the ball
       if (kickoffBall) mode = "kickoff";
@@ -462,7 +573,7 @@ class TemuBot {
       else mode = "support";
     } else {                                       // last man: protect the net
       if (!behind && !kickoffBall) mode = "retreat";
-      else if (!kickoffBall && ballToGoal < 28 && myEta + 0.2 < oppEta) mode = "attack";
+      else if (!kickoffBall && ballToGoal < 40 && myEta + 0.2 < oppEta) mode = "attack";
       else mode = "keeper";
     }
     this.mode = mode;
@@ -495,7 +606,7 @@ class TemuBot {
       const back = clamp(dist * 0.3, p.pos.y > 3 ? 0.5 : 1.6, 7);
       target = p.pos.clone().addScaledVector(shotDir, -back);
       // Clearing near our own net: just hit it away from goal, don't go around
-      if (ballToGoal < 20) target = p.pos.clone().addScaledVector(shotDir, -1);
+      if (ballToGoal < 30) target = p.pos.clone().addScaledVector(shotDir, -1);
       const toT = flat(new V3().subVectors(target, car.pos));
       const ang = Math.abs(wrapAngle(Math.atan2(toT.x, toT.z) - car.yaw));
       wantBoost = (dist > 18 && ang < 0.35) || (dist < 9 && ang < 0.25 && p.pos.y < 3 && p.t < 0.6);
@@ -507,7 +618,7 @@ class TemuBot {
     } else if (mode === "support") {
       let pad = null;
       if (car.boost < 35 && !threat) {
-        let pd = 30;
+        let pd = 45;
         for (const pv of match.pads) {
           if (!pv.big || pv.timer > 0 || (pv.pos.z - ball.pos.z) * a > 0) continue;
           const d = flat(new V3().subVectors(pv.pos, car.pos)).length();
@@ -517,7 +628,7 @@ class TemuBot {
       if (pad) { target = pad.pos.clone(); wantBoost = false; }
       else {
         const toGoal = flat(new V3().subVectors(ownGoal, ball.pos));
-        const back = Math.min(22, toGoal.length() * 0.5);
+        const back = Math.min(35, toGoal.length() * 0.5);
         target = ball.pos.clone().addScaledVector(toGoal.normalize(), back); target.y = 0;
         target.x *= 0.6; arrive = true;
         wantBoost = car.pos.distanceTo(target) > 30;
@@ -543,15 +654,19 @@ class TemuBot {
   }
   steerTo(c, target, arrive, ball) {
     const car = this.car;
-    const to = flat(new V3().subVectors(target, car.pos));
+    // Angle to the target measured in the plane the car is driving on (floor or wall). + means to the left.
+    const n = car.onGround ? car.up() : UP.clone();
+    const to = new V3().subVectors(target, car.pos); to.addScaledVector(n, -to.dot(n));
+    if (car.onGround && n.y < 0.8) to.addScaledVector(new V3(0, -1, 0).addScaledVector(n, n.y), 12);   // on a wall: head back down
     const dist = to.length();
-    const ang = wrapAngle(Math.atan2(to.x, to.z) - car.yaw);          // + means target is to the left
-    const speed = car.vel.dot(new V3(Math.sin(car.yaw), 0, Math.cos(car.yaw)));
+    const fwd = car.forward();
+    const ang = Math.atan2(new V3().crossVectors(fwd, to).dot(n), fwd.dot(to));
+    const speed = car.vel.dot(fwd);
     if (car.onGround) {
       if (arrive && dist < 2.5) {
         // Parked: face the ball, creep if needed
-        const tb = flat(new V3().subVectors(ball.pos, car.pos));
-        const bang = wrapAngle(Math.atan2(tb.x, tb.z) - car.yaw);
+        const tb = new V3().subVectors(ball.pos, car.pos); tb.addScaledVector(n, -tb.dot(n));
+        const bang = Math.atan2(new V3().crossVectors(fwd, tb).dot(n), fwd.dot(tb));
         c.steer = clamp(-bang * 2, -1, 1);
         c.throttle = Math.abs(bang) > 0.4 ? (speed > 3 ? -1 : 0.6) : (Math.abs(speed) > 2 ? -Math.sign(speed) : 0);
         return;
@@ -587,7 +702,7 @@ class TemuBot {
     // Shot heading over us near our net: jump to block
     const towardNet = ball.vel.z * -a;
     const ownZ = -a * HL;
-    if (towardNet > 8 && Math.abs(car.pos.z - ownZ) < 30 && (car.pos.z - ball.pos.z) * a < 0) {
+    if (towardNet > 8 && Math.abs(car.pos.z - ownZ) < 45 && (car.pos.z - ball.pos.z) * a < 0) {
       const t = Math.abs(car.pos.z - ball.pos.z) / towardNet;
       if (t < 0.5) {
         const y = ball.pos.y + ball.vel.y * t - 0.5 * BALL_G * t * t;
@@ -604,7 +719,7 @@ function etaOf(car, target) {
   const to = flat(new V3().subVectors(target, car.pos));
   const ang = Math.abs(wrapAngle(Math.atan2(to.x, to.z) - (car.onGround ? car.yaw : Math.atan2(car.forward().x, car.forward().z))));
   const v = Math.max(flat(car.vel).length(), 8);
-  return to.length() / ((v + (car.boost > 15 ? 36 : MAX_DRIVE)) / 2) + ang * 0.45;
+  return to.length() / ((v + (car.boost > 15 ? 40 : MAX_DRIVE)) / 2) + ang * 0.45;
 }
 function distToSegment2D(p, a, b) {
   const ax = b.x - a.x, az = b.z - a.z, L = ax * ax + az * az || 1;
@@ -617,18 +732,17 @@ class Pad {
   constructor(x, z, big) { this.pos = new V3(x, 0, z); this.big = big; this.amount = big ? 100 : 12; this.cooldown = big ? 10 : 4; this.timer = 0; }
 }
 function makePads() {
-  const pads = [];
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) pads.push(new Pad(sx * (HW - 7), sz * (HL - 10), true));
-  for (const sx of [-1, 1]) pads.push(new Pad(sx * (HW - 4), 0, true));
-  const small = [[0, -HL + 12], [0, HL - 12], [-14, -30], [14, -30], [-14, 30], [14, 30], [-24, -12], [24, -12], [-24, 12], [24, 12],
-    [0, -18], [0, 18], [-10, 0], [10, 0]];
-  for (const [x, z] of small) pads.push(new Pad(x, z, false));
-  return pads;
+  // Rocket League's Soccar layout (unreal units / 50): 6 big pads, 28 small ones
+  const big = [[-3584, 0], [3584, 0], [-3072, -4096], [3072, -4096], [-3072, 4096], [3072, 4096]];
+  const half = [[0, -4240], [-1792, -4184], [1792, -4184], [-940, -3308], [940, -3308], [0, -2816], [-3584, -2484], [3584, -2484],
+    [-1788, -2300], [1788, -2300], [-2048, -1036], [0, -1024], [2048, -1036]];
+  const small = [...half, ...half.map(([x, y]) => [x, -y]), [-1024, 0], [1024, 0]];
+  return [...big.map(([x, y]) => new Pad(x / 50, y / 50, true)), ...small.map(([x, y]) => new Pad(x / 50, y / 50, false))];
 }
 
 // ---- Match -------------------------------------------------------------------------
 // Kickoff spots for blue as (x, z) fractions of the half width / half length. Orange is mirrored.
-const KICK_SPOTS = [[-0.42, -0.5], [0.42, -0.5], [-0.08, -0.68], [0.08, -0.68], [0, -0.84]];
+const KICK_SPOTS = [[-0.5, -0.5], [0.5, -0.5], [-0.0625, -0.75], [0.0625, -0.75], [0, -0.9]];
 const PRESETS = {                    // used by the browser menus
   bot: { teamSize: 3, humans: [0] },
   duel: { teamSize: 1, humans: [0] },
@@ -737,7 +851,7 @@ class Match {
       collideCarsBall(this.cars, this.ball, this.events);
       for (let k = before; k < this.events.length; k++) if (this.events[k].type === "touch") this.lastTouch = this.events[k].team;
       this.collideCars();
-      collideArena(this.ball.pos, this.ball.vel, this.ball.r, BALL_E * m.ballE, true, 0.04);
+      collideArena(this.ball.pos, this.ball.vel, this.ball.r, BALL_E * m.ballE, 0.04);
       this.sanity();
       if (this.state === "play") this.checkGoal();
     }
@@ -797,7 +911,7 @@ class Match {
       if (dist < 25) {
         d.normalize(); d.y = Math.max(d.y, 0.5);
         car.vel.addScaledVector(d.normalize(), 22 * (1 - dist / 25) + 4);
-        if (car.vel.y > 2) { car.onGround = false; car.canDodge = false; car.airTime = 2; }
+        if (car.vel.y > 2) { car.leaveGround(); car.canDodge = false; car.airTime = 2; }
       }
     }
   }
@@ -825,25 +939,24 @@ class Match {
         if (aR !== bR) { if (aR) this.demolish(b, a); else this.demolish(a, b); continue; }
       }
       a.pos.addScaledVector(n, -(R - dist) / 2); b.pos.addScaledVector(n, (R - dist) / 2);
-      for (const car of [a, b]) if (car.pos.y < CAR_REST) car.pos.y = CAR_REST;
       const vn = new V3().subVectors(b.vel, a.vel).dot(n);
       if (vn < 0) {
         const imp = -(1 + 0.5) * vn / 2;
         a.vel.addScaledVector(n, -imp); b.vel.addScaledVector(n, imp);
         for (const car of [a, b]) {                    // a good bump knocks a car off its wheels
-          if (car.onGround && imp > 6) { car.vel.y += Math.min(imp * 0.35, 6); car.onGround = false; car.canDodge = false; car.airTime = 2; }
+          if (car.onGround && imp > 6) { car.vel.addScaledVector(car.up(), Math.min(imp * 0.35, 6)); car.leaveGround(); car.canDodge = false; car.airTime = 2; }
         }
       }
     }
   }
   demolish(victim, attacker) {
-    victim.demolished = true; victim.respawn = 2; victim.boosting = false;
+    victim.demolished = true; victim.respawn = RESPAWN_TIME; victim.boosting = false;
     this.events.push({ type: "demo", pos: victim.pos.clone(), team: victim.team, car: victim.idx, by: attacker.idx });
     this.say(choice(DEMO_MSGS), attacker.team, 1.8);
   }
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { Match, Car, Ball, TemuBot, Controls, Pad, predictBall, collideArena, BOT_SKILLS, PRESETS, SUBSTEPS, NEUTRAL,
+  module.exports = { Match, Car, Ball, TemuBot, Controls, Pad, predictBall, collideArena, sdArena, arenaNormal, BOT_SKILLS, PRESETS, SUBSTEPS, NEUTRAL, RE, GRAVITY,
     HW, HL, CEIL, GW, GH, GD, BALL_R, CAR_REST, MAX_SPEED, SUPERSONIC, MATCH_TIME, FPS, TEAM_NAMES, CAR_HX, CAR_HY, CAR_HZ };
 }

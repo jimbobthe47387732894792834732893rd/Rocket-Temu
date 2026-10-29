@@ -156,11 +156,8 @@ class Room {
     for (const p of this.players) {
       const c = m.cars[p.slot];
       // Full state of your own car, so your device can replay the inputs the server hasn't used yet
-      const me = [c.pos.x, c.pos.y, c.pos.z, c.vel.x, c.vel.y, c.vel.z, c.quat.x, c.quat.y, c.quat.z, c.quat.w,
-        c.angVel.x, c.angVel.y, c.angVel.z, c.yaw, c.airTime, c.flipLeft, c.flipAxis.x, c.flipAxis.y, c.flipAxis.z,
-        c.respawn, c.supersonicT, c.boost].map(r4);
-      const flags = (c.onGround ? 1 : 0) | (c.canDodge ? 2 : 0) | (c.hasDoubled ? 4 : 0) | (c.jumpPrev ? 8 : 0) | (c.demolished ? 16 : 0) | (c.boosting ? 32 : 0);
-      sendRaw(p, base + `,"a":${p.ack},"me":${JSON.stringify(me)},"mf":${flags}}`);
+      const me = c.serialize();
+      sendRaw(p, base + `,"a":${p.ack},"me":${JSON.stringify(me)}}`);
     }
   }
 }
