@@ -34,10 +34,11 @@ const DODGE_IMPULSE = 10, DODGE_WINDOW = 1.25, FLIP_TIME = 0.65;
 const T_PITCH = 12.15, T_YAW = 8.92, T_ROLL = 36.08, D_PITCH = -2.80, D_YAW = -1.89, D_ROLL = -4.47, MAX_SPIN = 5.5;
 const CAR_MASS = 180, BALL_MASS = 30;
 const MATCH_TIME = 300, SUBSTEPS = 2, FPS = 60, RESPAWN_TIME = 3;
+const GOAL_PAUSE = 8.5;                      // celebration, then the replay, then kickoff
 
 const TEAM_NAMES = ["BLU", "ORANG"];
 const GOAL_MSGS = ["GOAL! (DELIVERED)", "GOAL! LEFT AT THE NET", "GOAL! YOUR ORDER HAS ARRIVED",
-  "GOOOAL! (SPELLING MAY VARY)", "GOAL! 5 STARS, WOULD SCORE AGAIN", "GOAL! RETURNS NOT ACCEPTED"];
+  "GOOOAL! (SPELLING MAY VARY)", "GOAL! SHIPPED IN 2-3 BUSINESS DAYS", "GOAL! RETURNS NOT ACCEPTED"];
 const GO_WORDS = ["GO!", "SHIPPED!", "GO! (ISH)", "OUT FOR DELIVERY!"];
 const DEMO_MSGS = ["DEMOLISHED! REFUND PENDING", "DEMOLISHED! NOT COVERED BY WARRANTY", "DEMOLISHED! SOME ASSEMBLY REQUIRED"];
 const OVER_LINES = ["Your victory has shipped. Arrives in 7-21 business days.", "Trophy may differ from picture.",
@@ -784,7 +785,31 @@ class Match {
     this.score = [0, 0]; this.timeLeft = MATCH_TIME; this.overtime = false; this.otTime = 0;
     this.toast = null; this.goalMsg = null; this.goalTimer = 0; this.events = [];
     this.goFlash = 0; this.winner = null; this.overT = 0; this.overLine = ""; this.clock = 0; this.lastTouch = -1;
+    // Rocket League scoring: points per goal, assist, save, shot on goal and demolition
+    this.stats = this.cars.map(() => ({ score: 0, goals: 0, assists: 0, saves: 0, shots: 0, demos: 0 }));
+    this.touches = []; this.statCool = {}; this.lastShot = {};
     this.kickoff();
+  }
+  award(i, kind, pts) {
+    const st = this.stats[i]; st[kind + "s"]++; st.score += pts;
+    this.events.push({ type: "stat", car: i, kind, pts });
+  }
+  // Would this ball go into the goal at the `sign` end (+1 orange's net, -1 blue's) within 2.5 s?
+  headedIn(b, sign) {
+    for (const p of predictBall(b, NEUTRAL, 2.5, 1 / 20)) {
+      if (Math.abs(p.pos.z) > HL) return Math.sign(p.pos.z) === sign;
+    }
+    return false;
+  }
+  onTouch(i, pre) {
+    const car = this.cars[i], now = this.clock;
+    this.touches.push({ car: i, team: car.team, t: now });
+    if (this.touches.length > 30) this.touches.shift();
+    if (this.state !== "play" || (this.statCool[i] || 0) > now) return;
+    this.statCool[i] = now + 0.6;
+    const ownEnd = car.team === 0 ? -1 : 1;
+    if (this.headedIn(pre, ownEnd) && !this.headedIn(this.ball, ownEnd)) this.award(i, "save", 50);
+    else if (this.headedIn(this.ball, -ownEnd)) { this.award(i, "shot", 20); this.lastShot[i] = now; }
   }
   team(t) { return this.cars.filter((c) => c.team === t); }
   setHuman(i, human, name) {          // used by the online server when people join or leave
@@ -805,6 +830,7 @@ class Match {
     for (const car of this.cars) { car.boost = 33; car.role = null; }
     for (const i in this.bots) this.bots[i].kickoff();
     this.ball.reset();
+    this.touches = []; this.statCool = {};
     this.state = "countdown"; this.countdown = 3; this.goWord = choice(GO_WORDS); this.lastTouch = -1;
     this.events.push({ type: "kickoff" });
   }
@@ -847,9 +873,13 @@ class Match {
     for (let s = 0; s < SUBSTEPS; s++) {
       this.cars.forEach((car, i) => car.update(controls[i], sdt, m));
       this.ball.step(sdt, m);
-      const before = this.events.length;
+      const before = this.events.length, pre = { pos: this.ball.pos.clone(), vel: this.ball.vel.clone(), r: this.ball.r };
       collideCarsBall(this.cars, this.ball, this.events);
-      for (let k = before; k < this.events.length; k++) if (this.events[k].type === "touch") this.lastTouch = this.events[k].team;
+      const after = this.events.length;
+      for (let k = before; k < after; k++) {
+        const e = this.events[k];
+        if (e.type === "touch") { this.lastTouch = e.team; this.onTouch(e.car, pre); }
+      }
       this.collideCars();
       collideArena(this.ball.pos, this.ball.vel, this.ball.r, BALL_E * m.ballE, 0.04);
       this.sanity();
@@ -901,10 +931,25 @@ class Match {
   }
   goal(team) {
     this.score[team]++;
-    this.state = "goal"; this.goalTimer = 3.4;
+    this.state = "goal"; this.goalTimer = GOAL_PAUSE;
     const own = this.lastTouch !== -1 && this.lastTouch !== team;
     this.goalMsg = [own ? "OWN GOAL! (NO REFUNDS)" : choice(GOAL_MSGS), team];
-    this.events.push({ type: "goal", team, pos: this.ball.pos.clone(), msg: this.goalMsg[0] });
+    // Scorer: the scoring team's last touch. Assist: a different teammate's touch shortly before it.
+    let scorer = -1, assist = -1;
+    if (!own) {
+      for (let k = this.touches.length - 1; k >= 0; k--) {
+        const tc = this.touches[k];
+        if (scorer < 0) { if (tc.team === team) scorer = tc.car; continue; }
+        if (tc.team !== team) break;
+        if (tc.car !== scorer && this.clock - tc.t < 6) { assist = tc.car; break; }
+      }
+      if (scorer >= 0) {
+        if (!(this.lastShot[scorer] > this.clock - 4)) this.award(scorer, "shot", 20);   // every goal counts as a shot
+        this.award(scorer, "goal", 100);
+      }
+      if (assist >= 0) this.award(assist, "assist", 50);
+    }
+    this.events.push({ type: "goal", team, pos: this.ball.pos.clone(), msg: this.goalMsg[0], scorer, assist });
     for (const car of this.cars) {                       // goal explosion
       if (car.demolished) continue;
       const d = new V3().subVectors(car.pos, this.ball.pos), dist = d.length();
@@ -921,7 +966,7 @@ class Match {
     const humanTeams = new Set(this.cars.filter((c) => c.human).map((c) => c.team));
     if ((this.mode === "bot" || this.mode === "duel") && humanTeams.size === 1 && !humanTeams.has(this.winner)) {
       const cond = BOT_SKILLS[this.skill][0].toLowerCase().replace(/\b\w/g, (ch) => ch.toUpperCase());
-      this.overLine = `TemuBots (${cond}) win. Please leave a 5-star review anyway.`;
+      this.overLine = `TemuBots (${cond}) win. Better luck next order.`;
     } else this.overLine = choice(OVER_LINES);
     this.events.push({ type: "over", winner: this.winner, line: this.overLine });
   }
@@ -952,11 +997,12 @@ class Match {
   demolish(victim, attacker) {
     victim.demolished = true; victim.respawn = RESPAWN_TIME; victim.boosting = false;
     this.events.push({ type: "demo", pos: victim.pos.clone(), team: victim.team, car: victim.idx, by: attacker.idx });
+    this.award(attacker.idx, "demo", 25);
     this.say(choice(DEMO_MSGS), attacker.team, 1.8);
   }
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { Match, Car, Ball, TemuBot, Controls, Pad, predictBall, collideArena, sdArena, arenaNormal, BOT_SKILLS, PRESETS, SUBSTEPS, NEUTRAL, RE, GRAVITY,
+  module.exports = { Match, Car, Ball, TemuBot, Controls, Pad, predictBall, collideArena, sdArena, arenaNormal, BOT_SKILLS, PRESETS, SUBSTEPS, NEUTRAL, RE, GRAVITY, GOAL_PAUSE,
     HW, HL, CEIL, GW, GH, GD, BALL_R, CAR_REST, MAX_SPEED, SUPERSONIC, MATCH_TIME, FPS, TEAM_NAMES, CAR_HX, CAR_HY, CAR_HZ };
 }

@@ -31,6 +31,11 @@ const FILES = {
   "/index.html": [path.join(PUBLIC, "index.html"), "text/html; charset=utf-8"],
   "/three.min.js": [require.resolve("three/build/three.min.js"), "application/javascript"],
 };
+// Graphics add-ons (glow and reflections) served from the three package
+for (const a of ["shaders/CopyShader.js", "shaders/LuminosityHighPassShader.js", "postprocessing/EffectComposer.js", "postprocessing/RenderPass.js",
+  "postprocessing/ShaderPass.js", "postprocessing/UnrealBloomPass.js", "environments/RoomEnvironment.js"]) {
+  FILES["/three-addons/" + a] = [path.join(path.dirname(require.resolve("three/build/three.min.js")), "..", "examples", "js", a), "application/javascript"];
+}
 const server = http.createServer((req, res) => {
   const url = (req.url || "/").split("?")[0];
   if (url === "/health") { res.writeHead(200, { "content-type": "text/plain" }); res.end("ok"); return; }
@@ -38,7 +43,7 @@ const server = http.createServer((req, res) => {
   if (!f) { res.writeHead(404, { "content-type": "text/plain" }); res.end("Not found"); return; }
   fs.readFile(f[0], (err, data) => {
     if (err) { res.writeHead(500); res.end("Server error"); return; }
-    res.writeHead(200, { "content-type": f[1], "cache-control": url === "/three.min.js" ? "public, max-age=86400" : "no-cache" });
+    res.writeHead(200, { "content-type": f[1], "cache-control": url.endsWith(".js") ? "public, max-age=86400" : "no-cache" });
     res.end(data);
   });
 });
@@ -150,7 +155,7 @@ class Room {
       b: [...v3(m.ball.pos), ...v3(m.ball.vel), r2(m.ball.r)],
       c: m.cars.map((c) => [...v3(c.pos), r3(c.quat.x), r3(c.quat.y), r3(c.quat.z), r3(c.quat.w), ...v3(c.vel), Math.round(c.boost),
         (c.demolished ? 1 : 0) | (c.boosting ? 2 : 0) | (c.onGround ? 4 : 0)]),
-      p: pads, ev,
+      p: pads, ev, stx: m.stats.map((st) => [st.score, st.goals, st.assists, st.saves, st.shots, st.demos]),
     };
     const base = JSON.stringify(common).slice(0, -1);
     for (const p of this.players) {
