@@ -240,7 +240,11 @@ class Car {
       return;
     }
     const jumpPressed = c.jump && !this.jumpPrev;
-    this.jumpPrev = c.jump;
+    this.jumpPrev = c.jump; this.jumpNow = false;
+    if (jumpPressed && !this.onGround && this.flipLeft <= 0) {     // turtled: jump rolls you back over
+      const n = this.touching(0.3);
+      if (n && this.up().dot(n) < 0.3) { this.selfRight(n); this.jumpNow = true; }
+    }
     this.boosting = c.boost && (this.boost > 0 || m.unlimited);
     if (this.onGround) this.drive(c, dt, m, jumpPressed);
     else this.fly(c, dt, m, jumpPressed);
@@ -250,6 +254,12 @@ class Car {
     this.supersonicT = s > SUPERSONIC ? this.supersonicT + dt : 0;
     this.pos.addScaledVector(this.vel, dt);
     if (this.onGround) this.stick(dt); else this.collideAir(dt);
+    const dc = sdArena(this.pos.x, this.pos.y, this.pos.z);     // never let the car's centre end up inside a wall
+    if (dc > -0.2) {
+      const n = arenaNormal(this.pos, new V3());
+      this.pos.addScaledVector(n, dc + 0.2);
+      const vn = this.vel.dot(n); if (vn < 0) this.vel.addScaledVector(n, -vn);
+    }
     const fw = this.forward(); this.yaw = Math.atan2(fw.x, fw.z);
   }
   // On the wheels: works the same on the floor, up the curved walls and on the ceiling.
@@ -306,7 +316,7 @@ class Car {
       w.z += (T_ROLL * r + D_ROLL * w.z) * dt;
       const l = w.length(); if (l > MAX_SPIN) w.multiplyScalar(MAX_SPIN / l);
     }
-    if (jumpPressed && this.canDodge && this.airTime < DODGE_WINDOW) {
+    if (jumpPressed && this.canDodge && this.airTime < DODGE_WINDOW && !this.jumpNow && !(this.contactT > 0)) {
       this.canDodge = false; this.jumpHeld = false;
       if (c.throttle !== 0 || c.steer !== 0) {      // dodge / flip in the pressed direction
         const fw = flat(this.forward()).normalize(), lf = new V3(fw.z, 0, -fw.x);
@@ -363,24 +373,61 @@ class Car {
       if (vn < 0) this.vel.addScaledVector(n, -1.15 * vn);
     }
   }
-  // In the air: check the wheels and the corners against the arena; land on the wheels, bounce off anything else
+  // In the air: check the wheels and the corners against the arena.
+  // Touching down at an angle tips the car onto its wheels (a quick, physical-looking roll instead of a
+  // snap). Stuck on the roof or side ("turtled"), it rights itself after a moment, or straight away on jump.
   collideAir(dt) {
     const up = this.up();
-    let worst = 0, wp = null, wheelHit = false;
+    let worst = 0, wp = null;
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) for (const sy of [-1, 1]) {
       const local = new V3(sx * CAR_HX, sy * CAR_HY - (sy < 0 ? WHEEL_DROP : 0), sz * CAR_HZ);
       const p = this.pos.clone().add(local.applyQuaternion(this.quat));
       const d = sdArena(p.x, p.y, p.z);
-      if (d > worst) { worst = d; wp = p; wheelHit = sy < 0; }
+      if (d > worst) { worst = d; wp = p; }
     }
     if (!wp) { this.contactT = 0; return; }
     const n = arenaNormal(wp, new V3());
     this.pos.addScaledVector(n, worst);
-    const vn = this.vel.dot(n);
-    if (up.dot(n) > 0.5 && vn <= 2) { this.land(n); return; }
-    if (vn < 0) this.vel.addScaledVector(n, -1.2 * vn);
+    const vn = this.vel.dot(n), un = up.dot(n);
+    if (un > 0.985 && vn <= 2) { this.land(n); return; }
     this.contactT += dt;
-    if (this.contactT > 0.35 && Math.abs(vn) < 3) this.land(n);   // stuck on the roof or side: flip back onto the wheels
+    if (un > 0.3 && vn <= 2) {                         // on some wheels: tip over onto all four
+      const axis = new V3().crossVectors(up, n), s = axis.length();
+      if (s > 1e-4) this.angVel.copy(axis.multiplyScalar(Math.min(20 * Math.asin(Math.min(1, s)) / s, 12 / s)));
+      // the body keeps coming down, pivoting on the touching wheel (the push-out above holds that wheel on the
+      // surface), so it swings onto the other wheels instead of stopping dead
+      if (vn > 0) this.vel.addScaledVector(n, -vn);
+      this.flipLeft = 0;
+      if (this.contactT > 0.4) this.land(n);           // safety net
+      return;
+    }
+    if (vn < 0) this.vel.addScaledVector(n, -1.05 * vn);           // roof, side or nose: thud
+    const vt = this.vel.clone().addScaledVector(n, -this.vel.dot(n));
+    this.vel.addScaledVector(vt, -(1 - Math.exp(-2.5 * dt)));      // and scrape along
+    if (this.contactT > 0.3 && Math.abs(vn) < 4 && this.flipLeft <= 0) this.selfRight(n);
+  }
+  // The arena surface within `margin` of the hitbox (its normal), or null
+  touching(margin) {
+    let best = -margin, bp = null;
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) for (const sy of [-1, 1]) {
+      const p = this.pos.clone().add(new V3(sx * CAR_HX, sy * CAR_HY, sz * CAR_HZ).applyQuaternion(this.quat));
+      const d = sdArena(p.x, p.y, p.z);
+      if (d > best) { best = d; bp = p; }
+    }
+    return bp ? arenaNormal(bp, new V3()) : null;
+  }
+  // Roll back onto the wheels with a little hop (Rocket League's turtle recovery)
+  selfRight(n) {
+    const up = this.up();
+    let axis = new V3().crossVectors(up, n);
+    if (axis.lengthSq() < 1e-4) axis = this.forward();             // flat on the roof: roll over sideways
+    axis.normalize();
+    const ang = Math.acos(clamp(up.dot(n), -1, 1)), T = 0.38;
+    this.flipAxis.copy(axis.applyQuaternion(this.quat.clone().invert())).multiplyScalar(ang / T);
+    this.flipLeft = T;
+    this.vel.addScaledVector(n, 3.8);
+    this.pos.addScaledVector(n, 0.05);
+    this.contactT = 0;
   }
   land(n) {
     let f = this.forward().addScaledVector(n, -this.forward().dot(n));
