@@ -182,6 +182,16 @@ function predictBall(ball, mods, secs = 3, step = 1 / 30) {
   return out;
 }
 
+// ---- Car loadouts (looks only; every body has the same hitbox) ----------------------------------
+// [body, decal, wheels, boost trail, topper, accent colour]
+const LOOK_SIZES = [4, 6, 5, 6, 6, 10];
+const DEFAULT_LOOK = [0, 0, 0, 0, 0, 0];
+function cleanLook(a) {
+  if (!Array.isArray(a) || a.length !== LOOK_SIZES.length) return DEFAULT_LOOK.slice();
+  return LOOK_SIZES.map((n, i) => (Number.isInteger(a[i]) && a[i] >= 0 && a[i] < n ? a[i] : 0));
+}
+function randomLook() { return LOOK_SIZES.map((n, i) => (i === 4 && Math.random() < 0.6 ? 0 : (Math.random() * n) | 0)); }
+
 // ---- Car -------------------------------------------------------------------
 const _m4 = new THREE.Matrix4();
 function quatFromBasis(q, fwd, up) {           // car frame: x = left, y = up, z = forward
@@ -194,7 +204,7 @@ function quatFromBasis(q, fwd, up) {           // car frame: x = left, y = up, z
 const RESPAWNS = [[-46.08, -92.16], [-53.76, -92.16], [46.08, -92.16], [53.76, -92.16]];
 class Car {
   constructor(team, name) {
-    this.team = team; this.name = name;
+    this.team = team; this.name = name; this.look = randomLook();
     this.pos = new V3(); this.vel = new V3(); this.quat = new QT(); this.angVel = new V3(); this.flipAxis = new V3();
     this.homeZ = team === 0 ? -(HL - 10) : HL - 10;
     this.boostUse = 1;                                   // premium sellers get premium shipping (boost lasts longer)
@@ -1050,6 +1060,6 @@ class Match {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { Match, Car, Ball, TemuBot, Controls, Pad, predictBall, collideArena, sdArena, arenaNormal, BOT_SKILLS, PRESETS, SUBSTEPS, NEUTRAL, RE, GRAVITY, GOAL_PAUSE,
+  module.exports = { Match, Car, Ball, TemuBot, Controls, Pad, predictBall, collideArena, sdArena, arenaNormal, BOT_SKILLS, PRESETS, LOOK_SIZES, DEFAULT_LOOK, cleanLook, randomLook, SUBSTEPS, NEUTRAL, RE, GRAVITY, GOAL_PAUSE,
     HW, HL, CEIL, GW, GH, GD, BALL_R, CAR_REST, MAX_SPEED, SUPERSONIC, MATCH_TIME, FPS, TEAM_NAMES, CAR_HX, CAR_HY, CAR_HZ };
 }

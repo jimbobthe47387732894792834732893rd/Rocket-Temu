@@ -80,7 +80,7 @@ class Room {
   newMatch() {
     this.match = new S.Match({ mode: "online", teamSize: TEAM_SIZE, humans: [], skill: 1 });
     if (Number(process.env.MATCH_SECONDS)) this.match.timeLeft = Number(process.env.MATCH_SECONDS);   // testing only
-    for (const p of this.players) this.match.setHuman(p.slot, true, p.name);
+    for (const p of this.players) { this.match.setHuman(p.slot, true, p.name); this.match.cars[p.slot].look = p.look; }
     this.overSince = 0;
   }
   humans() { return this.players.size; }
@@ -101,7 +101,7 @@ class Room {
     if (slot < 0) return false;
     p.slot = slot; p.room = this; p.queue = []; p.ack = 0; p.last = new S.Controls(); p.lastInputAt = Date.now();
     this.players.add(p);
-    this.match.setHuman(slot, true, p.name);
+    this.match.setHuman(slot, true, p.name); this.match.cars[slot].look = p.look;
     send(p, { t: "joined", room: { id: this.id, name: this.name }, you: slot, size: TEAM_SIZE, roster: this.roster() });
     this.broadcastRoster();
     return true;
@@ -109,12 +109,12 @@ class Room {
   remove(p) {
     if (!this.players.delete(p)) return;
     this.match.setHuman(p.slot, false, null);
-    this.match.cars[p.slot].name = "TEMUBOT " + (p.slot + 1);
+    this.match.cars[p.slot].name = "TEMUBOT " + (p.slot + 1); this.match.cars[p.slot].look = S.randomLook();
     p.room = null;
     if (!this.players.size) this.emptySince = Date.now();
     this.broadcastRoster();
   }
-  roster() { return this.match.cars.map((c) => [c.name, c.human ? 1 : 0]); }
+  roster() { return this.match.cars.map((c) => [c.name, c.human ? 1 : 0, c.look]); }
   broadcastRoster() { const msg = JSON.stringify({ t: "roster", roster: this.roster() }); for (const p of this.players) sendRaw(p, msg); }
   step() {
     const m = this.match, now = Date.now();
@@ -198,7 +198,7 @@ wss.on("connection", (ws, req) => {
   const ip = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
   if ((perIp.get(ip) || 0) >= MAX_PER_IP) { ws.close(1013, "Too many connections"); return; }
   perIp.set(ip, (perIp.get(ip) || 0) + 1);
-  const p = { id: nextId++, ws, name: cleanName(""), room: null, slot: -1, alive: true, msgCount: 0, msgWindow: Date.now(), lastChat: 0 };
+  const p = { id: nextId++, ws, name: cleanName(""), room: null, slot: -1, alive: true, msgCount: 0, msgWindow: Date.now(), lastChat: 0, look: S.DEFAULT_LOOK.slice() };
   ws.on("pong", () => { ws.isAliveFlag = true; });
   ws.on("message", (data) => {
     const handle = () => {
@@ -221,7 +221,8 @@ wss.on("connection", (ws, req) => {
 });
 function onMessage(p, msg, now) {
   switch (msg.t) {
-    case "hello": p.name = cleanName(msg.name); if (p.room) { p.room.match.cars[p.slot].name = p.name; p.room.broadcastRoster(); } break;
+    case "hello": p.name = cleanName(msg.name); if (msg.look) p.look = S.cleanLook(msg.look);
+      if (p.room) { const c = p.room.match.cars[p.slot]; c.name = p.name; c.look = p.look; p.room.broadcastRoster(); } break;
     case "list": send(p, { t: "lobbies", rooms: lobbyList(), online: wss.clients.size }); break;
     case "quick": case "create": case "join": {
       if (p.room) p.room.remove(p);
