@@ -302,6 +302,11 @@
   #shotspeed.go { animation: shot 1.4s ease-out forwards; }
   @keyframes shot { 0% { transform: translate(-50%, 10px) scale(.7); opacity: 0; } 10% { transform: translate(-50%, 0) scale(1.12); opacity: 1; } 70% { opacity: 1; } 100% { transform: translate(-50%, -14px) scale(1); opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { #shotspeed.go { animation: none; } }
+  #practice-bar { position: absolute; top: 76px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; pointer-events: auto; max-width: calc(100% - 24px); }
+  #practice-bar button { background: rgba(16,13,34,.85); border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px; font-weight: 900; font-size: 12px; letter-spacing: .04em; white-space: nowrap; touch-action: manipulation; }
+  #practice-bar kbd { margin-left: 4px; color: var(--muted); font-size: 10px; }
+  #hud.touch #practice-bar kbd { display: none; }
+  #hud.compact #practice-bar { top: 58px; } #hud.compact #practice-bar button { padding: 6px 10px; font-size: 11px; }
   /* Garage */
   .gpanel { position: absolute; left: clamp(16px, 3vw, 40px); top: 76px; bottom: 40px; width: min(440px, 44vw); display: flex; flex-direction: column; gap: 10px;
     background: rgba(12,10,26,.82); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
@@ -369,6 +374,11 @@
     </div>
     <div id="toast" class="center-msg" hidden></div>
     <div id="netinfo" hidden></div>
+    <div id="practice-bar" hidden>
+      <button type="button" data-act="pball">BALL TO ME <kbd>R</kbd></button>
+      <button type="button" data-act="preset">RESET <kbd>T</kbd></button>
+      <button type="button" data-act="pboost" id="pboost">BOOST: UNLIMITED <kbd>U</kbd></button>
+    </div>
     <div id="replay" hidden><b>REPLAY</b><span id="replay-skip"></span></div>
     <div id="pop" hidden></div>
     <div id="shotspeed" hidden></div>
@@ -405,7 +415,8 @@
       <button class="nav-btn" type="button" data-act="bot"><span>3V3 VS TEMUBOTS</span><small>You and 2 bot teammates</small><kbd>2</kbd></button>
       <button class="nav-btn" type="button" data-act="duel"><span>1V1 VS TEMUBOT</span><small>Just you and a bot</small><kbd>3</kbd></button>
       <button class="nav-btn" type="button" data-act="2p"><span>SPLIT SCREEN</span><small>2 players, one keyboard. Bundle Deal</small><kbd>4</kbd></button>
-      <button class="nav-btn" type="button" data-act="watch"><span>WATCH BOTS</span><small>Display Model</small><kbd>5</kbd></button>
+      <button class="nav-btn" type="button" data-act="practice"><span>PRACTICE</span><small>Just you and the ball. No clock.</small><kbd>5</kbd></button>
+      <button class="nav-btn" type="button" data-act="watch"><span>WATCH BOTS</span><small>Display Model</small><kbd>6</kbd></button>
       <button class="nav-btn back" type="button" data-act="home"><span>BACK</span><kbd>Esc</kbd></button>
     </nav>
     <nav class="nav wide" id="nav-settings" aria-label="Settings" hidden>
@@ -422,6 +433,7 @@
         <div><b style="color:var(--org)">PLAYER 2</b>Arrow keys drive and steer<br>Enter or Right Ctrl jump &middot; Right Shift boost<br>, / . air roll</div>
         <div><b style="color:var(--gold)">IN THE AIR</b>Jump again to double jump. Jump plus a direction to flip. Upside down? Press jump to roll back over.</div>
         <div><b style="color:#cfc9ff">CAMERA, SOUND, CHAT</b>C ball cam &middot; M mute &middot; P pause &middot; Esc menu<br>Online: keys 1 to 6 send quick chat</div>
+        <div class="span2"><b style="color:#ffd23c">PRACTICE</b>R puts the ball in front of you &middot; T resets to kickoff &middot; U turns unlimited boost on or off. Controller: D-pad up / down / left.</div>
         <div class="span2"><b style="color:#7dffb0">CONTROLLER</b>RT drive &middot; LT reverse &middot; left stick steer<br>A jump &middot; B boost &middot; X powerslide (hold X in the air to air roll) &middot; LB / RB air roll left / right<br>Y ball cam &middot; Start pause &middot; D-pad quick chat online &middot; menus: A select, B back</div>
       </div>
       <button class="nav-btn back" type="button" data-act="home"><span>BACK</span><kbd>Esc</kbd></button>
@@ -1401,7 +1413,9 @@ const PRESETS = {                    // used by the browser menus
   duel: { teamSize: 1, humans: [0] },
   "2p": { teamSize: 3, humans: [0, 3] },
   watch: { teamSize: 3, humans: [] },
+  practice: { teamSize: 1, humans: [0] },         // just you and the ball: no opponents, no clock
 };
+const PRACTICE_MODS = Object.assign({}, NEUTRAL, { unlimited: true });
 function shuffled(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; }
 class Match {
   // opts: { mode, teamSize, humans: [car indices], skill, names: [...] }
@@ -1440,7 +1454,23 @@ class Match {
     // Rocket League scoring: points per goal, assist, save, shot on goal and demolition
     this.stats = this.cars.map(() => ({ score: 0, goals: 0, assists: 0, saves: 0, shots: 0, demos: 0 }));
     this.touches = []; this.statCool = {}; this.lastShot = {};
+    if (this.mode === "practice") {
+      this.practice = true; this.unlimited = true;
+      this.cars.length = 1; this.stats.length = 1; this.bots = {};
+    }
     this.kickoff();
+  }
+  // Practice tools: drop the ball in front of you for a shot, or put everything back on the kickoff spots
+  practiceBall(kind) {
+    if (!this.practice || this.state === "goal") return;
+    const car = this.cars[0];
+    if (kind === "reset") { this.kickoff(); this.countdown = 0.01; return; }
+    const f = flat(car.forward()); if (f.lengthSq() < 0.01) f.set(0, 0, 1);
+    f.normalize();
+    const p = car.pos.clone().addScaledVector(f, 14); p.y = 4;
+    p.x = clamp(p.x, -HW + 8, HW - 8); p.z = clamp(p.z, -HL + 8, HL - 8);
+    this.ball.pos.copy(p); this.ball.vel.set(-f.x * 3, 7, -f.z * 3); this.ball.spin.set(0, 0, 0);
+    this.state = "play";
   }
   award(i, kind, pts) {
     const st = this.stats[i]; st[kind + "s"]++; st.score += pts;
@@ -1477,13 +1507,13 @@ class Match {
       const [kx, kz] = spots[k];
       const p0 = new V3(kx * HW, CAR_REST, kz * HL), p1 = new V3(-kx * HW, CAR_REST, -kz * HL);
       this.cars[k].spawn(p0, Math.atan2(-p0.x, -p0.z));
-      this.cars[n + k].spawn(p1, Math.atan2(-p1.x, -p1.z));
+      if (this.cars[n + k]) this.cars[n + k].spawn(p1, Math.atan2(-p1.x, -p1.z));
     }
     for (const car of this.cars) { car.boost = 33; car.role = null; }
     for (const i in this.bots) this.bots[i].kickoff();
     this.ball.reset();
     this.touches = []; this.statCool = {};
-    this.state = "countdown"; this.countdown = 3; this.goWord = choice(GO_WORDS); this.lastTouch = -1;
+    this.state = "countdown"; this.countdown = this.practice ? 1 : 3; this.goWord = choice(GO_WORDS); this.lastTouch = -1;
     this.events.push({ type: "kickoff" });
   }
   // Team rotation: closest car that is goal-side of the ball attacks, the car nearest our net
@@ -1507,9 +1537,10 @@ class Match {
     }
   }
   say(msg, team, secs) { this.toast = [msg, team, secs]; }
-  mods() { return NEUTRAL; }
+  mods() { return this.practice && this.unlimited ? PRACTICE_MODS : NEUTRAL; }
   update(dt, inputs) {
     this.clock += dt;
+    if (this.practice && this.unlimited) this.cars[0].boost = 100;
     this.goFlash = Math.max(0, this.goFlash - dt);
     if (this.toast) { this.toast[2] -= dt; if (this.toast[2] <= 0) this.toast = null; }
     if (this.state === "countdown") {
@@ -1538,7 +1569,7 @@ class Match {
       if (this.state === "play") this.checkGoal();
     }
     this.updatePads(dt);
-    if (this.state === "play") {
+    if (this.state === "play" && !this.practice) {
       if (this.overtime) this.otTime += dt;
       else {
         this.timeLeft -= dt;
@@ -1583,7 +1614,7 @@ class Match {
   }
   goal(team) {
     this.score[team]++;
-    this.state = "goal"; this.goalTimer = GOAL_PAUSE;
+    this.state = "goal"; this.goalTimer = this.practice ? 3 : GOAL_PAUSE;
     const own = this.lastTouch !== -1 && this.lastTouch !== team;
     this.goalMsg = [own ? "OWN GOAL! (NO REFUNDS)" : choice(GOAL_MSGS), team];
     // Scorer: the scoring team's last touch. Assist: a different teammate's touch shortly before it.
@@ -3101,6 +3132,7 @@ function padUi() {
     if (any(PB.START)) act("pause");
     if (any(PB.Y)) act("cam");
     if (state.online) [PB.UP, PB.LEFT, PB.RIGHT, PB.DOWN].forEach((b, i) => { if (any(b)) sendChat(i); });
+    else if (state.match && state.match.practice) { if (any(PB.UP)) act("pball"); if (any(PB.DOWN)) act("preset"); if (any(PB.LEFT)) act("pboost"); }
     return;
   }
   // Menus: move between the buttons that are showing, A presses, B goes back
@@ -3413,7 +3445,7 @@ function handleEvents(m, celebrate) {
     if (e.type === "goal") {
       burst(e.pos, [TEAM_HEX[e.team], 0xffc428, 0xffffff], 500, 34, 2.2, 6, true);
       startShock(e.pos, e.team);
-      replay.goalT = state.t; replay.startAt = state.t + 2.4; replay.side = Math.sign(e.pos.z) || 1;
+      replay.goalT = state.t; replay.startAt = m.practice ? -1 : state.t + 2.4; replay.side = Math.sign(e.pos.z) || 1;
       if (e.scorer >= 0) addFeed(m.cars[e.scorer], e.assist >= 0 ? `scored (assist: ${m.cars[e.assist].name})` : "scored");
       else if (e.ownBy >= 0 && m.cars[e.ownBy]) addFeed(m.cars[e.ownBy], "scored an own goal");
       cheer = { team: e.team, t: 0 };                  // the scoring team's end of the stadium goes wild
@@ -3809,7 +3841,8 @@ function touchWanted() { return state.screen === "match" && state.local.length =
 function updateHud(m) {
   setText($("s0"), "s0", String(m.score[0])); setText($("s1"), "s1", String(m.score[1]));
   const secs = m.overtime ? Math.floor(m.otTime) : Math.ceil(m.timeLeft);
-  setText(elClock, "clock", (m.overtime ? "+" : "") + Math.floor(secs / 60) + ":" + String(secs % 60).padStart(2, "0"));
+  setText(elClock, "clock", m.practice ? "PRACTICE" : (m.overtime ? "+" : "") + Math.floor(secs / 60) + ":" + String(secs % 60).padStart(2, "0"));
+  setShown($("practice-bar"), "pbar", !!m.practice);
   elClock.classList.toggle("ot", m.overtime);
   let big = "", sub = "", bigColor = "#fff";
   if (m.state === "countdown") big = String(Math.ceil(m.countdown));
@@ -3818,7 +3851,7 @@ function updateHud(m) {
   // Who scored: a card in the middle of the screen with the scoreboard (the scorer's row lit up), then a
   // banner along the bottom while the replay plays
   const gi = state.goalInfo, inGoal = m.state === "goal" && gi;
-  const card = inGoal && !replay.active && state.t - gi.t > 0.5;
+  const card = inGoal && !m.practice && !replay.active && state.t - gi.t > 0.5;
   setShown($("goalcard"), "gcOn", !!card);
   if (card && !gi.shown) {
     gi.shown = true;
@@ -3899,6 +3932,7 @@ function startMatch(kind) {
   setArena(state.arena || 0);
   state.paused = false; state.online = false;
   bindMatch(state.match);
+  $("pboost").firstChild.textContent = "BOOST: UNLIMITED ";
   camState[0].pos.set(0, 8, -HL - 2); camState[1].pos.set(0, 8, HL + 2);
   show("match");
   canvas.focus({ preventScroll: true });
@@ -3982,7 +4016,9 @@ function toOnline() {
 }
 function act(name) {
   audio();
-  if (name === "bot" || name === "duel" || name === "2p" || name === "watch") pickArena(() => pickBall(() => startMatch(name)));
+  if (name === "bot" || name === "duel" || name === "2p" || name === "watch" || name === "practice") pickArena(() => pickBall(() => startMatch(name)));
+  else if (name === "pball" || name === "preset") { if (state.match && state.match.practice) { state.match.practiceBall(name === "pball" ? "front" : "reset"); stopReplay(); } }
+  else if (name === "pboost") { if (state.match && state.match.practice) { state.match.unlimited = !state.match.unlimited; $("pboost").firstChild.textContent = "BOOST: " + (state.match.unlimited ? "UNLIMITED " : "NORMAL "); } }
   else if (name === "cancelball") cancelBall();
   else if (name === "cancelarena") cancelArena();
   else if (name === "assist") { state.assist = !state.assist; persist(); updateSettings(); if (state.online) netSend({ t: "hello", name: state.nick, look: state.look, assist: state.assist }); }
@@ -4070,7 +4106,7 @@ window.addEventListener("keydown", (e) => {
   state.keys.add(e.code);
   audio();
   if (state.screen === "menu") {
-    const map = { Digit1: "online", Digit2: "bot", Digit3: "duel", Digit4: "2p", Digit5: "watch", Numpad1: "online", Numpad2: "bot", Numpad3: "duel", Numpad4: "2p", Numpad5: "watch", KeyD: "skill", KeyG: "garage" };
+    const map = { Digit1: "online", Digit2: "bot", Digit3: "duel", Digit4: "2p", Digit5: "practice", Numpad1: "online", Numpad2: "bot", Numpad3: "duel", Numpad4: "2p", Numpad5: "practice", Digit6: "watch", Numpad6: "watch", KeyD: "skill", KeyG: "garage" };
     if (map[e.code]) act(map[e.code]);
     else if (e.code === "Escape") act("home");
   } else if (state.screen === "garage") {
@@ -4088,6 +4124,9 @@ window.addEventListener("keydown", (e) => {
   } else {
     if (e.code === "Escape") act("menu");
     else if (e.code === "KeyP") act("pause");
+    else if (state.match && state.match.practice && e.code === "KeyR") act("pball");
+    else if (state.match && state.match.practice && e.code === "KeyT") act("preset");
+    else if (state.match && state.match.practice && e.code === "KeyU") act("pboost");
     else if (e.code === "Tab") { e.preventDefault(); state.boardHeld = true; }
     else if (e.code === "KeyC") act("cam");
     else if (e.code === "KeyM") act("sound");

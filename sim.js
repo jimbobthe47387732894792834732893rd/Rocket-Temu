@@ -861,7 +861,9 @@ const PRESETS = {                    // used by the browser menus
   duel: { teamSize: 1, humans: [0] },
   "2p": { teamSize: 3, humans: [0, 3] },
   watch: { teamSize: 3, humans: [] },
+  practice: { teamSize: 1, humans: [0] },         // just you and the ball: no opponents, no clock
 };
+const PRACTICE_MODS = Object.assign({}, NEUTRAL, { unlimited: true });
 function shuffled(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; }
 class Match {
   // opts: { mode, teamSize, humans: [car indices], skill, names: [...] }
@@ -900,7 +902,23 @@ class Match {
     // Rocket League scoring: points per goal, assist, save, shot on goal and demolition
     this.stats = this.cars.map(() => ({ score: 0, goals: 0, assists: 0, saves: 0, shots: 0, demos: 0 }));
     this.touches = []; this.statCool = {}; this.lastShot = {};
+    if (this.mode === "practice") {
+      this.practice = true; this.unlimited = true;
+      this.cars.length = 1; this.stats.length = 1; this.bots = {};
+    }
     this.kickoff();
+  }
+  // Practice tools: drop the ball in front of you for a shot, or put everything back on the kickoff spots
+  practiceBall(kind) {
+    if (!this.practice || this.state === "goal") return;
+    const car = this.cars[0];
+    if (kind === "reset") { this.kickoff(); this.countdown = 0.01; return; }
+    const f = flat(car.forward()); if (f.lengthSq() < 0.01) f.set(0, 0, 1);
+    f.normalize();
+    const p = car.pos.clone().addScaledVector(f, 14); p.y = 4;
+    p.x = clamp(p.x, -HW + 8, HW - 8); p.z = clamp(p.z, -HL + 8, HL - 8);
+    this.ball.pos.copy(p); this.ball.vel.set(-f.x * 3, 7, -f.z * 3); this.ball.spin.set(0, 0, 0);
+    this.state = "play";
   }
   award(i, kind, pts) {
     const st = this.stats[i]; st[kind + "s"]++; st.score += pts;
@@ -937,13 +955,13 @@ class Match {
       const [kx, kz] = spots[k];
       const p0 = new V3(kx * HW, CAR_REST, kz * HL), p1 = new V3(-kx * HW, CAR_REST, -kz * HL);
       this.cars[k].spawn(p0, Math.atan2(-p0.x, -p0.z));
-      this.cars[n + k].spawn(p1, Math.atan2(-p1.x, -p1.z));
+      if (this.cars[n + k]) this.cars[n + k].spawn(p1, Math.atan2(-p1.x, -p1.z));
     }
     for (const car of this.cars) { car.boost = 33; car.role = null; }
     for (const i in this.bots) this.bots[i].kickoff();
     this.ball.reset();
     this.touches = []; this.statCool = {};
-    this.state = "countdown"; this.countdown = 3; this.goWord = choice(GO_WORDS); this.lastTouch = -1;
+    this.state = "countdown"; this.countdown = this.practice ? 1 : 3; this.goWord = choice(GO_WORDS); this.lastTouch = -1;
     this.events.push({ type: "kickoff" });
   }
   // Team rotation: closest car that is goal-side of the ball attacks, the car nearest our net
@@ -967,9 +985,10 @@ class Match {
     }
   }
   say(msg, team, secs) { this.toast = [msg, team, secs]; }
-  mods() { return NEUTRAL; }
+  mods() { return this.practice && this.unlimited ? PRACTICE_MODS : NEUTRAL; }
   update(dt, inputs) {
     this.clock += dt;
+    if (this.practice && this.unlimited) this.cars[0].boost = 100;
     this.goFlash = Math.max(0, this.goFlash - dt);
     if (this.toast) { this.toast[2] -= dt; if (this.toast[2] <= 0) this.toast = null; }
     if (this.state === "countdown") {
@@ -998,7 +1017,7 @@ class Match {
       if (this.state === "play") this.checkGoal();
     }
     this.updatePads(dt);
-    if (this.state === "play") {
+    if (this.state === "play" && !this.practice) {
       if (this.overtime) this.otTime += dt;
       else {
         this.timeLeft -= dt;
@@ -1043,7 +1062,7 @@ class Match {
   }
   goal(team) {
     this.score[team]++;
-    this.state = "goal"; this.goalTimer = GOAL_PAUSE;
+    this.state = "goal"; this.goalTimer = this.practice ? 3 : GOAL_PAUSE;
     const own = this.lastTouch !== -1 && this.lastTouch !== team;
     this.goalMsg = [own ? "OWN GOAL! (NO REFUNDS)" : choice(GOAL_MSGS), team];
     // Scorer: the scoring team's last touch. Assist: a different teammate's touch shortly before it.
