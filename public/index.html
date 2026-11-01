@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#06050d">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Rocket Temu">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
@@ -119,12 +119,13 @@
   #hud.compact .team { min-width: 0; gap: 8px; padding: 3px 10px; }
   #hud.compact .clock { min-width: 70px; padding: 3px 10px; }
   /* Installed app and phones: full screen, clear of the notch and status bar, no rounded frame */
-  /* The game is pinned to the real screen size (iOS home-screen apps report a shorter page than the screen,
-     which left an empty strip along the bottom), clear of the status bar and notch, down to the very bottom edge */
+  /* Pinned to the window on all four sides, clear of the status bar and notch, down to the very bottom edge.
+     (The home-screen app uses an ordinary status bar: recent iPadOS versions leave an empty strip at the bottom
+     of apps that draw underneath it.) */
   html.app-mode, html.app-mode body { height: 100%; overflow: hidden; background: #06050d; }
   html.app-mode body { padding: 0; }
   html.app-mode #app { position: fixed; border-radius: 0; box-shadow: none; left: env(safe-area-inset-left, 0px); right: env(safe-area-inset-right, 0px);
-    top: env(safe-area-inset-top, 0px); bottom: auto; height: calc(100vh - env(safe-area-inset-top, 0px)); height: calc(var(--screen-h, 100vh) - env(safe-area-inset-top, 0px)); }
+    top: env(safe-area-inset-top, 0px); bottom: 0; height: auto; }
   html.app-mode .gauge, html.app-mode .tbtns, html.app-mode #chat-row { margin-bottom: env(safe-area-inset-bottom, 0px); }
   html.app-mode .showroom .fine { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
   /* ---- Overlays ---- */
@@ -3949,16 +3950,6 @@ if (app_.pwa && "serviceWorker" in navigator && (location.protocol === "https:" 
 updateInstall();
 // Installed app (or a phone): use the whole screen, keeping clear of the notch and status bar
 if (app_.standalone || /[?&]app=1/.test(location.search) || matchMedia("(pointer: coarse)").matches) document.documentElement.classList.add("app-mode");
-// The tallest of the reported sizes is the real screen; iOS home-screen apps under-report the page height
-function fitScreen() {
-  if (!document.documentElement.classList.contains("app-mode")) return;
-  const h = Math.max(window.innerHeight, document.documentElement.clientHeight, window.visualViewport ? window.visualViewport.height : 0,
-    app_.standalone && screen.height && screen.width ? (matchMedia("(orientation: landscape)").matches ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height)) : 0);
-  document.documentElement.style.setProperty("--screen-h", h + "px");
-}
-fitScreen();
-window.addEventListener("resize", fitScreen);
-window.addEventListener("orientationchange", () => { fitScreen(); setTimeout(fitScreen, 350); });
 window.rocketTemu = { state, act, net, replay, views: () => views, skids: () => skidN, addSkid, advance(secs) { for (let i = 0; i < secs * FPS; i++) step(1 / FPS); } };
 })();
 </script>
