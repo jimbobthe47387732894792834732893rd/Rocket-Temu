@@ -86,6 +86,41 @@
   #hud.split #g0 { right: auto; left: 16px; } #hud.split #g1 { left: auto; right: 16px; }
   #divider { position: absolute; top: 0; bottom: 0; left: 50%; width: 4px; margin-left: -2px; background: #000; }
 
+  /* Goal card: who scored, in the middle of the screen, over the scoreboard with their row lit up */
+  #goalcard { position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%); width: min(680px, calc(100% - 24px)); display: flex; flex-direction: column; align-items: center; gap: 4px;
+    text-align: center; animation: gc-in .35s cubic-bezier(.2,1.4,.4,1) both; pointer-events: none; }
+  #gc-head { font-weight: 900; font-style: italic; font-size: clamp(22px, 3.4vw, 46px); line-height: 1.02; max-width: 22ch; text-shadow: 0 4px 0 #000, 0 0 30px rgba(0,0,0,.6); text-wrap: balance; }
+  #gc-score { font-weight: 900; font-size: clamp(18px, 2.4vw, 32px); text-shadow: 0 3px 0 #000; font-variant-numeric: tabular-nums; }
+  #gc-name { margin-top: 4px; font-weight: 900; font-style: italic; font-size: clamp(20px, 2.8vw, 36px); letter-spacing: .02em; background: rgba(8,6,20,.82);
+    border-radius: 10px; padding: 4px 18px; text-shadow: 0 2px 0 #000; overflow-wrap: anywhere; }
+  #gc-assist { color: #e6e2f5; font-weight: 800; font-size: clamp(13px, 1.6vw, 18px); text-shadow: 0 2px 0 #000; }
+  #gc-board { margin-top: 8px; }
+  @keyframes gc-in { from { transform: translate(-50%, -50%) scale(.7); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { #goalcard { animation: none; } }
+  .mini-board { width: 100%; display: grid; gap: 6px; }
+  .mini-board table.sb th { padding: 4px 8px; font-size: 10px; } .mini-board table.sb td { padding: 4px 8px; font-size: 13px; }
+  table.sb tr.scorer td { background: rgba(255,196,40,.28); color: #fff; }
+  .goalbadge { margin-left: 8px; background: var(--gold); color: #1a1426; font-size: 10px; font-weight: 900; letter-spacing: .08em; padding: 2px 6px; border-radius: 4px; vertical-align: 2px; }
+  #scorer-banner { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); background: rgba(8,6,20,.85); border: 1px solid var(--line); border-radius: 999px;
+    padding: 8px 18px; font-weight: 900; font-style: italic; font-size: clamp(14px, 2vw, 22px); white-space: nowrap; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; }
+  #liveboard { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(620px, calc(100% - 24px)); pointer-events: none; }
+  .board { pointer-events: auto; cursor: pointer; }
+  @media (max-height: 480px) { #goalcard { top: 55%; gap: 2px; } #gc-head { font-size: 24px; } #gc-score { font-size: 18px; } #gc-name { font-size: 20px; padding: 2px 12px; }
+    .mini-board table.sb td { padding: 2px 8px; font-size: 11px; } .mini-board table.sb th { padding: 2px 8px; } #gc-board { margin-top: 4px; } }
+  /* Phones: one row of short buttons up top */
+  @media (min-width: 641px) {
+    #hud.compact .hud-top { grid-template-columns: 1fr auto 1fr; gap: 6px; }
+    #hud.compact .logo { display: none; }
+    #hud.compact .board { grid-column: 2; }
+    #hud.compact .hud-btns { grid-column: 3; }
+  }
+  #hud.compact .hud-btns { flex-wrap: nowrap; gap: 4px; }
+  #hud.compact .hud-btns button { padding: 6px 8px; font-size: 11px; }
+  #hud.compact .team { min-width: 0; gap: 8px; padding: 3px 10px; }
+  #hud.compact .clock { min-width: 70px; padding: 3px 10px; }
+  /* Installed app and phones: full screen, clear of the notch and status bar, no rounded frame */
+  html.app-mode body { padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+  html.app-mode #app { border-radius: 0; box-shadow: none; }
   /* ---- Overlays ---- */
   .overlay { position: absolute; inset: 0; display: flex; overflow: auto; padding: 18px 14px; background: radial-gradient(ellipse at center, rgba(6,5,14,.55), rgba(6,5,14,.88)); }
   .card { margin: auto; width: min(980px, 100%); display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
@@ -311,6 +346,15 @@
     <div id="pop" hidden></div>
     <div id="feed" aria-live="polite"></div>
     <div id="center"><div id="big" hidden></div><div id="sub" hidden></div></div>
+    <div id="goalcard" hidden>
+      <div id="gc-head"></div>
+      <div id="gc-score"></div>
+      <div id="gc-name"></div>
+      <div id="gc-assist"></div>
+      <div id="gc-board" class="mini-board"></div>
+    </div>
+    <div id="scorer-banner" hidden></div>
+    <div id="liveboard" class="mini-board" hidden></div>
     <div id="divider" hidden></div>
     <div id="g0" class="gauge"></div>
     <div id="g1" class="gauge"></div>
@@ -2346,10 +2390,14 @@ const softTex = canvasTex(64, 64, (g, w) => { const gr = g.createRadialGradient(
 const glowParts = new THREE.Points(gGeo, new THREE.PointsMaterial({ size: 0.5, vertexColors: true, map: softTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
 glowParts.frustumCulled = false; scene.add(glowParts);
 const plist = [], glist = [];
+// Particles are recycled rather than created and thrown away, so big bursts don't cause garbage-collection hitches
+const pPool = [];
 function emit(pos, vel, life, color, grav = 9, glow = false) {
   const L = glow ? glist : plist;
-  if (L.length >= MAXP) L.shift();
-  L.push({ p: pos.clone(), v: vel.clone(), life, max: life, c: new THREE.Color(color), g: grav });
+  if (L.length >= MAXP) pPool.push(L.shift());
+  const q = pPool.pop() || { p: new THREE.Vector3(), v: new THREE.Vector3(), c: new THREE.Color() };
+  q.p.copy(pos); q.v.copy(vel); q.life = life; q.max = life; q.c.set(color); q.g = grav;
+  L.push(q);
 }
 function burst(pos, colors, n, speed, life, up = 0, glow = false) {
   for (let i = 0; i < n; i++) {
@@ -2359,13 +2407,16 @@ function burst(pos, colors, n, speed, life, up = 0, glow = false) {
   }
 }
 function stepList(L, dt, posArr, colArr, geo, fade) {
-  for (let i = L.length - 1; i >= 0; i--) {
+  let w = 0;
+  for (let i = 0; i < L.length; i++) {                 // update and drop dead ones in one pass
     const q = L[i];
     q.life -= dt;
-    if (q.life <= 0) { L.splice(i, 1); continue; }
+    if (q.life <= 0) { pPool.push(q); continue; }
     q.v.y -= q.g * dt; q.v.multiplyScalar(1 - 0.9 * dt); q.p.addScaledVector(q.v, dt);
     if (q.p.y < 0.05) { q.p.y = 0.05; q.v.set(0, 0, 0); }
+    L[w++] = q;
   }
+  L.length = w;
   let n = 0;
   for (const q of L) {
     const k = fade ? (q.life / q.max) * 0.9 : 1;
@@ -2683,9 +2734,16 @@ function addSkid(a, b, w, strength) {
   skidPos.set([a.x + nx, 0.025, a.z + nz, a.x - nx, 0.025, a.z - nz, b.x - nx, 0.025, b.z - nz, b.x + nx, 0.025, b.z + nz], i * 12);
   const v = 1 - 0.42 * Math.max(0.4, strength);                                    // multiply blending: 1 = no mark, lower = darker
   for (let k = 0; k < 12; k++) skidCol[i * 12 + k] = v;
-  skidGeo.attributes.position.needsUpdate = true; skidGeo.attributes.color.needsUpdate = true;
+  skidDirty[0] = Math.min(skidDirty[0], i); skidDirty[1] = Math.max(skidDirty[1], i);
 }
-function clearSkids() { skidPos.fill(0); skidCol.fill(1); skidGeo.attributes.position.needsUpdate = true; skidGeo.attributes.color.needsUpdate = true; skidN = 0; }
+const skidDirty = [Infinity, -1];
+function flushSkids() {                                             // upload only the quads that changed this frame
+  if (skidDirty[1] < 0) return;
+  const off = skidDirty[0] * 12, cnt = (skidDirty[1] - skidDirty[0] + 1) * 12;
+  for (const a of [skidGeo.attributes.position, skidGeo.attributes.color]) { a.updateRange.offset = off; a.updateRange.count = cnt; a.needsUpdate = true; }
+  skidDirty[0] = Infinity; skidDirty[1] = -1;
+}
+function clearSkids() { skidPos.fill(0); skidCol.fill(1); skidDirty[0] = 0; skidDirty[1] = SKID_MAX - 1; flushSkids(); skidN = 0; }
 clearSkids();
 // Supersonic trails: two ribbons of white wind streaming off the back corners
 const TRAIL_N = 26;
@@ -2891,6 +2949,7 @@ function handleEvents(m, celebrate) {
         emit(new THREE.Vector3(s.x, s.y + 2, s.z), towardField.add(new THREE.Vector3(0, 6 + Math.random() * 7, 0)), 3 + Math.random() * 2, [TEAM_HEX[e.team], 0xffc428, 0xffffff][(Math.random() * 3) | 0], 5);
       }
       state.goalSide = Math.sign(e.pos.z) || 1; state.goalT = state.t;
+      state.goalInfo = { scorer: e.scorer, assist: e.assist, team: e.team, t: state.t, shown: false };
       if (celebrate) { sfx.goal(); state.shake = 0.6; state.local.forEach((ci, who) => rumble(who, 0.7, 0.9, 600)); }
     } else if (e.type === "touch" && celebrate) {
       if (e.power > 6) sfx.hit(e.power);
@@ -3249,6 +3308,32 @@ function updateHud(m) {
   if (m.state === "countdown") big = String(Math.ceil(m.countdown));
   else if (m.goFlash > 0 && m.state === "play") { big = m.goWord; bigColor = "#ffc428"; }
   else if (m.state === "goal" && m.goalMsg && !replay.active) { big = m.goalMsg[0]; bigColor = TEAM_CSS[m.goalMsg[1]]; sub = `${m.score[0]}  -  ${m.score[1]}`; }
+  // Who scored: a card in the middle of the screen with the scoreboard (the scorer's row lit up), then a
+  // banner along the bottom while the replay plays
+  const gi = state.goalInfo, inGoal = m.state === "goal" && gi;
+  const card = inGoal && !replay.active && state.t - gi.t > 0.5;
+  setShown($("goalcard"), "gcOn", !!card);
+  if (card && !gi.shown) {
+    gi.shown = true;
+    const sc = gi.scorer >= 0 ? m.cars[gi.scorer] : null;
+    $("gc-head").textContent = m.goalMsg ? m.goalMsg[0] : "GOAL!"; $("gc-head").style.color = TEAM_CSS[gi.team];
+    $("gc-score").textContent = `${m.score[0]}  -  ${m.score[1]}`;
+    const own = m.goalMsg && /^OWN GOAL/.test(m.goalMsg[0]);
+    $("gc-name").textContent = sc ? sc.name + " SCORED!" : own ? TEAM_NAMES[1 - gi.team] + " PUT IT IN THEIR OWN NET" : TEAM_NAMES[gi.team] + " SCORES!";
+    $("gc-name").style.color = TEAM_CSS[gi.team];
+    $("gc-assist").textContent = gi.assist >= 0 ? "Assist: " + m.cars[gi.assist].name : "";
+    $("gc-assist").hidden = gi.assist < 0;
+    renderScoreboard(m, $("gc-board"), gi.scorer);
+  }
+  const ban = inGoal && replay.active;
+  setShown($("scorer-banner"), "sbOn", !!ban);
+  if (ban) setText($("scorer-banner"), "sbT", gi.scorer >= 0 ? `${m.cars[gi.scorer].name} scored` + (gi.assist >= 0 ? ` · assist ${m.cars[gi.assist].name}` : "") : `Own goal · ${TEAM_NAMES[gi.team]} scores`);
+  if (m.state !== "goal" && gi) state.goalInfo = null;
+  // Live scoreboard: hold Tab, hold the controller's View/Back button, or tap the score at the top
+  const live = state.boardHeld || state.boardToggled || pads.list.some((g) => holding(g, PB.BACK));
+  setShown($("liveboard"), "lbOn", !!live && m.state !== "over" && !card);
+  if (live && state.t - (state.boardAt || 0) > 0.5) { state.boardAt = state.t; renderScoreboard(m, $("liveboard")); }
+  if (card) big = "", sub = "";
   setShown(elBig, "bigOn", !!big); setText(elBig, "big", big); elBig.style.color = bigColor;
   setShown(elSub, "subOn", !!sub); setText(elSub, "sub", sub);
   const toast = m.toast ? m.toast[0] : "";
@@ -3271,9 +3356,15 @@ function updateHud(m) {
   setShown($("b-pause"), "bpause", !state.online);
   setShown($("replay"), "replay", replay.active);
   if (replay.active) setText($("replay-skip"), "rskip", state.online ? "" : (state.touch ? "Tap to skip" : "Press Space to skip"));
-  const narrow = app.clientWidth < 640;
-  setText($("b-cam"), "cam", (narrow ? "CAM " : "BALL CAM: ") + (state.ballCam[0] ? "ON" : "OFF"));
-  setText($("b-sound"), "snd", (narrow ? "SOUND " : "SOUND: ") + (sound.on ? "ON" : "OFF"));
+  hudButtons();
+}
+// Top-right buttons: full labels on big screens, short ones on phones so they stay on one row
+function hudButtons() {
+  const compact = app.clientWidth < 900 || app.clientHeight < 500;
+  hud.classList.toggle("compact", compact);
+  setText($("b-cam"), "cam", (compact ? "CAM " : "BALL CAM: ") + (state.ballCam[0] ? "ON" : "OFF"));
+  setText($("b-sound"), "snd", compact ? (sound.on ? "SOUND" : "MUTED") : "SOUND: " + (sound.on ? "ON" : "OFF"));
+  setText($("b-pause"), "bpause", compact ? "II" : "PAUSE");
   setText($("b-menu"), "bmenu", state.online ? "LEAVE" : "MENU");
 }
 function show(screen) {
@@ -3421,12 +3512,12 @@ function showOver(m) {
   $("b-overmenu").textContent = state.online ? "Leave lobby (Esc)" : "Main menu (Esc)";
   $("over").hidden = false;
 }
-function renderScoreboard(m) {
-  const box = $("scoreboard"); box.textContent = "";
+function renderScoreboard(m, box = $("scoreboard"), hi = -1) {
+  box.textContent = "";
   if (!m.stats) return;
   const rows = m.cars.map((c, i) => ({ c, i, st: m.stats[i] }));
-  const winners = rows.filter((r) => r.c.team === m.winner);
-  const mvp = winners.reduce((a, b) => (b.st.score > a.st.score ? b : a), winners[0]);
+  const winners = m.state === "over" ? rows.filter((r) => r.c.team === m.winner) : [];
+  const mvp = winners.length ? winners.reduce((a, b) => (b.st.score > a.st.score ? b : a), winners[0]) : null;
   for (const team of [0, 1]) {
     const tbl = document.createElement("table"); tbl.className = "sb t" + team;
     const head = tbl.createTHead().insertRow();
@@ -3434,7 +3525,9 @@ function renderScoreboard(m) {
     const body = tbl.createTBody();
     rows.filter((r) => r.c.team === team).sort((a, b) => b.st.score - a.st.score).forEach((r) => {
       const tr = body.insertRow(); if (state.local.includes(r.i)) tr.className = "me";
+      if (r.i === hi) tr.classList.add("scorer");
       const name = tr.insertCell(); name.textContent = r.c.name;
+      if (r.i === hi) { const b = document.createElement("span"); b.className = "goalbadge"; b.textContent = "GOAL"; name.appendChild(b); }
       if (r === mvp && r.st.score > 0) { const b = document.createElement("span"); b.className = "mvp"; b.textContent = "MVP"; name.appendChild(b); }
       for (const v of [r.st.score, r.st.goals, r.st.assists, r.st.saves, r.st.shots]) tr.insertCell().textContent = v;
     });
@@ -3476,13 +3569,15 @@ window.addEventListener("keydown", (e) => {
   } else {
     if (e.code === "Escape") act("menu");
     else if (e.code === "KeyP") act("pause");
+    else if (e.code === "Tab") { e.preventDefault(); state.boardHeld = true; }
     else if (e.code === "KeyC") act("cam");
     else if (e.code === "KeyM") act("sound");
     else if (state.online && /^Digit[1-6]$/.test(e.code)) sendChat(Number(e.code.slice(5)) - 1);
     else if ((e.code === "Enter" || e.code === "NumpadEnter") && state.match && state.match.state === "over") act("rematch");
   }
 });
-window.addEventListener("keyup", (e) => state.keys.delete(e.code));
+window.addEventListener("keyup", (e) => { state.keys.delete(e.code); if (e.code === "Tab") state.boardHeld = false; });
+document.querySelector(".board").addEventListener("pointerdown", (e) => { e.stopPropagation(); state.boardToggled = !state.boardToggled; });
 window.addEventListener("blur", () => { state.keys.clear(); state.stick.active = false; });
 canvas.addEventListener("pointerdown", () => { canvas.focus({ preventScroll: true }); audio(); skipReplay(); });
 canvas.addEventListener("contextmenu", (e) => e.preventDefault());
@@ -3649,6 +3744,7 @@ function step(dt) {
 function render(dt) {
   if (LOBBY.has(state.screen)) { renderGarage(dt); return; }
   if (!stadiumEnv && quality.high) captureStadiumEnv();
+  flushSkids();
   animateBallLook(dt);
   for (const o of [parts, glowParts]) if (o.parent !== scene) scene.add(o);
   const m = state.screen === "match" ? state.match : state.attract;
@@ -3710,11 +3806,58 @@ function frame(now) {
   pollPads(); padUi();
   acc += real;
   let n = 0;
-  while (acc >= 1 / FPS && n < 5) { step(1 / FPS); acc -= 1 / FPS; n++; }
+  while (acc >= 1 / FPS && n < 5) { snapPrev(); step(1 / FPS); acc -= 1 / FPS; n++; }
   if (n === 5) acc = 0;
+  // Draw cars and the ball part-way between the last two physics steps, so motion is smooth at any
+  // frame rate (60, 90, 120, 144 Hz screens, or when a frame arrives a little early or late)
+  autoQuality(now); dynamicResolution(now);               // before drawing, so a resize never shows a blank frame
+  const undo = interpolate(Math.min(1, acc * FPS));
   render(real);
-  autoQuality(now);
+  undo();
   requestAnimationFrame(frame);
+}
+// ---- Smooth motion between physics steps -----------------------------------------------------------
+function interpolated() {                                    // the bodies that move only on physics steps
+  const m = state.screen === "match" ? state.match : null;
+  if (!m || replay.active || state.noInterp) return null;
+  const list = m.cars.filter((c) => !state.online || c.idx === net.you);   // other online players are already smoothed every frame
+  list.push(m.ball);
+  return list;
+}
+function snapPrev() {
+  const list = interpolated(); if (!list) return;
+  for (const b of list) {
+    if (!b.ip) { b.ip = new THREE.Vector3(); b.ic = new THREE.Vector3(); if (b.quat) { b.iq = new THREE.Quaternion(); b.icq = new THREE.Quaternion(); } }
+    b.ip.copy(b.pos); if (b.quat) b.iq.copy(b.quat);
+    b.iok = true;
+  }
+}
+const noop = () => {};
+function interpolate(alpha) {
+  const list = interpolated(); if (!list) return noop;
+  const moved = [];
+  for (const b of list) {
+    if (!b.iok || b.ip.distanceToSquared(b.pos) > 16) continue;   // teleported (kickoff, respawn): don't smear it across the field
+    b.ic.copy(b.pos); b.pos.lerpVectors(b.ip, b.ic, alpha);
+    if (b.quat) { b.icq.copy(b.quat); b.quat.copy(b.iq).slerp(b.icq, alpha); }
+    moved.push(b);
+  }
+  return () => { for (const b of moved) { b.pos.copy(b.ic); if (b.quat) b.quat.copy(b.icq); } };
+}
+// Dynamic resolution: if frames start taking too long during a match, draw fewer pixels (and more again
+// when there's room), so the frame rate holds steady instead of the game dropping to 30
+const dyn = { base: 0, ratio: 0, ema: 1 / 60, last: 0, check: 0 };
+function dynamicResolution(now) {
+  if (!dyn.base) { dyn.base = renderer.getPixelRatio(); dyn.ratio = dyn.base; }
+  const ft = dyn.last ? Math.min(0.1, (now - dyn.last) / 1000) : 1 / 60; dyn.last = now;
+  if (state.screen !== "match" || document.hidden) { dyn.check = now + 1500; return; }
+  dyn.ema += (ft - dyn.ema) * 0.05;
+  if (now < dyn.check) return;
+  dyn.check = now + 1200;
+  let r = dyn.ratio;
+  if (dyn.ema > 1 / 48) r = Math.max(dyn.base * 0.6, 0.6, r * 0.85);
+  else if (dyn.ema < 1 / 57 && r < dyn.base) r = Math.min(dyn.base, r * 1.1);
+  if (Math.abs(r - dyn.ratio) > 0.01) { dyn.ratio = r; renderer.setPixelRatio(r); resize(); dyn.check = now + 2000; }
 }
 // If HIGH graphics run slowly on this device (and the player never picked a setting), switch off
 // the expensive parts (glow, real shadows, extra pixels) so the game stays smooth.
@@ -3729,7 +3872,7 @@ function autoQuality(now) {
   perf.done = true;
   if (perf.frames / secs >= 40) return;
   quality.high = false; composer = null; sun.castShadow = false;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25)); ballShadow.visible = true;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25)); ballShadow.visible = true; dyn.base = 0;
   resize();
 }
 applyBall();
@@ -3786,6 +3929,8 @@ if (app_.pwa && "serviceWorker" in navigator && (location.protocol === "https:" 
   window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
 }
 updateInstall();
+// Installed app (or a phone): use the whole screen, keeping clear of the notch and status bar
+if (app_.standalone || /[?&]app=1/.test(location.search) || matchMedia("(pointer: coarse)").matches) document.documentElement.classList.add("app-mode");
 window.rocketTemu = { state, act, net, replay, views: () => views, skids: () => skidN, addSkid, advance(secs) { for (let i = 0; i < secs * FPS; i++) step(1 / FPS); } };
 })();
 </script>
