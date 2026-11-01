@@ -70,6 +70,7 @@ function toControls(a) {
   const num = (x) => (Number.isFinite(x) ? Math.max(-1, Math.min(1, x)) : 0);
   c.throttle = num(a[0]); c.steer = num(a[1]); c.jump = !!a[2]; c.boost = !!a[3]; c.roll = num(a[4]); c.slide = !!a[5];
   if (Number.isFinite(a[6])) c.pitch = num(a[6]);
+  if (Number.isFinite(a[7]) && Number.isFinite(a[8])) { const x = num(a[7]), z = num(a[8]), l = Math.hypot(x, z); if (l > 0.5) c.aim = { x: x / l, z: z / l }; }
   return c;
 }
 let nextId = 1;

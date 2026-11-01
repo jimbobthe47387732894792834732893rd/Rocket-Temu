@@ -603,7 +603,7 @@ const flat = (v) => new V3(v.x, 0, v.z);
 
 class Controls {
   // pitch: the air pitch input when it comes from a separate stick (controllers); null means use throttle (keyboard, bots)
-  constructor() { this.throttle = 0; this.steer = 0; this.jump = false; this.boost = false; this.roll = 0; this.slide = false; this.pitch = null; }
+  constructor() { this.throttle = 0; this.steer = 0; this.jump = false; this.boost = false; this.roll = 0; this.slide = false; this.pitch = null; this.aim = null; }
   copy() { return Object.assign(new Controls(), this); }
 }
 
@@ -790,6 +790,7 @@ class Car {
       }
       return;
     }
+    this.aim = c.aim || null;                            // touch screens: where the stick points is where a hit goes
     const jumpPressed = c.jump && !this.jumpPrev;
     this.jumpPrev = c.jump; this.jumpNow = false;
     if (jumpPressed && !this.onGround && this.flipLeft <= 0) {     // turtled: jump rolls you back over
@@ -1063,8 +1064,19 @@ function collideCarsBall(cars, ball, events) {
   if (spin.lengthSq() > 0) ball.spin.add(spin);
   ball.pos.add(push);
   ball.vel.add(dv);
-  if (strikers.length === 1 && strikers[0].assist) shotAssist(strikers[0], ball);
+  if (strikers.length === 1) {
+    if (strikers[0].aim) aimShot(strikers[0], ball);
+    if (strikers[0].assist) shotAssist(strikers[0], ball);
+  }
   if (ball.vel.length() > BALL_MAX) ball.vel.setLength(BALL_MAX);
+}
+// Touch-screen aiming: the ball leaves in the direction the player's stick points (up to 90 degrees from
+// where the hit itself would send it), keeping its speed and height
+function aimShot(car, ball) {
+  const v = ball.vel, a = car.aim, hs = Math.hypot(v.x, v.z);
+  if (hs < 4) { v.x += a.x * 6; v.z += a.z * 6; return; }
+  const cur = Math.atan2(v.x, v.z), d = clamp(wrapAngle(Math.atan2(a.x, a.z) - cur), -Math.PI / 2, Math.PI / 2);
+  v.x = Math.sin(cur + d) * hs; v.z = Math.cos(cur + d) * hs;
 }
 // Shot assist (players can switch it off): a shot already heading for the opponent's goal that would just
 // miss the posts is bent back inside them, and one about to sail over the bar is brought down under it.
@@ -2986,6 +2998,12 @@ function readP1(solo, car) {
     const st = state.stick, sx = st.active ? dead(st.x) : 0, sy = st.active ? dead(st.y) : 0;
     if (sx) c.steer = sx;
     if (sy) c.throttle = -sy;
+    // Aiming: the stick direction, turned to match the camera (up = straight ahead on screen)
+    if (st.active && Math.hypot(sx, sy) > 0.35) {
+      const cs = camState[0], fx = cs.look.x - cs.pos.x, fz = cs.look.z - cs.pos.z, fl = Math.hypot(fx, fz) || 1;
+      const ax = (fx / fl) * -sy + (-fz / fl) * sx, az = (fz / fl) * -sy + (fx / fl) * sx, al = Math.hypot(ax, az) || 1;
+      c.aim = { x: Math.round(ax / al * 100) / 100, z: Math.round(az / al * 100) / 100 };
+    }
   }
   return finishControls(c);
 }
@@ -3411,7 +3429,7 @@ function handleEvents(m, celebrate) {
     } else if (e.type === "touch" && celebrate) {
       if (e.power > 6) sfx.hit(e.power);
       const who = state.local.indexOf(e.car); if (who >= 0) rumble(who, Math.min(1, e.power / 40), Math.min(1, e.power / 25), 90);
-      if (who >= 0) { const kmh = Math.round(m.ball.vel.length() * 3.6); if (kmh >= 80) showShot(kmh); if (kmh >= 150) state.shake = Math.max(state.shake, 0.12); }
+      if (who >= 0) { const kmh = Math.round(m.ball.vel.length() * 3.6); if (kmh > 180) { showShot(kmh); state.shake = Math.max(state.shake, 0.12); } }
     }
     else if (e.type === "demo") {
       burst(e.pos, [TEAM_HEX[e.team], 0xffc428, 0xff5a00], 180, 18, 1.0, 4, true); burst(e.pos, [0x333333, 0x555555], 80, 10, 1.6, 3);
@@ -3562,7 +3580,7 @@ function netStep(dt) {
   net.seq++;
   net.pending.push({ s: net.seq, c });
   if (net.pending.length > 180) net.pending.shift();
-  netSend({ t: "in", s: net.seq, c: [c.throttle, c.steer, c.jump ? 1 : 0, c.boost ? 1 : 0, c.roll, c.slide ? 1 : 0].concat(c.pitch == null ? [] : [c.pitch]) });
+  netSend({ t: "in", s: net.seq, c: [c.throttle, c.steer, c.jump ? 1 : 0, c.boost ? 1 : 0, c.roll, c.slide ? 1 : 0, c.pitch == null ? null : c.pitch].concat(c.aim ? [c.aim.x, c.aim.z] : []) });
   if (net.predicting) for (let k = 0; k < SUBSTEPS; k++) car.update(c, 1 / FPS / SUBSTEPS, NEUTRAL);
   if (m.state === "play" || m.state === "goal") for (let k = 0; k < SUBSTEPS; k++) m.ball.step(1 / FPS / SUBSTEPS, NEUTRAL);
   net.carErr.multiplyScalar(Math.exp(-9 * dt)); net.ballErr.multiplyScalar(Math.exp(-7 * dt));
@@ -3598,10 +3616,30 @@ function renderFeed() {
 }
 const STAT_NAMES = { goal: "GOAL", assist: "ASSIST", save: "SAVE", shot: "SHOT ON GOAL", demo: "DEMOLITION" };
 let popTimer = 0;
+// Aim arrow (touch screens): shows where a hit will send the ball while you hold the stick near it
+const aimArrow = new THREE.Group(); aimArrow.visible = false; scene.add(aimArrow);
+{
+  const tex = canvasTex(64, 256, (g, w, h) => {
+    const gr = g.createLinearGradient(0, h, 0, 0); gr.addColorStop(0, "rgba(255,255,255,0)"); gr.addColorStop(0.5, "rgba(255,255,255,0.75)"); gr.addColorStop(1, "rgba(255,255,255,0.95)");
+    g.fillStyle = gr; g.fillRect(w * 0.36, h * 0.18, w * 0.28, h * 0.82);
+    g.fillStyle = "rgba(255,255,255,0.95)"; g.beginPath(); g.moveTo(w / 2, 0); g.lineTo(w, h * 0.22); g.lineTo(0, h * 0.22); g.closePath(); g.fill();
+  });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 7.5), new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(0xffd23c).multiplyScalar(GLOW), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+  m.rotation.set(-Math.PI / 2, 0, Math.PI); m.position.set(0, 0.08, 5.6); aimArrow.add(m);
+}
+function updateAimArrow(m) {
+  const car = state.local.length === 1 && m ? m.cars[state.local[0]] : null;
+  const c = car && state.touch && m.state === "play" && !replay.active ? readP1(true, car) : null;
+  const near = c && c.aim && car.pos.distanceTo(m.ball.pos) < 22;
+  aimArrow.visible = !!near;
+  if (!near) return;
+  aimArrow.position.set(m.ball.pos.x, Math.max(0, m.ball.pos.y - m.ball.r), m.ball.pos.z);
+  aimArrow.rotation.y = Math.atan2(c.aim.x, c.aim.z);
+}
 // Shot speed: how hard you just hit it
 function showShot(kmh) {
   const el = $("shotspeed");
-  el.textContent = kmh + " KM/H"; el.classList.toggle("hot", kmh >= 150);
+  el.textContent = kmh + " KM/H"; el.classList.toggle("hot", kmh >= 220);
   el.hidden = false; el.classList.remove("go"); void el.offsetWidth; el.classList.add("go");
   clearTimeout(showShot.t); showShot.t = setTimeout(() => { el.hidden = true; }, 1400);
 }
@@ -4226,6 +4264,7 @@ function step(dt) {
 function render(dt) {
   if (LOBBY.has(state.screen)) { renderGarage(dt); return; }
   if (!stadiumEnv && quality.high) captureStadiumEnv();
+  updateAimArrow(state.screen === "match" ? state.match : null);
   flushSkids();
   animateBallLook(dt);
   for (const o of [parts, glowParts]) if (o.parent !== scene) scene.add(o);

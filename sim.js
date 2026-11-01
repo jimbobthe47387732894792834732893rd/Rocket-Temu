@@ -63,7 +63,7 @@ const flat = (v) => new V3(v.x, 0, v.z);
 
 class Controls {
   // pitch: the air pitch input when it comes from a separate stick (controllers); null means use throttle (keyboard, bots)
-  constructor() { this.throttle = 0; this.steer = 0; this.jump = false; this.boost = false; this.roll = 0; this.slide = false; this.pitch = null; }
+  constructor() { this.throttle = 0; this.steer = 0; this.jump = false; this.boost = false; this.roll = 0; this.slide = false; this.pitch = null; this.aim = null; }
   copy() { return Object.assign(new Controls(), this); }
 }
 
@@ -250,6 +250,7 @@ class Car {
       }
       return;
     }
+    this.aim = c.aim || null;                            // touch screens: where the stick points is where a hit goes
     const jumpPressed = c.jump && !this.jumpPrev;
     this.jumpPrev = c.jump; this.jumpNow = false;
     if (jumpPressed && !this.onGround && this.flipLeft <= 0) {     // turtled: jump rolls you back over
@@ -523,8 +524,19 @@ function collideCarsBall(cars, ball, events) {
   if (spin.lengthSq() > 0) ball.spin.add(spin);
   ball.pos.add(push);
   ball.vel.add(dv);
-  if (strikers.length === 1 && strikers[0].assist) shotAssist(strikers[0], ball);
+  if (strikers.length === 1) {
+    if (strikers[0].aim) aimShot(strikers[0], ball);
+    if (strikers[0].assist) shotAssist(strikers[0], ball);
+  }
   if (ball.vel.length() > BALL_MAX) ball.vel.setLength(BALL_MAX);
+}
+// Touch-screen aiming: the ball leaves in the direction the player's stick points (up to 90 degrees from
+// where the hit itself would send it), keeping its speed and height
+function aimShot(car, ball) {
+  const v = ball.vel, a = car.aim, hs = Math.hypot(v.x, v.z);
+  if (hs < 4) { v.x += a.x * 6; v.z += a.z * 6; return; }
+  const cur = Math.atan2(v.x, v.z), d = clamp(wrapAngle(Math.atan2(a.x, a.z) - cur), -Math.PI / 2, Math.PI / 2);
+  v.x = Math.sin(cur + d) * hs; v.z = Math.cos(cur + d) * hs;
 }
 // Shot assist (players can switch it off): a shot already heading for the opponent's goal that would just
 // miss the posts is bent back inside them, and one about to sail over the bar is brought down under it.
