@@ -489,24 +489,36 @@ function collideCarsBall(cars, ball, events) {
     if (ct) hits.push([car, ct]);
   }
   if (!hits.length) return;
-  const bvel = ball.vel.clone(), push = new V3(), dv = new V3();
+  const bvel = ball.vel.clone(), push = new V3(), dv = new V3(), spin = new V3();
+  const share = CAR_MASS / (CAR_MASS + BALL_MASS);
   for (const [car, { n, pen }] of hits) {
     push.addScaledVector(n, pen);
-    const rel = new V3().subVectors(bvel, car.vel);
+    // Velocity of the car at the contact point, including its rotation: the nose of a flipping car is
+    // moving much faster than the car itself, which is what makes flip shots hit hard
+    const r = new V3().subVectors(ball.pos, car.pos).addScaledVector(n, -ball.r);
+    const vc = new V3().crossVectors(car.angVel, r).add(car.vel);
+    const rel = new V3().subVectors(bvel, vc);
     const vn = rel.dot(n);
     if (vn < 0) {
-      const j = -(1 + 0.3) * vn;
-      dv.addScaledVector(n, j * CAR_MASS / (CAR_MASS + BALL_MASS));
-      car.vel.addScaledVector(n, -Math.min(j * BALL_MASS / (CAR_MASS + BALL_MASS), 6));
-      // The real game's extra "car hit" impulse: along car->ball, flattened, scaled by closing speed
-      const dir = new V3().subVectors(ball.pos, car.pos); dir.y *= 0.35; dir.normalize();
-      const rs = Math.min(rel.length(), 46);
-      const scale = rs < 10 ? 0.65 : 0.65 - 0.1 * (rs - 10) / 36;
+      const j = -(1 + 0.2) * vn;                                   // mostly inelastic, close to the real game's car-ball contact
+      dv.addScaledVector(n, j * share);
+      car.vel.addScaledVector(n, -Math.min(j * (1 - share), 6));
+      // Scrubbing across the ball sets it spinning (looks only; spin doesn't change its flight)
+      const tan = rel.clone().addScaledVector(n, -vn), tl = tan.length();
+      if (tl > 1e-3) spin.addScaledVector(new V3().crossVectors(n, tan), Math.min(tl * 0.5, 0.6 * j) * share / tl / ball.r);
+      // Rocket League's extra "car hit" impulse: from the car's centre to the ball, with the up component
+      // squashed and some of the forward component taken out, so where the ball meets the car steers the shot
+      const f = car.forward(), dir = new V3().subVectors(ball.pos, car.pos);
+      dir.y *= 0.35; dir.addScaledVector(f, -0.35 * dir.dot(f)).normalize();
+      const rs = Math.min(new V3().subVectors(bvel, car.vel).length(), 92);
+      const scale = rs <= 10 ? 0.65 : rs <= 46 ? 0.65 - 0.1 * (rs - 10) / 36 : 0.55 - 0.25 * (rs - 46) / 46;
       dv.addScaledVector(dir, rs * scale);
-      events.push({ type: "touch", team: car.team, car: car.idx, power: rs });
+      const power = Math.max(rs, -vn);
+      events.push({ type: "touch", team: car.team, car: car.idx, power });
       car.lastTouch = performance.now ? performance.now() : 0;
     }
   }
+  if (spin.lengthSq() > 0) ball.spin.add(spin);
   ball.pos.add(push);
   ball.vel.add(dv);
   if (ball.vel.length() > BALL_MAX) ball.vel.setLength(BALL_MAX);

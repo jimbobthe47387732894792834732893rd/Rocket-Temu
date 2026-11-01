@@ -119,8 +119,14 @@
   #hud.compact .team { min-width: 0; gap: 8px; padding: 3px 10px; }
   #hud.compact .clock { min-width: 70px; padding: 3px 10px; }
   /* Installed app and phones: full screen, clear of the notch and status bar, no rounded frame */
-  html.app-mode body { padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
-  html.app-mode #app { border-radius: 0; box-shadow: none; }
+  /* The game is pinned to the real screen size (iOS home-screen apps report a shorter page than the screen,
+     which left an empty strip along the bottom), clear of the status bar and notch, down to the very bottom edge */
+  html.app-mode, html.app-mode body { height: 100%; overflow: hidden; background: #06050d; }
+  html.app-mode body { padding: 0; }
+  html.app-mode #app { position: fixed; border-radius: 0; box-shadow: none; left: env(safe-area-inset-left, 0px); right: env(safe-area-inset-right, 0px);
+    top: env(safe-area-inset-top, 0px); bottom: auto; height: calc(100vh - env(safe-area-inset-top, 0px)); height: calc(var(--screen-h, 100vh) - env(safe-area-inset-top, 0px)); }
+  html.app-mode .gauge, html.app-mode .tbtns, html.app-mode #chat-row { margin-bottom: env(safe-area-inset-bottom, 0px); }
+  html.app-mode .showroom .fine { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
   /* ---- Overlays ---- */
   .overlay { position: absolute; inset: 0; display: flex; overflow: auto; padding: 18px 14px; background: radial-gradient(ellipse at center, rgba(6,5,14,.55), rgba(6,5,14,.88)); }
   .card { margin: auto; width: min(980px, 100%); display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
@@ -982,24 +988,36 @@ function collideCarsBall(cars, ball, events) {
     if (ct) hits.push([car, ct]);
   }
   if (!hits.length) return;
-  const bvel = ball.vel.clone(), push = new V3(), dv = new V3();
+  const bvel = ball.vel.clone(), push = new V3(), dv = new V3(), spin = new V3();
+  const share = CAR_MASS / (CAR_MASS + BALL_MASS);
   for (const [car, { n, pen }] of hits) {
     push.addScaledVector(n, pen);
-    const rel = new V3().subVectors(bvel, car.vel);
+    // Velocity of the car at the contact point, including its rotation: the nose of a flipping car is
+    // moving much faster than the car itself, which is what makes flip shots hit hard
+    const r = new V3().subVectors(ball.pos, car.pos).addScaledVector(n, -ball.r);
+    const vc = new V3().crossVectors(car.angVel, r).add(car.vel);
+    const rel = new V3().subVectors(bvel, vc);
     const vn = rel.dot(n);
     if (vn < 0) {
-      const j = -(1 + 0.3) * vn;
-      dv.addScaledVector(n, j * CAR_MASS / (CAR_MASS + BALL_MASS));
-      car.vel.addScaledVector(n, -Math.min(j * BALL_MASS / (CAR_MASS + BALL_MASS), 6));
-      // The real game's extra "car hit" impulse: along car->ball, flattened, scaled by closing speed
-      const dir = new V3().subVectors(ball.pos, car.pos); dir.y *= 0.35; dir.normalize();
-      const rs = Math.min(rel.length(), 46);
-      const scale = rs < 10 ? 0.65 : 0.65 - 0.1 * (rs - 10) / 36;
+      const j = -(1 + 0.2) * vn;                                   // mostly inelastic, close to the real game's car-ball contact
+      dv.addScaledVector(n, j * share);
+      car.vel.addScaledVector(n, -Math.min(j * (1 - share), 6));
+      // Scrubbing across the ball sets it spinning (looks only; spin doesn't change its flight)
+      const tan = rel.clone().addScaledVector(n, -vn), tl = tan.length();
+      if (tl > 1e-3) spin.addScaledVector(new V3().crossVectors(n, tan), Math.min(tl * 0.5, 0.6 * j) * share / tl / ball.r);
+      // Rocket League's extra "car hit" impulse: from the car's centre to the ball, with the up component
+      // squashed and some of the forward component taken out, so where the ball meets the car steers the shot
+      const f = car.forward(), dir = new V3().subVectors(ball.pos, car.pos);
+      dir.y *= 0.35; dir.addScaledVector(f, -0.35 * dir.dot(f)).normalize();
+      const rs = Math.min(new V3().subVectors(bvel, car.vel).length(), 92);
+      const scale = rs <= 10 ? 0.65 : rs <= 46 ? 0.65 - 0.1 * (rs - 10) / 36 : 0.55 - 0.25 * (rs - 46) / 46;
       dv.addScaledVector(dir, rs * scale);
-      events.push({ type: "touch", team: car.team, car: car.idx, power: rs });
+      const power = Math.max(rs, -vn);
+      events.push({ type: "touch", team: car.team, car: car.idx, power });
       car.lastTouch = performance.now ? performance.now() : 0;
     }
   }
+  if (spin.lengthSq() > 0) ball.spin.add(spin);
   ball.pos.add(push);
   ball.vel.add(dv);
   if (ball.vel.length() > BALL_MAX) ball.vel.setLength(BALL_MAX);
@@ -3931,6 +3949,16 @@ if (app_.pwa && "serviceWorker" in navigator && (location.protocol === "https:" 
 updateInstall();
 // Installed app (or a phone): use the whole screen, keeping clear of the notch and status bar
 if (app_.standalone || /[?&]app=1/.test(location.search) || matchMedia("(pointer: coarse)").matches) document.documentElement.classList.add("app-mode");
+// The tallest of the reported sizes is the real screen; iOS home-screen apps under-report the page height
+function fitScreen() {
+  if (!document.documentElement.classList.contains("app-mode")) return;
+  const h = Math.max(window.innerHeight, document.documentElement.clientHeight, window.visualViewport ? window.visualViewport.height : 0,
+    app_.standalone && screen.height && screen.width ? (matchMedia("(orientation: landscape)").matches ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height)) : 0);
+  document.documentElement.style.setProperty("--screen-h", h + "px");
+}
+fitScreen();
+window.addEventListener("resize", fitScreen);
+window.addEventListener("orientationchange", () => { fitScreen(); setTimeout(fitScreen, 350); });
 window.rocketTemu = { state, act, net, replay, views: () => views, skids: () => skidN, addSkid, advance(secs) { for (let i = 0; i < secs * FPS; i++) step(1 / FPS); } };
 })();
 </script>
