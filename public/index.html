@@ -296,6 +296,12 @@
   .arena-card .votes:empty { display: none; }
   #vote { background: radial-gradient(ellipse at center, rgba(6,5,14,.7), rgba(6,5,14,.92)); z-index: 4; }
   @media (max-width: 640px), (max-height: 520px) { .arena-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .arena-card small { display: none; } .arena-card b { font-size: 15px; } .arena-pv { aspect-ratio: 2 / 1; } }
+  #shotspeed { position: absolute; left: 50%; bottom: 18%; transform: translateX(-50%); font-weight: 900; font-style: italic; font-size: clamp(20px, 3vw, 36px); color: #fff;
+    text-shadow: 0 3px 0 #000, 0 0 16px rgba(255,255,255,.35); white-space: nowrap; pointer-events: none; }
+  #shotspeed.hot { color: var(--gold); text-shadow: 0 3px 0 #000, 0 0 22px rgba(255,160,40,.7); }
+  #shotspeed.go { animation: shot 1.4s ease-out forwards; }
+  @keyframes shot { 0% { transform: translate(-50%, 10px) scale(.7); opacity: 0; } 10% { transform: translate(-50%, 0) scale(1.12); opacity: 1; } 70% { opacity: 1; } 100% { transform: translate(-50%, -14px) scale(1); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { #shotspeed.go { animation: none; } }
   /* Garage */
   .gpanel { position: absolute; left: clamp(16px, 3vw, 40px); top: 76px; bottom: 40px; width: min(440px, 44vw); display: flex; flex-direction: column; gap: 10px;
     background: rgba(12,10,26,.82); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
@@ -365,6 +371,7 @@
     <div id="netinfo" hidden></div>
     <div id="replay" hidden><b>REPLAY</b><span id="replay-skip"></span></div>
     <div id="pop" hidden></div>
+    <div id="shotspeed" hidden></div>
     <div id="feed" aria-live="polite"></div>
     <div id="center"><div id="big" hidden></div><div id="sub" hidden></div></div>
     <div id="goalcard" hidden>
@@ -406,6 +413,7 @@
       <button class="nav-btn" type="button" data-act="skill"><span>TEMUBOT CONDITION</span><small id="skill-name">LIKE NEW</small><kbd>D</kbd></button>
       <button class="nav-btn" type="button" data-act="gfx"><span>GRAPHICS</span><small id="gfx-name">HIGH</small></button>
       <button class="nav-btn" type="button" data-act="sound"><span>SOUND</span><small id="snd-name">ON</small></button>
+      <button class="nav-btn" type="button" data-act="assist"><span>SHOT ASSIST</span><small id="assist-name">ON</small></button>
       <button class="nav-btn" type="button" data-act="cam"><span>BALL CAM</span><small id="cam-name">ON</small></button>
       <button class="nav-btn" type="button" data-act="fullscreen" id="fs-btn"><span>FULL SCREEN</span><small>Fill the whole screen (sideways on phones)</small></button>
       <button class="nav-btn" type="button" data-act="install" id="install-btn" hidden><span>INSTALL APP</span><small id="install-note">Put Rocket Temu on your home screen</small></button>
@@ -1023,6 +1031,7 @@ function collideCarsBall(cars, ball, events) {
   if (!hits.length) return;
   const bvel = ball.vel.clone(), push = new V3(), dv = new V3(), spin = new V3();
   const share = CAR_MASS / (CAR_MASS + BALL_MASS);
+  const strikers = [];
   for (const [car, { n, pen }] of hits) {
     push.addScaledVector(n, pen);
     // Velocity of the car at the contact point, including its rotation: the nose of a flipping car is
@@ -1047,13 +1056,35 @@ function collideCarsBall(cars, ball, events) {
       dv.addScaledVector(dir, rs * scale);
       const power = Math.max(rs, -vn);
       events.push({ type: "touch", team: car.team, car: car.idx, power });
+      strikers.push(car);
       car.lastTouch = performance.now ? performance.now() : 0;
     }
   }
   if (spin.lengthSq() > 0) ball.spin.add(spin);
   ball.pos.add(push);
   ball.vel.add(dv);
+  if (strikers.length === 1 && strikers[0].assist) shotAssist(strikers[0], ball);
   if (ball.vel.length() > BALL_MAX) ball.vel.setLength(BALL_MAX);
+}
+// Shot assist (players can switch it off): a shot already heading for the opponent's goal that would just
+// miss the posts is bent back inside them, and one about to sail over the bar is brought down under it.
+// Shots that are way off, slow, or going the other way are left alone.
+function shotAssist(car, ball) {
+  const sign = car.team === 0 ? 1 : -1, v = ball.vel;
+  if (v.z * sign < 10) return;
+  const dz = sign * HL - ball.pos.z, t = dz / v.z;
+  if (t <= 0 || t > 2.6) return;
+  const px = ball.pos.x + v.x * t, lim = GW - BALL_R - 1.6;
+  if (Math.abs(px) > GW + 16) return;
+  const hs = Math.hypot(v.x, v.z);
+  if (Math.abs(px) > lim) {
+    const want = new V3(clamp(px, -lim, lim) - ball.pos.x, 0, dz).normalize(), cur = new V3(v.x, 0, v.z).normalize();
+    cur.copy(want);
+    v.x = cur.x * hs; v.z = cur.z * hs;
+  }
+  const t2 = dz / v.z, top = GH - BALL_R - 1.2;
+  const yAt = ball.pos.y + v.y * t2 - 0.5 * BALL_G * t2 * t2;
+  if (yAt > top && yAt < top + 10) v.y = (GH * 0.45 - ball.pos.y + 0.5 * BALL_G * t2 * t2) / t2;
 }
 
 // ---- TemuBot -------------------------------------------------------------------
@@ -1876,9 +1907,11 @@ seats.forEach((s, i) => {
 });
 standsGroup.add(crowdBody, crowdHead, crowdArms);
 let cheer = null;                       // {team, t}
+let crowdTick = 0;
 function updateCrowd(dt, t) {
   if (cheer) { cheer.t += dt; if (cheer.t > 5) cheer = null; }
   if (!crowdBody.visible) return;
+  if (!cheer && (crowdTick++ % 4)) return;                     // idle swaying doesn't need every frame
   const fade = cheer ? Math.max(0, 1 - cheer.t / 4.5) : 0;
   seats.forEach((s, i) => {
     let dy = Math.sin(t * 1.3 + s.phase) * 0.04, arms = false;
@@ -2921,7 +2954,7 @@ const sfx = {
 const CHATS = ["Nice shot!", "What a save!", "I got it!", "Defending...", "Thanks!", "Sorry! (refund issued)"];
 const STATES = ["countdown", "play", "goal", "over"];
 const state = { screen: "menu", match: null, attract: null, paused: false, skill: 1, ballCam: [true, true], t: 0, keys: new Set(), shake: 0,
-  local: [], online: false, touch: false, stick: { active: false, x: 0, y: 0, id: null }, nick: "", look: DEFAULT_LOOK.slice() };
+  local: [], online: false, touch: false, stick: { active: false, x: 0, y: 0, id: null }, nick: "", look: DEFAULT_LOOK.slice(), assist: true };
 try {
   const saved = JSON.parse(localStorage.getItem("rocket-temu-3d") || "{}");
   if (Number.isInteger(saved.skill) && saved.skill >= 0 && saved.skill < BOT_SKILLS.length) state.skill = saved.skill;
@@ -2929,11 +2962,12 @@ try {
   if (typeof saved.sound === "boolean") sound.on = saved.sound;
   if (typeof saved.nick === "string") state.nick = saved.nick;
   if (saved.look) state.look = cleanLook(saved.look);
+  if (typeof saved.assist === "boolean") state.assist = saved.assist;
   if (Number.isInteger(saved.ball)) state.ball = saved.ballv === 2 ? saved.ball : saved.ball === 2 ? 1 : 0;   // older saves had 5 balls
   if (!(state.ball >= 0 && state.ball < BALLS.length)) state.ball = 0;
   if (Number.isInteger(saved.arena) && saved.arena >= 0 && saved.arena < ARENAS.length) state.arena = saved.arena;
 } catch (_) {}
-function persist() { try { localStorage.setItem("rocket-temu-3d", JSON.stringify({ skill: state.skill, ballCam: state.ballCam[0], sound: sound.on, nick: state.nick, look: state.look, ball: state.ball || 0, ballv: 2, arena: state.arena || 0, gfx: quality.chosen ? (quality.high ? "high" : "low") : undefined })); } catch (_) {} }
+function persist() { try { localStorage.setItem("rocket-temu-3d", JSON.stringify({ skill: state.skill, ballCam: state.ballCam[0], sound: sound.on, nick: state.nick, look: state.look, ball: state.ball || 0, ballv: 2, assist: state.assist, arena: state.arena || 0, gfx: quality.chosen ? (quality.high ? "high" : "low") : undefined })); } catch (_) {} }
 
 const K = (...codes) => codes.some((c) => state.keys.has(c));
 const dead = (v) => (Math.abs(v) < 0.14 ? 0 : clamp((v - Math.sign(v) * 0.14) / 0.76, -1, 1));
@@ -3104,6 +3138,17 @@ document.addEventListener("pointerdown", () => document.querySelectorAll(".padfo
 
 // ---- World views for a match ---------------------------------------------------------------
 let views = null;
+// Compile every material's shader up front (trails, goal explosion, new cars), so nothing stalls the
+// first time it appears mid-game
+function warmUp() {
+  for (const cv of views.cars) if (!cv.trails) { cv.trails = makeTrails(cv); for (const tr of cv.trails) tr.mesh.visible = false; }
+  const was = shock.visible; shock.visible = true;
+  try { renderer.compile(scene, cams[0]); } catch (_) {}
+  shock.visible = was;
+  dyn.ratio = dyn.base = 0; dyn.steps = 0;
+  if (renderer.getPixelRatio() !== baseRatio()) { renderer.setPixelRatio(baseRatio()); resize(); }
+}
+function baseRatio() { return Math.min(window.devicePixelRatio || 1, quality.high ? 2 : quality.auto ? 1.25 : 1.5); }
 function unbindMatch() {
   if (!views) return;
   for (const cv of views.cars) disposeCarView(cv);
@@ -3117,6 +3162,7 @@ function bindMatch(m) {
   }
   views = { match: m, cars: m.cars.map((c) => makeCarView(c)), pads: m.pads.map(makePadView) };
   clearSkids();
+  warmUp();
   plist.length = 0; cheer = null; feed.length = 0;
 }
 
@@ -3308,6 +3354,13 @@ function syncWorld(m, dt, t) {
   const bh = Math.max(0, b.pos.y - b.r), bs = b.r * 2.4 * Math.max(0.35, 1 - bh / 25);
   ballShadow.position.set(bp.x, 0.03, bp.z);
   focus.copy(bp); ballShadow.scale.set(bs, bs, 1); ballShadow.material.opacity = Math.max(0.25, 1 - bh / 20);
+  const bv = b.vel.length();
+  if (bv > 38 && dt > 0) {                                        // fast shots leave a streak of fire
+    const team = m.lastTouch === 1 ? 1 : 0, cols = team ? [0xff7a10, 0xffb030, 0xffe08a] : [0x3a8bff, 0x7cc8ff, 0xd8f0ff];
+    const n = bv > 60 ? 3 : 2;
+    for (let k = 0; k < n; k++) emit(bp.clone().add(new THREE.Vector3((Math.random() - 0.5) * b.r, (Math.random() - 0.5) * b.r, (Math.random() - 0.5) * b.r)),
+      b.vel.clone().multiplyScalar(-0.05), 0.3 + Math.random() * 0.2, cols[k % 3], 0, true);
+  }
   views.cars.forEach((cv, i) => {                    // someone joined or changed cars: rebuild that car
     const car = cv.car;
     if (cv.lookKey !== (car.look || DEFAULT_LOOK).join(",")) { disposeCarView(cv); views.cars[i] = makeCarView(car); }
@@ -3358,6 +3411,7 @@ function handleEvents(m, celebrate) {
     } else if (e.type === "touch" && celebrate) {
       if (e.power > 6) sfx.hit(e.power);
       const who = state.local.indexOf(e.car); if (who >= 0) rumble(who, Math.min(1, e.power / 40), Math.min(1, e.power / 25), 90);
+      if (who >= 0) { const kmh = Math.round(m.ball.vel.length() * 3.6); if (kmh >= 80) showShot(kmh); if (kmh >= 150) state.shake = Math.max(state.shake, 0.12); }
     }
     else if (e.type === "demo") {
       burst(e.pos, [TEAM_HEX[e.team], 0xffc428, 0xff5a00], 180, 18, 1.0, 4, true); burst(e.pos, [0x333333, 0x555555], 80, 10, 1.6, 3);
@@ -3397,7 +3451,7 @@ function netConnect() {
   let opened = false, ws;
   try { ws = new WebSocket(url); } catch (_) { netStatus(noServer, true); return; }
   net.ws = ws;
-  ws.onopen = () => { opened = true; netStatus("Connected. Pick Quick play or a lobby below."); netSend({ t: "hello", name: nickValue(), look: state.look }); netSend({ t: "list" }); if (net.want) { netSend(net.want); net.want = null; } };
+  ws.onopen = () => { opened = true; netStatus("Connected. Pick Quick play or a lobby below."); netSend({ t: "hello", name: nickValue(), look: state.look, assist: state.assist }); netSend({ t: "list" }); if (net.want) { netSend(net.want); net.want = null; } };
   ws.onmessage = (ev) => { let m; try { m = JSON.parse(ev.data); } catch (_) { return; } onNet(m); };
   ws.onclose = () => {
     const wasPlaying = state.online;
@@ -3441,7 +3495,7 @@ function renderLobbies() {
 function netJoin(msg) {
   audio();
   state.nick = nickValue(); persist();
-  if (net.ws && net.ws.readyState === 1) { netSend({ t: "hello", name: state.nick, look: state.look }); netSend(msg); netStatus("Joining..."); }
+  if (net.ws && net.ws.readyState === 1) { netSend({ t: "hello", name: state.nick, look: state.look, assist: state.assist }); netSend(msg); netStatus("Joining..."); }
   else { net.want = msg; netConnect(); }
 }
 function startOnline(j) {
@@ -3544,6 +3598,13 @@ function renderFeed() {
 }
 const STAT_NAMES = { goal: "GOAL", assist: "ASSIST", save: "SAVE", shot: "SHOT ON GOAL", demo: "DEMOLITION" };
 let popTimer = 0;
+// Shot speed: how hard you just hit it
+function showShot(kmh) {
+  const el = $("shotspeed");
+  el.textContent = kmh + " KM/H"; el.classList.toggle("hot", kmh >= 150);
+  el.hidden = false; el.classList.remove("go"); void el.offsetWidth; el.classList.add("go");
+  clearTimeout(showShot.t); showShot.t = setTimeout(() => { el.hidden = true; }, 1400);
+}
 function showPop(text) {
   const el = $("pop"); el.textContent = text; el.hidden = false;
   el.classList.remove("go"); void el.offsetWidth; el.classList.add("go");
@@ -3796,7 +3857,7 @@ function startMatch(kind) {
   const preset = PRESETS[kind];
   state.match = new Match(Object.assign({ mode: kind, skill: state.skill }, preset));
   state.local = preset.humans.slice();
-  for (const i of state.local) state.match.cars[i].look = state.look.slice();
+  for (const i of state.local) { state.match.cars[i].look = state.look.slice(); state.match.cars[i].assist = state.assist; }
   setArena(state.arena || 0);
   state.paused = false; state.online = false;
   bindMatch(state.match);
@@ -3824,6 +3885,7 @@ function updateSettings() {
   $("gfx-name").textContent = quality.high ? "HIGH" : "LOW (faster)";
   $("snd-name").textContent = sound.on ? "ON" : "OFF";
   $("cam-name").textContent = state.ballCam[0] ? "ON" : "OFF";
+  $("assist-name").textContent = state.assist ? "ON: near-misses bend in, high shots dip under the bar" : "OFF: pure physics";
 }
 function updatePlate() {
   const B = BODIES[state.look[0]];
@@ -3885,6 +3947,7 @@ function act(name) {
   if (name === "bot" || name === "duel" || name === "2p" || name === "watch") pickArena(() => pickBall(() => startMatch(name)));
   else if (name === "cancelball") cancelBall();
   else if (name === "cancelarena") cancelArena();
+  else if (name === "assist") { state.assist = !state.assist; persist(); updateSettings(); if (state.online) netSend({ t: "hello", name: state.nick, look: state.look, assist: state.assist }); }
   else if (name === "install") install();
   else if (name === "fullscreen") fullscreen();
   else if (name === "closehelp") $("install-help").hidden = true;
@@ -3909,7 +3972,7 @@ function act(name) {
 document.querySelectorAll("[data-act]").forEach((b) => b.addEventListener("click", () => act(b.dataset.act)));
 $("b-cam").addEventListener("click", () => act("cam")); $("b-sound").addEventListener("click", () => act("sound"));
 $("b-pause").addEventListener("click", () => act("pause")); $("b-menu").addEventListener("click", () => act("menu"));
-$("nick").addEventListener("change", () => { state.nick = nickValue(); persist(); netSend({ t: "hello", name: state.nick, look: state.look }); });
+$("nick").addEventListener("change", () => { state.nick = nickValue(); persist(); netSend({ t: "hello", name: state.nick, look: state.look, assist: state.assist }); });
 function showOver(m) {
   if (state.online) setText($("over-next"), "overnext", net.nextIn > 0 ? `Next match starts in ${net.nextIn} s. Stay in the lobby or leave.` : "Next match starting...");
   if (!$("over").hidden) return;
@@ -4131,6 +4194,7 @@ window.addEventListener("pointermove", (e) => {
 window.addEventListener("pointerup", () => { garage.drag = null; });
 
 function resize() {
+  resize.n = (resize.n || 0) + 1;
   const w = app.clientWidth, h = app.clientHeight;
   renderer.setSize(w, h, false);
   if (composer) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h); }
@@ -4264,18 +4328,20 @@ function interpolate(alpha) {
 }
 // Dynamic resolution: if frames start taking too long during a match, draw fewer pixels (and more again
 // when there's room), so the frame rate holds steady instead of the game dropping to 30
-const dyn = { base: 0, ratio: 0, ema: 1 / 60, last: 0, check: 0 };
+// Changing the resolution is itself a hiccup, so it only ever steps down (at most twice), and only after the
+// game has been slow for a few seconds in a row; it never bounces back up mid-match.
+const dyn = { base: 0, ratio: 0, ema: 1 / 60, last: 0, check: 0, slow: 0, steps: 0 };
 function dynamicResolution(now) {
   if (!dyn.base) { dyn.base = renderer.getPixelRatio(); dyn.ratio = dyn.base; }
   const ft = dyn.last ? Math.min(0.1, (now - dyn.last) / 1000) : 1 / 60; dyn.last = now;
-  if (state.screen !== "match" || document.hidden) { dyn.check = now + 1500; return; }
-  dyn.ema += (ft - dyn.ema) * 0.05;
+  if (state.screen !== "match" || document.hidden || state.paused) { dyn.check = now + 3000; dyn.slow = 0; return; }
+  dyn.ema += (ft - dyn.ema) * 0.03;
   if (now < dyn.check) return;
-  dyn.check = now + 1200;
-  let r = dyn.ratio;
-  if (dyn.ema > 1 / 48) r = Math.max(dyn.base * 0.6, 0.6, r * 0.85);
-  else if (dyn.ema < 1 / 57 && r < dyn.base) r = Math.min(dyn.base, r * 1.1);
-  if (Math.abs(r - dyn.ratio) > 0.01) { dyn.ratio = r; renderer.setPixelRatio(r); resize(); dyn.check = now + 2000; }
+  dyn.check = now + 1500;
+  dyn.slow = dyn.ema > 1 / 45 ? dyn.slow + 1 : 0;
+  if (dyn.slow < 3 || dyn.steps >= 2) return;
+  const r = Math.max(dyn.base * 0.6, 0.6, dyn.ratio * 0.8);
+  if (dyn.ratio - r > 0.05) { dyn.ratio = r; dyn.steps++; renderer.setPixelRatio(r); resize(); dyn.check = now + 6000; dyn.slow = 0; }
 }
 // If HIGH graphics run slowly on this device (and the player never picked a setting), switch off
 // the expensive parts (glow, real shadows, extra pixels) so the game stays smooth.
@@ -4290,7 +4356,7 @@ function autoQuality(now) {
   perf.done = true;
   if (perf.frames / secs >= 40) return;
   quality.high = false; composer = null; sun.castShadow = false;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25)); ballShadow.visible = true; dyn.base = 0;
+  quality.auto = true; renderer.setPixelRatio(baseRatio()); ballShadow.visible = true; dyn.base = 0;
   resize();
 }
 applyBall();
@@ -4350,7 +4416,7 @@ if (app_.pwa && "serviceWorker" in navigator && (location.protocol === "https:" 
 updateInstall();
 // Installed app (or a phone): use the whole screen, keeping clear of the notch and status bar
 if (app_.standalone || /[?&]app=1/.test(location.search) || matchMedia("(pointer: coarse)").matches) document.documentElement.classList.add("app-mode");
-window.rocketTemu = { state, act, net, replay, setArena, views: () => views, skids: () => skidN, addSkid, advance(secs) { for (let i = 0; i < secs * FPS; i++) step(1 / FPS); } };
+window.rocketTemu = { state, act, net, replay, setArena, dbg: () => ({ resizes: resize.n, ratio: renderer.getPixelRatio(), dyn }), views: () => views, skids: () => skidN, addSkid, advance(secs) { for (let i = 0; i < secs * FPS; i++) step(1 / FPS); } };
 })();
 </script>
 </body>

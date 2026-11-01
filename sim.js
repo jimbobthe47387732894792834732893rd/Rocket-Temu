@@ -491,6 +491,7 @@ function collideCarsBall(cars, ball, events) {
   if (!hits.length) return;
   const bvel = ball.vel.clone(), push = new V3(), dv = new V3(), spin = new V3();
   const share = CAR_MASS / (CAR_MASS + BALL_MASS);
+  const strikers = [];
   for (const [car, { n, pen }] of hits) {
     push.addScaledVector(n, pen);
     // Velocity of the car at the contact point, including its rotation: the nose of a flipping car is
@@ -515,13 +516,35 @@ function collideCarsBall(cars, ball, events) {
       dv.addScaledVector(dir, rs * scale);
       const power = Math.max(rs, -vn);
       events.push({ type: "touch", team: car.team, car: car.idx, power });
+      strikers.push(car);
       car.lastTouch = performance.now ? performance.now() : 0;
     }
   }
   if (spin.lengthSq() > 0) ball.spin.add(spin);
   ball.pos.add(push);
   ball.vel.add(dv);
+  if (strikers.length === 1 && strikers[0].assist) shotAssist(strikers[0], ball);
   if (ball.vel.length() > BALL_MAX) ball.vel.setLength(BALL_MAX);
+}
+// Shot assist (players can switch it off): a shot already heading for the opponent's goal that would just
+// miss the posts is bent back inside them, and one about to sail over the bar is brought down under it.
+// Shots that are way off, slow, or going the other way are left alone.
+function shotAssist(car, ball) {
+  const sign = car.team === 0 ? 1 : -1, v = ball.vel;
+  if (v.z * sign < 10) return;
+  const dz = sign * HL - ball.pos.z, t = dz / v.z;
+  if (t <= 0 || t > 2.6) return;
+  const px = ball.pos.x + v.x * t, lim = GW - BALL_R - 1.6;
+  if (Math.abs(px) > GW + 16) return;
+  const hs = Math.hypot(v.x, v.z);
+  if (Math.abs(px) > lim) {
+    const want = new V3(clamp(px, -lim, lim) - ball.pos.x, 0, dz).normalize(), cur = new V3(v.x, 0, v.z).normalize();
+    cur.copy(want);
+    v.x = cur.x * hs; v.z = cur.z * hs;
+  }
+  const t2 = dz / v.z, top = GH - BALL_R - 1.2;
+  const yAt = ball.pos.y + v.y * t2 - 0.5 * BALL_G * t2 * t2;
+  if (yAt > top && yAt < top + 10) v.y = (GH * 0.45 - ball.pos.y + 0.5 * BALL_G * t2 * t2) / t2;
 }
 
 // ---- TemuBot -------------------------------------------------------------------
