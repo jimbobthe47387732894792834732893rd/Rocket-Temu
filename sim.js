@@ -30,6 +30,10 @@ const BOOST_ACCEL = 19.83, BOOST_ACCEL_AIR = 21.17, AIR_THROTTLE = 1.33;
 const BRAKE = 70, COAST = 10.5, BOOST_USE = 33.3, STICKY = 6.5;
 const JUMP_VEL = 5.83, JUMP_HOLD_ACCEL = 29.17, JUMP_HOLD_TIME = 0.2, DOUBLE_JUMP = 5.83;
 const DODGE_IMPULSE = 10, DODGE_WINDOW = 1.25, FLIP_TIME = 0.65;
+// Rocket League jump and dodge details (RocketSim values, uu/50)
+const JUMP_MIN_TIME = 0.025;                            // even a tap holds the jump this long
+const FLIP_SCALE_FWD = 1, FLIP_SCALE_BACK = 2.5, FLIP_SCALE_SIDE = 1.9, FLIP_BACK_X = 16 / 15;   // impulse grows with speed
+const FLIP_Z_DAMP = 0.35, FLIP_Z_DAMP_START = 0.15, FLIP_Z_DAMP_END = 0.21;                     // flips 'hang' for a moment
 // Air control (Rocket League's measured torque and damping per axis, local frame)
 const T_PITCH = 12.15, T_YAW = 8.92, T_ROLL = 36.08, D_PITCH = -2.80, D_YAW = -1.89, D_ROLL = -4.47, MAX_SPIN = 5.5;
 const CAR_MASS = 180, BALL_MASS = 30;
@@ -216,7 +220,7 @@ class Car {
     this.pos.copy(pos); this.pos.y = CAR_REST; this.vel.set(0, 0, 0); this.angVel.set(0, 0, 0);
     this.yaw = yaw; this.quat.setFromAxisAngle(UP, yaw);
     this.onGround = true; this.boosting = false; this.jumpPrev = false; this.airTime = 0; this.jumpT = 0; this.jumpHeld = false;
-    this.canDodge = false; this.hasDoubled = false; this.flipLeft = 0; this.flipAxis.set(0, 0, 0); this.contactT = 0; this.slideT = 0;
+    this.canDodge = false; this.hasDoubled = false; this.flipLeft = 0; this.flipAxis.set(0, 0, 0); this.contactT = 0; this.slideT = 0; this.jumped = false;
     this.demolished = false; this.respawn = 0; this.supersonicT = 0;
   }
   forward() { return new V3(0, 0, 1).applyQuaternion(this.quat); }
@@ -229,7 +233,7 @@ class Car {
     return [this.pos.x, this.pos.y, this.pos.z, this.vel.x, this.vel.y, this.vel.z, this.quat.x, this.quat.y, this.quat.z, this.quat.w,
       this.angVel.x, this.angVel.y, this.angVel.z, this.airTime, this.jumpT, this.flipLeft, this.flipAxis.x, this.flipAxis.y, this.flipAxis.z,
       this.respawn, this.supersonicT, this.boost, this.contactT, this.slideT || 0].map(r).concat([
-      (this.onGround ? 1 : 0) | (this.canDodge ? 2 : 0) | (this.hasDoubled ? 4 : 0) | (this.jumpPrev ? 8 : 0) | (this.demolished ? 16 : 0) | (this.boosting ? 32 : 0) | (this.jumpHeld ? 64 : 0)]);
+      (this.onGround ? 1 : 0) | (this.canDodge ? 2 : 0) | (this.hasDoubled ? 4 : 0) | (this.jumpPrev ? 8 : 0) | (this.demolished ? 16 : 0) | (this.boosting ? 32 : 0) | (this.jumpHeld ? 64 : 0) | (this.jumped ? 128 : 0)]);
   }
   deserialize(v) {
     this.pos.set(v[0], v[1], v[2]); this.vel.set(v[3], v[4], v[5]); this.quat.set(v[6], v[7], v[8], v[9]).normalize();
@@ -237,7 +241,7 @@ class Car {
     this.respawn = v[19]; this.supersonicT = v[20]; this.boost = v[21]; this.contactT = v[22]; this.slideT = v[23];
     const f = v[24];
     this.onGround = !!(f & 1); this.canDodge = !!(f & 2); this.hasDoubled = !!(f & 4); this.jumpPrev = !!(f & 8);
-    this.demolished = !!(f & 16); this.boosting = !!(f & 32); this.jumpHeld = !!(f & 64);
+    this.demolished = !!(f & 16); this.boosting = !!(f & 32); this.jumpHeld = !!(f & 64); this.jumped = !!(f & 128);
     const fw = this.forward(); this.yaw = Math.atan2(fw.x, fw.z);
   }
   update(c, dt, m) {
@@ -310,22 +314,29 @@ class Car {
     }
     if (jumpPressed) {
       this.leaveGround(); this.vel.addScaledVector(n, JUMP_VEL); this.pos.addScaledVector(n, 0.05);
-      this.jumpT = 0; this.jumpHeld = true; this.canDodge = true; this.hasDoubled = false;
+      this.jumpT = 0; this.jumpHeld = true; this.canDodge = true; this.hasDoubled = false; this.jumped = true;
     }
   }
-  leaveGround() { this.onGround = false; this.airTime = 0; this.canDodge = true; this.contactT = 0; }
+  // Leaving a surface without jumping (driving off a wall or ramp, a bump): the flip stays available until you land
+  leaveGround() { this.onGround = false; this.airTime = 0; this.canDodge = true; this.contactT = 0; this.jumped = false; this.jumpHeld = false; }
+  // Touching the ball with the wheels in the air gives the flip back (a 'flip reset')
+  flipReset() { if (this.onGround || this.canDodge && !this.jumped) return false; this.canDodge = true; this.jumped = false; this.hasDoubled = false; return true; }
   fly(c, dt, m, jumpPressed) {
-    this.airTime += dt; this.jumpT += dt;
-    // Holding jump right after jumping makes it higher
+    this.jumpT += dt;
+    // Holding jump right after jumping makes it higher (a tap still holds for a moment)
     if (this.jumpHeld) {
-      if (c.jump && this.jumpT < JUMP_HOLD_TIME) this.vel.addScaledVector(this.up(), JUMP_HOLD_ACCEL * dt);
+      if ((c.jump || this.jumpT < JUMP_MIN_TIME) && this.jumpT < JUMP_HOLD_TIME) this.vel.addScaledVector(this.up(), JUMP_HOLD_ACCEL * dt);
       else this.jumpHeld = false;
     }
+    if (!this.jumpHeld) this.airTime += dt;              // the 1.25 s window for the second jump starts when the jump ends
     const inv = this.quat.clone().invert();
     const w = this.angVel.clone().applyQuaternion(inv);   // local: x = pitch (nose down +), y = yaw (left +), z = roll
     if (this.flipLeft > 0) {
       this.flipLeft -= dt;
       w.copy(this.flipAxis);
+      // Flip cancel: holding the stick against a front or back flip stops it rotating
+      const p = c.pitch == null ? c.throttle : c.pitch;
+      if (this.flipAxis.x * p < 0) w.x *= 1 - Math.min(1, Math.abs(p));
       if (this.flipLeft <= 0) w.multiplyScalar(0.25);
     } else {
       const p = c.pitch == null ? c.throttle : c.pitch, y = -c.steer, r = c.roll;
@@ -334,16 +345,17 @@ class Car {
       w.z += (T_ROLL * r + D_ROLL * w.z) * dt;
       const l = w.length(); if (l > MAX_SPIN) w.multiplyScalar(MAX_SPIN / l);
     }
-    if (jumpPressed && this.canDodge && this.airTime < DODGE_WINDOW && !this.jumpNow && !(this.contactT > 0)) {
+    if (jumpPressed && this.canDodge && (!this.jumped || this.airTime < DODGE_WINDOW) && !this.jumpNow && !(this.contactT > 0)) {
       this.canDodge = false; this.jumpHeld = false;
       const fp = c.pitch == null ? c.throttle : c.pitch;
       if (Math.hypot(fp, c.steer) > 0.5) {           // dodge / flip in the pressed direction (half-way stick or more)
         const fw = flat(this.forward()).normalize(), lf = new V3(fw.z, 0, -fw.x);
-        const sp = flat(this.vel).length();
-        const fwd = fp * DODGE_IMPULSE, side = -c.steer * DODGE_IMPULSE * (1 + 0.9 * sp / MAX_SPEED);
+        const fl = Math.hypot(fp, c.steer) || 1, dx = fp / fl, dy = -c.steer / fl;
+        const ratio = Math.min(1, Math.abs(this.vel.dot(fw)) / MAX_SPEED), back = dx < 0;
+        let fwd = dx * DODGE_IMPULSE * (((back ? FLIP_SCALE_BACK : FLIP_SCALE_FWD) - 1) * ratio + 1);
+        if (back) fwd *= FLIP_BACK_X;
+        const side = dy * DODGE_IMPULSE * ((FLIP_SCALE_SIDE - 1) * ratio + 1);
         this.vel.addScaledVector(fw, fwd).addScaledVector(lf, side);
-        this.vel.y = Math.max(this.vel.y * 0.35, 0);
-        const fl = Math.hypot(fp, c.steer) || 1;
         this.flipAxis.set((fp / fl) * (Math.PI * 2) / FLIP_TIME, 0, (c.steer / fl) * (Math.PI * 2) / FLIP_TIME);
         this.flipLeft = FLIP_TIME;
       } else {
@@ -360,6 +372,9 @@ class Car {
     if (this.boosting) this.vel.addScaledVector(this.forward(), BOOST_ACCEL_AIR * dt);
     else if (c.throttle) this.vel.addScaledVector(this.forward(), AIR_THROTTLE * c.throttle * dt);
     this.vel.y -= GRAVITY * m.grav * dt;
+    // Early in a flip, vertical speed is damped away (always at first, then only while falling)
+    const fe = FLIP_TIME - this.flipLeft;
+    if (this.flipLeft > 0 && (fe < FLIP_Z_DAMP_START || (fe < FLIP_Z_DAMP_END && this.vel.y < 0))) this.vel.y *= Math.pow(1 - FLIP_Z_DAMP, dt * 120);
   }
   // Keep a driving car on its surface; follow the curve of the walls; bump into anything else.
   stick(dt) {
@@ -517,6 +532,7 @@ function collideCarsBall(cars, ball, events) {
       dv.addScaledVector(dir, rs * scale);
       const power = Math.max(rs, -vn);
       events.push({ type: "touch", team: car.team, car: car.idx, power });
+      if (!car.onGround && n.dot(car.up()) < -0.8 && car.flipReset()) events.push({ type: "flipreset", car: car.idx, pos: car.pos.clone() });
       strikers.push(car);
       car.lastTouch = performance.now ? performance.now() : 0;
     }
