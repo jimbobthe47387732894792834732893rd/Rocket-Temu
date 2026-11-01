@@ -166,6 +166,7 @@
   .tbtn.jump { width: 100%; aspect-ratio: 1; background: rgba(60,130,255,.66); }
   .tbtn.boost { width: 86%; aspect-ratio: 1; background: rgba(251,119,1,.74); }
   .tbtn.chat { width: 46%; aspect-ratio: 1; font-size: 12px; background: rgba(16,13,34,.7); order: -1; }
+  .tbtn.drift { position: absolute; right: calc(100% + 12px); bottom: 4px; width: 50%; aspect-ratio: 1; font-size: clamp(13px, 3.6vw, 16px); background: rgba(150,90,255,.7); }
   .tbtn.on { filter: brightness(1.45); transform: scale(.96); }
   #chat-row { position: absolute; right: calc(28px + clamp(120px, 32vw, 150px)); bottom: 18px; display: flex; flex-direction: column; gap: 6px; pointer-events: auto; }
   /* Landscape: a diagonal cluster, Boost up-left of Jump */
@@ -174,6 +175,7 @@
   #touch.landscape .tbtn.jump { right: 0; bottom: 0; width: 56%; }
   #touch.landscape .tbtn.boost { left: 0; top: 0; width: 48%; }
   #touch.landscape .tbtn.chat { left: 0; bottom: 0; width: 26%; }
+  #touch.landscape .tbtn.drift { right: 0; top: 0; bottom: auto; width: 32%; }
   #touch.landscape #stick-zone { width: calc(100% - 272px); }
   #touch.landscape #chat-row { right: 270px; }
   #chat-row button, .chat-keys button { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; font-weight: 800; font-size: 14px; text-align: left; }
@@ -354,6 +356,7 @@
       <button class="tbtn chat" type="button" id="t-chat" hidden>CHAT</button>
       <button class="tbtn boost" type="button" data-key="TouchBoost">BOOST</button>
       <button class="tbtn jump" type="button" data-key="TouchJump">JUMP</button>
+      <button class="tbtn drift" type="button" data-key="TouchDrift">DRIFT</button>
     </div>
     <div id="chat-row" hidden></div>
   </div>
@@ -433,6 +436,7 @@
         <div><b style="color:var(--org)">PLAYER 2</b>Arrow keys drive and steer<br>Enter or Right Ctrl jump &middot; Right Shift boost<br>, / . air roll</div>
         <div><b style="color:var(--gold)">IN THE AIR</b>Tap jump for a hop, hold it to jump higher. Jump again within 1.25 s to double jump or flip. Pull back during a front flip to cancel it. Drive off a wall without jumping and you keep your flip. Wheels on the ball in the air give a flip reset. Upside down? Press jump to roll back over.</div>
         <div><b style="color:#cfc9ff">CAMERA, SOUND, CHAT</b>C ball cam &middot; M mute &middot; P pause &middot; Esc menu<br>Online: keys 1 to 6 send quick chat</div>
+        <div class="span2"><b style="color:#b98cff">DRIFT / BRAKE</b>X on a keyboard or controller powerslides. On phones and tablets, hold DRIFT while steering to drift, or hold it with the stick let go to brake.</div>
         <div class="span2"><b style="color:#ffd23c">PRACTICE</b>R puts the ball in front of you &middot; T resets to kickoff &middot; U turns unlimited boost on or off. Controller: D-pad up / down / left.</div>
         <div class="span2"><b style="color:#7dffb0">CONTROLLER</b>RT drive &middot; LT reverse &middot; left stick steer<br>A jump &middot; B boost &middot; X powerslide (hold X in the air to air roll) &middot; LB / RB air roll left / right<br>Y ball cam &middot; Start pause &middot; D-pad quick chat online &middot; menus: A select, B back</div>
       </div>
@@ -3045,6 +3049,12 @@ function readP1(solo, car) {
     const st = state.stick, sx = st.active ? dead(st.x) : 0, sy = st.active ? dead(st.y) : 0;
     if (sx) c.steer = sx;
     if (sy) c.throttle = -sy;
+    // DRIFT button: powerslide while steering; with the stick let go it's a brake
+    if (K("TouchDrift")) {
+      c.slide = true;
+      const fs = car ? car.vel.dot(car.forward()) : 0;
+      if (!sy && car && car.onGround && Math.abs(fs) > 0.5) c.throttle = -Math.sign(fs);
+    }
     // Aiming: the stick direction, turned to match the camera (up = straight ahead on screen)
     if (st.active && Math.hypot(sx, sy) > 0.35) {
       const cs = camState[0], fx = cs.look.x - cs.pos.x, fz = cs.look.z - cs.pos.z, fl = Math.hypot(fx, fz) || 1;
