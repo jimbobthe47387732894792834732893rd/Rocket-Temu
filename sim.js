@@ -38,7 +38,7 @@ const GOAL_PAUSE = 8.5;                      // celebration, then the replay, th
 
 const TEAM_NAMES = ["BLU", "ORANG"];
 const GOAL_MSGS = ["GOAL! (DELIVERED)", "GOAL! LEFT AT THE NET", "GOAL! YOUR ORDER HAS ARRIVED",
-  "GOOOAL! (SPELLING MAY VARY)", "GOAL! SHIPPED IN 2-3 BUSINESS DAYS", "GOAL! RETURNS NOT ACCEPTED"];
+  "GOAL! SHIPPED IN 2-3 BUSINESS DAYS", "GOAL! RETURNS NOT ACCEPTED"];
 const GO_WORDS = ["GO!", "SHIPPED!", "GO! (ISH)", "OUT FOR DELIVERY!"];
 const DEMO_MSGS = ["DEMOLISHED! REFUND PENDING", "DEMOLISHED! NOT COVERED BY WARRANTY", "DEMOLISHED! SOME ASSEMBLY REQUIRED"];
 const OVER_LINES = ["Your victory has shipped. Arrives in 7-21 business days.", "Trophy may differ from picture.",
@@ -1026,7 +1026,10 @@ class Match {
       }
       if (assist >= 0) this.award(assist, "assist", 50);
     }
-    this.events.push({ type: "goal", team, pos: this.ball.pos.clone(), msg: this.goalMsg[0], scorer, assist });
+    // Own goal: whoever on the other team touched it last put it in (named, but no points for it)
+    let ownBy = -1;
+    if (own) for (let k = this.touches.length - 1; k >= 0; k--) if (this.touches[k].team !== team) { ownBy = this.touches[k].car; break; }
+    this.events.push({ type: "goal", team, pos: this.ball.pos.clone(), msg: this.goalMsg[0], scorer, assist, ownBy });
     for (const car of this.cars) {                       // goal explosion
       if (car.demolished) continue;
       const d = new V3().subVectors(car.pos, this.ball.pos), dist = d.length();

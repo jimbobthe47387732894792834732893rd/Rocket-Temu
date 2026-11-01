@@ -23,6 +23,7 @@ const CHATS = ["Nice shot!", "What a save!", "I got it!", "Defending...", "Thank
 const ROOM_NAMES = ["Bargain Bin", "Clearance Aisle", "Flash Sale Arena", "Free Shipping Stadium", "Warehouse 7",
   "Lightning Lounge", "Coupon Court", "Final Markdown", "Spin-to-Win Field", "Discount Dome", "Overstock Oval", "Fine Print Park"];
 const STATES = ["countdown", "play", "goal", "over"];
+const VOTE_MS = Number(process.env.VOTE_SECONDS || 12) * 1000, ARENA_COUNT = 4;
 
 // ---- Static files -------------------------------------------------------------
 const PUBLIC = path.join(__dirname, "public");
@@ -88,11 +89,33 @@ class Room {
   }
   newMatch() {
     this.match = new S.Match({ mode: "online", teamSize: TEAM_SIZE, humans: [], skill: 1 });
+    this.startVote();
     if (Number(process.env.MATCH_SECONDS)) this.match.timeLeft = Number(process.env.MATCH_SECONDS);   // testing only
     for (const p of this.players) { this.match.setHuman(p.slot, true, p.name); this.match.cars[p.slot].look = p.look; }
     this.overSince = 0;
   }
   humans() { return this.players.size; }
+  // Arena vote before each match: everyone in the lobby picks field, turf, kart track or garage.
+  // The match waits at kickoff until the vote ends (12 s, or as soon as everyone has voted).
+  startVote() { this.vote = { start: Date.now(), ends: Date.now() + VOTE_MS, votes: new Map(), sent: 0 }; if (this.arena == null) this.arena = 0; this.sendVote(); }
+  voteCounts() { const c = new Array(ARENA_COUNT).fill(0); if (this.vote) for (const v of this.vote.votes.values()) c[v]++; return c; }
+  voteInfo(p) {
+    if (!this.vote) return null;
+    return { left: Math.max(0, Math.ceil((this.vote.ends - Date.now()) / 1000)), counts: this.voteCounts(), mine: p && this.vote.votes.has(p.id) ? this.vote.votes.get(p.id) : -1 };
+  }
+  sendVote() { if (!this.vote) return; this.vote.sent = Date.now(); for (const p of this.players) send(p, Object.assign({ t: "vote" }, this.voteInfo(p))); }
+  castVote(p, i) {
+    if (!this.vote || !Number.isInteger(i) || i < 0 || i >= ARENA_COUNT) return;
+    this.vote.votes.set(p.id, i); this.sendVote();
+  }
+  finishVote() {
+    const c = this.voteCounts(), max = Math.max(...c);
+    const best = max ? c.map((v, i) => (v === max ? i : -1)).filter((i) => i >= 0) : c.map((_, i) => i);
+    this.arena = best[(Math.random() * best.length) | 0];
+    this.vote = null;
+    const msg = JSON.stringify({ t: "arena", a: this.arena, counts: c });
+    for (const p of this.players) sendRaw(p, msg);
+  }
   freeSlot() {
     const counts = [0, 0];
     for (const p of this.players) counts[p.slot < TEAM_SIZE ? 0 : 1]++;
@@ -111,12 +134,13 @@ class Room {
     p.slot = slot; p.room = this; p.queue = []; p.ack = 0; p.last = new S.Controls(); p.lastInputAt = Date.now();
     this.players.add(p);
     this.match.setHuman(slot, true, p.name); this.match.cars[slot].look = p.look;
-    send(p, { t: "joined", room: { id: this.id, name: this.name }, you: slot, size: TEAM_SIZE, roster: this.roster() });
+    send(p, { t: "joined", room: { id: this.id, name: this.name }, you: slot, size: TEAM_SIZE, roster: this.roster(), arena: this.arena || 0, vote: this.voteInfo(p) });
     this.broadcastRoster();
     return true;
   }
   remove(p) {
     if (!this.players.delete(p)) return;
+    if (this.vote) this.vote.votes.delete(p.id);
     this.match.setHuman(p.slot, false, null);
     this.match.cars[p.slot].name = "TEMUBOT " + (p.slot + 1); this.match.cars[p.slot].look = S.randomLook();
     p.room = null;
@@ -134,6 +158,14 @@ class Room {
       if (p.queue.length) { const q = p.queue.shift(); p.last = q.c; p.ack = q.s; }
       else if (now - p.lastInputAt > 300) p.last = new S.Controls();     // tab hidden or connection stalled
       inputs[p.slot] = p.last;
+    }
+    if (this.vote) {                                   // waiting at kickoff while the lobby votes on the arena
+      const all = this.players.size > 0 && this.vote.votes.size >= this.players.size;
+      if (now >= this.vote.ends || !this.players.size || (all && now - this.vote.start > 1500)) this.finishVote();
+      else if (now - this.vote.sent > 500) this.sendVote();
+      this.tick++;
+      if (this.tick % SNAPSHOT_EVERY === 0) this.snapshot();
+      return;
     }
     m.update(TICK, inputs);
     for (const e of m.events) this.events.push(e);
@@ -178,7 +210,7 @@ class Room {
 function lobbyList() {
   return [...rooms.values()].sort((a, b) => b.humans() - a.humans()).map((r) => ({
     id: r.id, name: r.name, humans: r.humans(), max: ROOM_SIZE, score: r.match.score, state: r.match.state,
-    time: Math.ceil(r.match.timeLeft), ot: r.match.overtime,
+    time: Math.ceil(r.match.timeLeft), ot: r.match.overtime, arena: r.arena || 0, voting: !!r.vote,
   }));
 }
 function quickRoom() {
@@ -241,6 +273,7 @@ function onMessage(p, msg, now) {
       break;
     }
     case "leave": if (p.room) p.room.remove(p); break;
+    case "vote": if (p.room) p.room.castVote(p, msg.i); break;
     case "in": {
       if (!p.room || !Number.isInteger(msg.s)) break;
       if (msg.s <= p.ack || (p.queue.length && msg.s <= p.queue[p.queue.length - 1].s)) break;

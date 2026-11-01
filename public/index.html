@@ -100,6 +100,7 @@
   .mini-board { width: 100%; display: grid; gap: 6px; }
   .mini-board table.sb th { padding: 4px 8px; font-size: 10px; } .mini-board table.sb td { padding: 4px 8px; font-size: 13px; }
   table.sb tr.scorer td { background: rgba(255,196,40,.28); color: #fff; }
+  .goalbadge.own { background: #ff6b6b; color: #fff; }
   .goalbadge { margin-left: 8px; background: var(--gold); color: #1a1426; font-size: 10px; font-weight: 900; letter-spacing: .08em; padding: 2px 6px; border-radius: 4px; vertical-align: 2px; }
   #scorer-banner { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); background: rgba(8,6,20,.85); border: 1px solid var(--line); border-radius: 999px;
     padding: 8px 18px; font-weight: 900; font-style: italic; font-size: clamp(14px, 2vw, 22px); white-space: nowrap; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; }
@@ -282,6 +283,19 @@
   .ball-card small { color: var(--muted); font-weight: 700; font-size: 12px; }
   .ball-card kbd { position: absolute; top: 8px; left: 8px; color: var(--muted); font-size: 11px; border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; }
   @media (max-width: 520px), (max-height: 480px) { .ball-list { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; } .ball-pv { width: 60px; height: 60px; } .ball-card small { display: none; } .ball-card { padding: 10px 6px; } }
+  .arena-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; width: min(960px, 100%); }
+  .arena-card { position: relative; display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 8px 8px 12px; border: 2px solid var(--line); border-radius: 14px;
+    background: linear-gradient(160deg, rgba(48,42,96,.92), rgba(22,19,46,.92)); text-align: left; }
+  .arena-card:hover, .arena-card:focus-visible { border-color: var(--temu); outline: none; transform: translateY(-2px); }
+  .arena-card[aria-current="true"] { border-color: var(--gold); box-shadow: 0 0 18px rgba(255,196,40,.3); }
+  .arena-pv { width: 100%; height: auto; aspect-ratio: 5 / 3; border-radius: 9px; display: block; }
+  .arena-card b { font-weight: 900; font-style: italic; font-size: 18px; letter-spacing: .03em; padding: 2px 4px 0; }
+  .arena-card small { color: var(--muted); font-weight: 700; font-size: 12px; padding: 0 4px; }
+  .arena-card kbd { position: absolute; top: 14px; left: 14px; background: rgba(0,0,0,.6); color: #fff; font-size: 11px; border-radius: 6px; padding: 2px 6px; }
+  .arena-card .votes { position: absolute; top: 14px; right: 14px; background: var(--gold); color: #1a1426; font-weight: 900; font-size: 12px; border-radius: 999px; padding: 2px 8px; }
+  .arena-card .votes:empty { display: none; }
+  #vote { background: radial-gradient(ellipse at center, rgba(6,5,14,.7), rgba(6,5,14,.92)); z-index: 4; }
+  @media (max-width: 640px), (max-height: 520px) { .arena-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .arena-card small { display: none; } .arena-card b { font-size: 15px; } .arena-pv { aspect-ratio: 2 / 1; } }
   /* Garage */
   .gpanel { position: absolute; left: clamp(16px, 3vw, 40px); top: 76px; bottom: 40px; width: min(440px, 44vw); display: flex; flex-direction: column; gap: 10px;
     background: rgba(12,10,26,.82); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
@@ -454,6 +468,24 @@
     </div>
   </div>
 
+  <div id="arenapick" class="overlay" hidden>
+    <div class="card">
+      <h2 class="pick-title">PICK AN ARENA</h2>
+      <p class="tag">Same pitch, same physics, different place.</p>
+      <div id="arena-list" class="arena-list"></div>
+      <div class="row"><button class="btn" type="button" data-act="cancelarena">Back (Esc)</button></div>
+    </div>
+  </div>
+
+  <div id="vote" class="overlay" hidden>
+    <div class="card">
+      <h2 class="pick-title">VOTE FOR THE ARENA</h2>
+      <p class="tag" id="vote-left">Match starts in 12 s</p>
+      <div id="vote-list" class="arena-list"></div>
+      <p class="fine">Most votes wins. A tie is decided at random. Keys 1 to 4 vote too.</p>
+    </div>
+  </div>
+
   <div id="ballpick" class="overlay" hidden>
     <div class="card">
       <h2 class="pick-title">PICK A BALL</h2>
@@ -538,7 +570,7 @@ const GOAL_PAUSE = 8.5;                      // celebration, then the replay, th
 
 const TEAM_NAMES = ["BLU", "ORANG"];
 const GOAL_MSGS = ["GOAL! (DELIVERED)", "GOAL! LEFT AT THE NET", "GOAL! YOUR ORDER HAS ARRIVED",
-  "GOOOAL! (SPELLING MAY VARY)", "GOAL! SHIPPED IN 2-3 BUSINESS DAYS", "GOAL! RETURNS NOT ACCEPTED"];
+  "GOAL! SHIPPED IN 2-3 BUSINESS DAYS", "GOAL! RETURNS NOT ACCEPTED"];
 const GO_WORDS = ["GO!", "SHIPPED!", "GO! (ISH)", "OUT FOR DELIVERY!"];
 const DEMO_MSGS = ["DEMOLISHED! REFUND PENDING", "DEMOLISHED! NOT COVERED BY WARRANTY", "DEMOLISHED! SOME ASSEMBLY REQUIRED"];
 const OVER_LINES = ["Your victory has shipped. Arrives in 7-21 business days.", "Trophy may differ from picture.",
@@ -1526,7 +1558,10 @@ class Match {
       }
       if (assist >= 0) this.award(assist, "assist", 50);
     }
-    this.events.push({ type: "goal", team, pos: this.ball.pos.clone(), msg: this.goalMsg[0], scorer, assist });
+    // Own goal: whoever on the other team touched it last put it in (named, but no points for it)
+    let ownBy = -1;
+    if (own) for (let k = this.touches.length - 1; k >= 0; k--) if (this.touches[k].team !== team) { ownBy = this.touches[k].car; break; }
+    this.events.push({ type: "goal", team, pos: this.ball.pos.clone(), msg: this.goalMsg[0], scorer, assist, ownBy });
     for (const car of this.cars) {                       // goal explosion
       if (car.demolished) continue;
       const d = new V3().subVectors(car.pos, this.ball.pos), dist = d.length();
@@ -1612,7 +1647,7 @@ const GLOW = quality.high ? 1.8 : 1;           // how far past white glowing thi
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x070814);
 scene.fog = new THREE.Fog(0x070814, 300, 680);
-scene.add(new THREE.HemisphereLight(0xc8d0ff, 0x1c2a18, quality.high ? 0.7 : 0.85));
+const hemi = new THREE.HemisphereLight(0xc8d0ff, 0x1c2a18, quality.high ? 0.7 : 0.85); scene.add(hemi);
 // The stadium lights: one strong light that follows the action so its shadows stay sharp
 const sun = new THREE.DirectionalLight(0xfff4e0, quality.high ? 1.0 : 0.75);
 sun.position.set(60, 160, 40); scene.add(sun); scene.add(sun.target);
@@ -1721,25 +1756,28 @@ const floorGeo = new THREE.ShapeGeometry(floorShape);
   const ps = floorGeo.attributes.position, uv = floorGeo.attributes.uv;
   for (let i = 0; i < ps.count; i++) uv.setXY(i, (ps.getX(i) + HW) / (2 * HW), (ps.getY(i) + HL) / (2 * HL));
 }
-const floor = new THREE.Mesh(floorGeo, lam(0xffffff, { map: floorTex }));
+const floor = new THREE.Mesh(floorGeo, lam(0xffffff, { map: floorTex }));   // material replaced by the arena theme
 floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true;
 scene.add(floor);
 const turf = lam(0x2f8f4a);
+const goalFloors = [];
 for (const s of [-1, 1]) {
   const strip = new THREE.Mesh(new THREE.PlaneGeometry(2 * GW, RE + 0.2), turf);
   strip.rotation.x = -Math.PI / 2; strip.position.set(0, 0.005, s * (HL - RE / 2 + 0.1)); scene.add(strip);
   const gf = new THREE.Mesh(new THREE.PlaneGeometry(2 * GW, GD), lam(s < 0 ? 0x1d3770 : 0x6b3410));
-  gf.rotation.x = -Math.PI / 2; gf.position.set(0, 0.01, s * (HL + GD / 2)); scene.add(gf);
+  gf.rotation.x = -Math.PI / 2; gf.position.set(0, 0.01, s * (HL + GD / 2)); scene.add(gf); goalFloors.push(gf);
 }
 // The curved bottom of the walls is solid turf-coloured; above it, smoky glass with a grid
-scene.add(new THREE.Mesh(wallGeometry(bottomRows, inMouth), lam(0x2a7a44, { side: THREE.DoubleSide })));
+const wallCurve = new THREE.Mesh(wallGeometry(bottomRows, inMouth), lam(0x2a7a44, { side: THREE.DoubleSide }));
+wallCurve.receiveShadow = true; scene.add(wallCurve);
 const gridTex = canvasTex(256, 256, (g, w, h) => {
   g.fillStyle = "rgba(40,50,110,0.5)"; g.fillRect(0, 0, w, h);
   g.strokeStyle = "rgba(160,180,255,0.35)"; g.lineWidth = 3; g.strokeRect(0, 0, w, h);
 });
 gridTex.wrapS = gridTex.wrapT = THREE.RepeatWrapping;
-scene.add(new THREE.Mesh(wallGeometry(glassRows, inMouth),
-  lam(0xffffff, { map: gridTex, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false })));
+const glassWall = new THREE.Mesh(wallGeometry(glassRows, inMouth),
+  lam(0xffffff, { map: gridTex, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false }));
+scene.add(glassWall);
 // Ceiling: a faint dark lid
 const ceilShape = new THREE.Shape();
 INNER.forEach((c, i) => (i ? ceilShape.lineTo(c.x, -c.z) : ceilShape.moveTo(c.x, -c.z)));
@@ -1772,10 +1810,11 @@ const adTex = canvasTex(2048, 96, (g, w, h) => {
   }
 });
 adTex.wrapS = THREE.RepeatWrapping;
+const adBoards = [];
 for (const sx of [-1, 1]) {
   const len = 2 * (HL - RC), t = adTex.clone(); t.needsUpdate = true; t.repeat.set(len / 80, 1);
   const ad = new THREE.Mesh(new THREE.PlaneGeometry(len, 2.4), basic(0xffffff, { map: t }));
-  ad.position.set(sx * (HW - 0.08), RE + 1.6, 0); ad.rotation.y = -sx * Math.PI / 2; scene.add(ad);
+  ad.position.set(sx * (HW - 0.08), RE + 1.6, 0); ad.rotation.y = -sx * Math.PI / 2; scene.add(ad); adBoards.push(ad);
 }
 
 // Goals: posts, nets, glow
@@ -1804,6 +1843,7 @@ for (const s of [-1, 1]) {
 
 // ---- Stands and crowd ---------------------------------------------------------------------
 const standMat = lam(0x1d1934);
+const standsGroup = new THREE.Group(); scene.add(standsGroup);       // stands, crowd and floodlights (outdoor arenas)
 const seats = [];                       // {x, y, z, team, lateral: 'x'|'z', phase}
 function standBlock(axis, sign) {       // axis 'x': stands beside the long walls; 'z': behind the goals
   const tiers = axis === "x" ? 9 : 7;
@@ -1813,7 +1853,7 @@ function standBlock(axis, sign) {       // axis 'x': stands beside the long wall
     const geo = new THREE.BoxGeometry(axis === "x" ? 3.6 : span, y, axis === "x" ? span : 3.6);
     const m = new THREE.Mesh(geo, standMat);
     if (axis === "x") m.position.set(sign * (out + 1.8), y / 2, 0); else m.position.set(0, y / 2, sign * (out + 1.8));
-    scene.add(m);
+    standsGroup.add(m);
     for (let p = -span / 2 + 1.5; p < span / 2 - 0.8; p += 2.1) {
       if (Math.random() < 0.07) continue;
       const sx = axis === "x" ? sign * (out + 1.4) : p + (Math.random() - 0.5) * 0.4;
@@ -1834,10 +1874,11 @@ seats.forEach((s, i) => {
   const skin = SKINS[(Math.random() * 4) | 0];
   crowdHead.setColorAt(i, _c.setHex(skin)); crowdArms.setColorAt(2 * i, _c); crowdArms.setColorAt(2 * i + 1, _c);
 });
-scene.add(crowdBody, crowdHead, crowdArms);
+standsGroup.add(crowdBody, crowdHead, crowdArms);
 let cheer = null;                       // {team, t}
 function updateCrowd(dt, t) {
   if (cheer) { cheer.t += dt; if (cheer.t > 5) cheer = null; }
+  if (!crowdBody.visible) return;
   const fade = cheer ? Math.max(0, 1 - cheer.t / 4.5) : 0;
   seats.forEach((s, i) => {
     let dy = Math.sin(t * 1.3 + s.phase) * 0.04, arms = false;
@@ -1863,7 +1904,330 @@ function updateCrowd(dt, t) {
 // Floodlight towers (just glowing panels) for atmosphere
 for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
   const panel = new THREE.Mesh(new THREE.BoxGeometry(6, 3, 0.6), glowMat(0xfff3d6, GLOW * 1.2));
-  panel.position.set(sx * (HW + 50), 64, sz * (HL + 36)); panel.scale.setScalar(1.8); panel.lookAt(0, 0, 0); scene.add(panel);
+  panel.position.set(sx * (HW + 50), 64, sz * (HL + 36)); panel.scale.setScalar(1.8); panel.lookAt(0, 0, 0); standsGroup.add(panel);
+}
+
+// ---- Arenas -----------------------------------------------------------------------------------------
+// Four looks for the same pitch (same walls, goals and physics): a real grass field, artificial turf,
+// an indoor karting hall and a garage. Online, the lobby votes on one before each match.
+const ARENAS = [
+  { key: "field", name: "FIELD", blurb: "Real grass under the floodlights." },
+  { key: "turf", name: "TURF", blurb: "Plastic grass. Same great price." },
+  { key: "kart", name: "KART TRACK", blurb: "Indoor karting hall. Mind the tyres." },
+  { key: "garage", name: "GARAGE", blurb: "Somebody's garage. Don't scratch the car." },
+];
+// Painting helpers: everything is drawn in field metres, so the same painter works at any texture size
+function noiseCanvas(cw, ch, lo = 0, hi = 255) {
+  const c = document.createElement("canvas"); c.width = cw; c.height = ch;
+  const x = c.getContext("2d"), img = x.createImageData(cw, ch);
+  for (let i = 0; i < cw * ch; i++) { const v = lo + Math.random() * (hi - lo); img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = v; img.data[i * 4 + 3] = 255; }
+  x.putImageData(img, 0, 0); return c;
+}
+function noiseLayer(g, w, h, cells, alpha, mode) {               // smooth blotches (a small noise image stretched over the floor)
+  const n = noiseCanvas(cells, Math.max(2, Math.round(cells * h / w)));
+  g.save(); g.globalAlpha = alpha; g.globalCompositeOperation = mode; g.imageSmoothingEnabled = true; g.drawImage(n, 0, 0, w, h); g.restore();
+}
+function strokesPattern(g, size, n, cols, len, wid, vertical) {   // a tile of short strokes (grass blades, grit), repeated
+  const c = document.createElement("canvas"); c.width = c.height = size;
+  const x = c.getContext("2d");
+  for (let i = 0; i < n; i++) {
+    x.strokeStyle = cols[(Math.random() * cols.length) | 0]; x.lineWidth = wid * (0.6 + Math.random() * 0.8);
+    const px = Math.random() * size, py = Math.random() * size, a = vertical ? -Math.PI / 2 + (Math.random() - 0.5) * 0.9 : Math.random() * Math.PI * 2, l = len * (0.5 + Math.random());
+    for (const ox of [-size, 0, size]) for (const oy of [-size, 0, size]) { x.beginPath(); x.moveTo(px + ox, py + oy); x.lineTo(px + ox + Math.cos(a) * l, py + oy + Math.sin(a) * l); x.stroke(); }
+  }
+  return g.createPattern(c, "repeat");
+}
+function pitchMarkings(g, w, h, color, logoAlpha) {
+  const X = (x) => (x + HW) / (2 * HW) * w, Z = (z) => (z + HL) / (2 * HL) * h, S = w / (2 * HW);
+  g.strokeStyle = color; g.lineWidth = Math.max(1, 0.5 * S);
+  g.beginPath(); g.moveTo(0, Z(0)); g.lineTo(w, Z(0)); g.stroke();
+  g.beginPath(); g.arc(X(0), Z(0), 18 * S, 0, Math.PI * 2); g.stroke();
+  g.fillStyle = color; g.beginPath(); g.arc(X(0), Z(0), 0.9 * S, 0, Math.PI * 2); g.fill();
+  for (const s of [-1, 1]) {
+    const z0 = Z(s * HL), z1 = Z(s * (HL - 26));
+    g.strokeRect(X(-GW - 12), Math.min(z0, z1), (2 * GW + 24) * S, Math.abs(z1 - z0));
+    const z2 = Z(s * (HL - 10)); g.strokeRect(X(-GW - 3), Math.min(z0, z2), (2 * GW + 6) * S, Math.abs(z2 - z0));
+  }
+  if (logoAlpha) {
+    g.save(); g.translate(X(0), Z(0)); g.rotate(Math.PI / 2);
+    g.fillStyle = `rgba(255,255,255,${logoAlpha})`; g.font = `900 ${13 * S}px ${FONT}`; g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText("ROCKET TEMU", 0, 0);
+    g.font = `800 ${2.6 * S}px ${FONT}`; g.fillText("*FIELD MAY DIFFER FROM PICTURE", 0, 9 * S);
+    g.restore();
+  }
+}
+function teamTint(g, w, h, a) { g.fillStyle = `rgba(60,130,255,${a})`; g.fillRect(0, 0, w, h / 2); g.fillStyle = `rgba(255,120,30,${a})`; g.fillRect(0, h / 2, w, h / 2); }
+const FLOOR_PAINT = {
+  // Real grass: mown stripes with soft edges, patchy colour, blade texture, chalk lines
+  field(g, w, h) {
+    const Z = (z) => (z + HL) / (2 * HL) * h, S = w / (2 * HW);
+    g.fillStyle = "#2f8a45"; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 13; i++) {
+      const z0 = Z(-HL + i * 16), z1 = z0 + 16 * S, light = i % 2 === 0;
+      const gr = g.createLinearGradient(0, z0, 0, z1);
+      const c = light ? "rgba(140,220,120," : "rgba(10,50,20,";
+      gr.addColorStop(0, c + "0.04)"); gr.addColorStop(0.12, c + (light ? "0.16)" : "0.14)")); gr.addColorStop(0.88, c + (light ? "0.16)" : "0.14)")); gr.addColorStop(1, c + "0.04)");
+      g.fillStyle = gr; g.fillRect(0, z0, w, z1 - z0 + 1);
+    }
+    noiseLayer(g, w, h, 40, 0.35, "soft-light");
+    noiseLayer(g, w, h, 160, 0.22, "soft-light");
+    g.globalAlpha = 0.5; g.fillStyle = strokesPattern(g, 96, 1300, ["#1f6b33", "#3fa356", "#4fb35a", "#256f36", "#2c8a43"], 2.2, 1.3, false); g.fillRect(0, 0, w, h); g.globalAlpha = 1;
+    for (let i = 0; i < 26; i++) {                                        // a few worn, browner patches
+      const x = Math.random() * w, y = Math.random() * h, r = (2 + Math.random() * 5) * S, gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, "rgba(120,110,50,0.18)"); gr.addColorStop(1, "rgba(120,110,50,0)"); g.fillStyle = gr; g.fillRect(x - r, y - r, 2 * r, 2 * r);
+    }
+    teamTint(g, w, h, 0.07);
+    pitchMarkings(g, w, h, "rgba(250,252,245,0.9)", 0.13);
+  },
+  // Artificial turf: brighter, very even, stitched rows and black rubber crumb
+  turf(g, w, h) {
+    g.fillStyle = "#2c944c"; g.fillRect(0, 0, w, h);
+    noiseLayer(g, w, h, 120, 0.12, "soft-light");
+    const S = w / (2 * HW);
+    g.fillStyle = "rgba(0,0,0,0.08)"; for (let x = 0; x < w; x += Math.max(2, 0.45 * S)) g.fillRect(x, 0, Math.max(1, 0.12 * S), h);
+    g.globalAlpha = 0.55; g.fillStyle = strokesPattern(g, 96, 900, ["#27884a", "#38a85c", "#2f9a52"], 1.6, 1.2, false); g.fillRect(0, 0, w, h);
+    g.globalAlpha = 0.9; g.fillStyle = strokesPattern(g, 64, 60, ["#151515", "#222222"], 0.6, 1.6, false); g.fillRect(0, 0, w, h); g.globalAlpha = 1;
+    teamTint(g, w, h, 0.06);
+    pitchMarkings(g, w, h, "rgba(255,255,255,0.95)", 0.1);
+    const X = (x) => (x + HW) / (2 * HW) * w, Zz = (z) => (z + HL) / (2 * HL) * h;
+    g.fillStyle = "rgba(255,255,255,0.85)";                              // hash marks down both sides
+    for (let z = -HL + 10; z < HL - 9; z += 10) for (const x of [-HW + 6, HW - 8]) g.fillRect(X(x), Zz(z), 2 * S, 0.4 * S);
+  },
+  // Karting hall: asphalt with a painted circuit, kerbs, a chequered start line and rubber laid down on the racing line
+  kart(g, w, h) {
+    const X = (x) => (x + HW) / (2 * HW) * w, Z = (z) => (z + HL) / (2 * HL) * h, S = w / (2 * HW);
+    g.fillStyle = "#2e3036"; g.fillRect(0, 0, w, h);
+    noiseLayer(g, w, h, 60, 0.25, "soft-light");
+    g.globalAlpha = 0.8; g.fillStyle = strokesPattern(g, 64, 420, ["#4a4c54", "#1c1d22", "#5a5c64", "#25262b"], 0.5, 1.4, false); g.fillRect(0, 0, w, h); g.globalAlpha = 1;
+    const loop = (inset, r) => { const x0 = X(-HW + inset), x1 = X(HW - inset), z0 = Z(-HL + inset), z1 = Z(HL - inset); g.beginPath(); g.roundRect ? g.roundRect(x0, z0, x1 - x0, z1 - z0, r * S) : g.rect(x0, z0, x1 - x0, z1 - z0); };
+    g.fillStyle = "#24262b"; loop(34, 14); g.fill();                     // infield, a shade darker
+    g.lineWidth = 2 * S; g.strokeStyle = "rgba(10,10,12,0.35)"; loop(20, 22); g.stroke();   // rubber on the racing line
+    g.lineWidth = 0.6 * S; g.strokeStyle = "rgba(255,255,255,0.85)"; loop(8, 26); g.stroke(); loop(34, 14); g.stroke();
+    g.setLineDash([3 * S, 3 * S]); g.lineWidth = 1.6 * S;                 // red and white kerbs on the outside line
+    g.strokeStyle = "#d8262c"; loop(8.8, 25); g.stroke(); g.lineDashOffset = 3 * S; g.strokeStyle = "#f2f2f2"; loop(8.8, 25); g.stroke();
+    g.setLineDash([]); g.lineDashOffset = 0;
+    const cs = 1.6 * S;                                                   // chequered start/finish across the track
+    for (let i = 0; X(-HW + 8) + i * cs < X(-HW + 34); i++) for (let j = 0; j < 2; j++) { g.fillStyle = (i + j) % 2 ? "#111" : "#eee"; g.fillRect(X(-HW + 8) + i * cs, Z(0) - cs + j * cs, cs, cs); }
+    for (let k = 0; k < 4; k++) { g.strokeStyle = "rgba(255,255,255,0.7)"; g.lineWidth = 0.4 * S; g.strokeRect(X(-HW + 12 + (k % 2) * 11), Z(4 + k * 6), 8 * S, 4 * S); }   // grid boxes
+    for (let i = 0; i < 40; i++) {                                        // skid marks
+      g.strokeStyle = "rgba(8,8,10,0.28)"; g.lineWidth = (0.3 + Math.random() * 0.4) * S;
+      const cx = X((Math.random() - 0.5) * 2 * (HW - 20)), cz = Z((Math.random() - 0.5) * 2 * (HL - 20)), r = (6 + Math.random() * 14) * S, a = Math.random() * 6.28;
+      g.beginPath(); g.arc(cx, cz, r, a, a + 0.6 + Math.random()); g.stroke();
+    }
+    teamTint(g, w, h, 0.05);
+    pitchMarkings(g, w, h, "rgba(255,206,40,0.9)", 0);
+  },
+  // Garage: sealed concrete with expansion joints, parking bays, oil stains and hazard stripes along the walls
+  garage(g, w, h) {
+    const X = (x) => (x + HW) / (2 * HW) * w, Z = (z) => (z + HL) / (2 * HL) * h, S = w / (2 * HW);
+    g.fillStyle = "#77746d"; g.fillRect(0, 0, w, h);
+    noiseLayer(g, w, h, 30, 0.35, "soft-light"); noiseLayer(g, w, h, 140, 0.2, "soft-light");
+    g.globalAlpha = 0.5; g.fillStyle = strokesPattern(g, 64, 300, ["#6e6b65", "#9a978f", "#5e5b55"], 0.4, 1.2, false); g.fillRect(0, 0, w, h); g.globalAlpha = 1;
+    g.strokeStyle = "rgba(40,38,34,0.45)"; g.lineWidth = Math.max(1, 0.12 * S);
+    for (let x = -HW; x <= HW; x += 8) { g.beginPath(); g.moveTo(X(x), 0); g.lineTo(X(x), h); g.stroke(); }
+    for (let z = -HL; z <= HL; z += 8) { g.beginPath(); g.moveTo(0, Z(z)); g.lineTo(w, Z(z)); g.stroke(); }
+    for (let i = 0; i < 22; i++) {                                        // oil stains
+      const x = Math.random() * w, y = Math.random() * h, r = (1 + Math.random() * 3.5) * S, gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, "rgba(25,22,18,0.55)"); gr.addColorStop(0.6, "rgba(25,22,18,0.25)"); gr.addColorStop(1, "rgba(25,22,18,0)");
+      g.fillStyle = gr; g.beginPath(); g.ellipse(x, y, r, r * (0.5 + Math.random() * 0.5), Math.random() * 3, 0, 6.29); g.fill();
+    }
+    g.strokeStyle = "rgba(240,190,30,0.85)"; g.lineWidth = 0.35 * S; g.fillStyle = "rgba(240,190,30,0.8)"; g.font = `900 ${3 * S}px ${FONT}`; g.textAlign = "center"; g.textBaseline = "middle";
+    for (const sx of [-1, 1]) for (let k = 0; k < 7; k++) {               // parking bays along both long sides
+      const z = -HL + 28 + k * 21.5, x0 = sx < 0 ? X(-HW + 6) : X(HW - 22);
+      g.strokeRect(x0, Z(z), 16 * S, 20 * S);
+      g.save(); g.translate(x0 + 8 * S, Z(z + 10)); g.rotate(sx * Math.PI / 2); g.fillText(String(k + 1 + (sx > 0 ? 7 : 0)), 0, 0); g.restore();
+    }
+    const hz = 1.4 * S;                                                   // hazard stripes along the walls
+    g.save(); g.beginPath(); g.rect(0, 0, w, h); g.rect(X(-HW + 4), Z(-HL + 4), (2 * HW - 8) * S, (2 * HL - 8) * S); g.clip("evenodd");
+    g.fillStyle = "#e8b81e"; g.fillRect(0, 0, w, h); g.fillStyle = "#1a1a1a";
+    for (let k = -h; k < w + h; k += 2 * hz) { g.beginPath(); g.moveTo(k, 0); g.lineTo(k + hz, 0); g.lineTo(k + hz - h, h); g.lineTo(k - h, h); g.fill(); }
+    g.restore();
+    g.fillStyle = "#3a3a3a"; g.fillRect(X(-1.5), Z(-1.5), 3 * S, 3 * S); g.fillStyle = "#222";   // floor drain
+    for (let k = 0; k < 6; k++) g.fillRect(X(-1.3), Z(-1.3 + k * 0.5), 2.6 * S, 0.2 * S);
+    teamTint(g, w, h, 0.05);
+    pitchMarkings(g, w, h, "rgba(250,250,245,0.85)", 0);
+  },
+};
+// Close-up detail, tiled many times over the floor and blended in by the shader (sharp blades, grit)
+const DETAIL_PAINT = {
+  field(g, w) { g.fillStyle = "#808080"; g.fillRect(0, 0, w, w); g.fillStyle = strokesPattern(g, w, 3200, ["#5e5e5e", "#a2a2a2", "#707070", "#949494"], 3, 1.6, false); g.fillRect(0, 0, w, w); },
+  turf(g, w) { g.fillStyle = "#808080"; g.fillRect(0, 0, w, w); g.fillStyle = "rgba(0,0,0,0.1)"; for (let x = 0; x < w; x += 8) g.fillRect(x, 0, 2, w); g.fillStyle = strokesPattern(g, w, 1800, ["#6c6c6c", "#989898"], 2, 1.4, false); g.fillRect(0, 0, w, w); },
+  kart(g, w) { g.fillStyle = "#808080"; g.fillRect(0, 0, w, w); g.fillStyle = strokesPattern(g, w, 2200, ["#5c5c5c", "#a4a4a4", "#4c4c4c", "#b8b8b8"], 1, 2.2, false); g.fillRect(0, 0, w, w); },
+  garage(g, w) { g.fillStyle = "#808080"; g.fillRect(0, 0, w, w); g.fillStyle = strokesPattern(g, w, 800, ["#747474", "#8e8e8e", "#686868"], 1, 1.6, false); g.fillRect(0, 0, w, w); },
+};
+const DETAIL_REPEAT = { field: 46, turf: 60, kart: 34, garage: 24 };
+// Floor material: Lambert with the arena texture, plus the tiled detail multiplied in at close range
+function floorMaterial(key) {
+  const big = quality.high ? 2048 : 1024;
+  const tex = canvasTex(big, Math.round(big * HL / HW), (g, w, h) => FLOOR_PAINT[key](g, w, h));
+  tex.anisotropy = quality.high ? 8 : 4;
+  const det = canvasTex(256, 256, (g, w) => DETAIL_PAINT[key](g, w));
+  det.wrapS = det.wrapT = THREE.RepeatWrapping; det.anisotropy = 8;
+  const m = lam(0xffffff, { map: tex });
+  const rep = DETAIL_REPEAT[key];
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.detailMap = { value: det };
+    sh.fragmentShader = "uniform sampler2D detailMap;\n" + sh.fragmentShader.replace("#include <map_fragment>",
+      `#include <map_fragment>
+       diffuseColor.rgb *= texture2D(detailMap, vUv * vec2(${rep.toFixed(1)}, ${(rep * HL / HW).toFixed(1)})).rgb * 2.0;`);
+  };
+  m.customProgramCacheKey = () => "floor-" + key;
+  m.userData.tex = tex;
+  return m;
+}
+// 3D grass (high graphics, grass field only): a few see-through layers just above the floor, each showing
+// fewer blades than the one below, so the grass has real depth and catches the light at low angles
+const SHELLS = 4, SHELL_H = 0.11;
+let shellGroup = null;
+function grassShells(floorMat) {
+  if (shellGroup) return shellGroup;
+  shellGroup = new THREE.Group();
+  const blades = canvasTex(128, 128, (g, w) => {
+    g.clearRect(0, 0, w, w);
+    for (let i = 0; i < 1100; i++) {
+      const x = Math.random() * w, y = Math.random() * w, hgt = Math.random(), sh = 0.7 + Math.random() * 0.5;
+      g.fillStyle = `rgba(${(90 * sh) | 0},${(200 * sh) | 0},${(95 * sh) | 0},${hgt.toFixed(3)})`;
+      g.fillRect(x, y, 1.6, 1.6); if (x > w - 2) g.fillRect(x - w, y, 1.6, 1.6); if (y > w - 2) g.fillRect(x, y - w, 1.6, 1.6);
+    }
+  });
+  blades.wrapS = blades.wrapT = THREE.RepeatWrapping; blades.minFilter = THREE.NearestMipmapLinearFilter; blades.premultiplyAlpha = false;
+  for (let k = 1; k <= SHELLS; k++) {
+    const f = k / SHELLS, m = lam(0xffffff, { map: floorMat.userData.tex });
+    m.onBeforeCompile = (sh) => {
+      sh.uniforms.blades = { value: blades };
+      sh.fragmentShader = "uniform sampler2D blades;\n" + sh.fragmentShader.replace("#include <map_fragment>",
+        `#include <map_fragment>
+         vec4 bl = texture2D(blades, vUv * vec2(180.0, ${(180 * HL / HW).toFixed(1)}));
+         if (bl.a < ${(0.12 + 0.75 * f).toFixed(3)}) discard;
+         diffuseColor.rgb *= mix(vec3(1.0), bl.rgb * 1.9, 0.45) * ${(0.82 + 0.3 * f).toFixed(3)};`);
+    };
+    m.customProgramCacheKey = () => "shell-" + k;
+    const mesh = new THREE.Mesh(floorGeo, m);
+    mesh.rotation.x = -Math.PI / 2; mesh.position.y = SHELL_H * f; mesh.receiveShadow = true;
+    shellGroup.add(mesh);
+  }
+  scene.add(shellGroup);
+  return shellGroup;
+}
+// Walls, roof and props for each arena
+function wallTex(key) {
+  if (key === "kart") return canvasTex(256, 64, (g, w, h) => {              // tyre barrier: red and white blocks
+    for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? "#f0f0f0" : "#c8222a"; g.fillRect(i * w / 8, 0, w / 8, h); }
+    g.fillStyle = "rgba(0,0,0,0.18)"; for (let y = 0; y < h; y += 8) g.fillRect(0, y, w, 2);
+  });
+  if (key === "garage") return canvasTex(256, 64, (g, w, h) => {            // painted concrete kickboard
+    g.fillStyle = "#6d6a64"; g.fillRect(0, 0, w, h); noiseLayer(g, w, h, 24, 0.3, "soft-light");
+    g.fillStyle = "#e8b81e"; g.fillRect(0, h * 0.78, w, h * 0.22); g.fillStyle = "#1a1a1a";
+    for (let x = -h; x < w; x += 16) { g.beginPath(); g.moveTo(x, h); g.lineTo(x + 8, h); g.lineTo(x + 8 + h * 0.22, h * 0.78); g.lineTo(x + h * 0.22, h * 0.78); g.fill(); }
+  });
+  return null;
+}
+function upperWallMat(key) {
+  if (key === "garage") {
+    const t = canvasTex(512, 256, (g, w, h) => {                            // corrugated metal with the odd poster and pegboard
+      for (let x = 0; x < w; x += 16) { const gr = g.createLinearGradient(x, 0, x + 16, 0); gr.addColorStop(0, "#5d6066"); gr.addColorStop(0.5, "#8d9198"); gr.addColorStop(1, "#5d6066"); g.fillStyle = gr; g.fillRect(x, 0, 16, h); }
+      noiseLayer(g, w, h, 20, 0.25, "multiply");
+      g.fillStyle = "#b9a37a"; g.fillRect(40, 150, 150, 80); g.fillStyle = "#4a3b26"; for (let x = 48; x < 186; x += 12) for (let y = 158; y < 226; y += 12) g.fillRect(x, y, 3, 3);
+      g.fillStyle = "#fb7701"; g.fillRect(300, 120, 90, 120); g.fillStyle = "#fff"; g.font = `900 30px ${FONT}`; g.textAlign = "center"; g.fillText("TEMU", 345, 170); g.font = `800 14px ${FONT}`; g.fillText("PARTS & TOOLS", 345, 196);
+    });
+    t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, 0.5);
+    return lam(0xffffff, { map: t, side: THREE.DoubleSide });
+  }
+  if (key === "kart") {
+    const t = canvasTex(256, 256, (g, w, h) => {
+      g.fillStyle = "rgba(20,20,26,0.55)"; g.fillRect(0, 0, w, h);
+      g.strokeStyle = "rgba(251,119,1,0.45)"; g.lineWidth = 3; g.strokeRect(0, 0, w, h);
+    });
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    return lam(0xffffff, { map: t, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false });
+  }
+  return glassWall.userData.base;
+}
+const indoorRoof = new THREE.Group(); indoorRoof.visible = false; scene.add(indoorRoof);
+{
+  const panel = glowMat(0xf4f1ff, GLOW * 0.95);
+  for (let x = -HW + 16; x <= HW - 16; x += 26) for (let z = -HL + 18; z <= HL - 18; z += 30) {
+    const p = new THREE.Mesh(new THREE.BoxGeometry(10, 0.2, 2.4), panel); p.position.set(x, CEIL - 0.3, z); indoorRoof.add(p);
+  }
+}
+const kartProps = new THREE.Group(); kartProps.visible = false; scene.add(kartProps);
+{
+  // stacks of tyres all round the outside of the arena, and team-coloured flags on poles
+  const tyre = new THREE.CylinderGeometry(0.75, 0.75, 0.55, 14, 1, true), stacks = [];
+  for (let i = 0; i < INNER.length; i += 2) { const c = INNER[i]; stacks.push([c.x + c.nx * (RE + 3.2), c.z + c.nz * (RE + 3.2)]); }
+  const inst = new THREE.InstancedMesh(tyre, lam(0x18181c, { side: THREE.DoubleSide }), stacks.length * 4);
+  let n = 0;
+  for (const [x, z] of stacks) for (let k = 0; k < 4; k++) { _m4.makeTranslation(x, 0.3 + k * 0.56, z); inst.setMatrixAt(n++, _m4); }
+  kartProps.add(inst);
+  const banner = canvasTex(1024, 64, (g, w, h) => {
+    for (let x = 0; x < w; x += 32) for (let y = 0; y < h; y += 32) { g.fillStyle = ((x + y) / 32) % 2 ? "#111" : "#eee"; g.fillRect(x, y, 32, 32); }
+    g.fillStyle = "#fb7701"; g.fillRect(w * 0.3, 0, w * 0.4, h); g.fillStyle = "#fff"; g.font = `900 44px ${FONT}`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("TEMU KART GP", w / 2, h / 2 + 2);
+  });
+  for (const s of [-1, 1]) {
+    const b = new THREE.Mesh(new THREE.PlaneGeometry(2 * HW - 30, 4), basic(0xffffff, { map: banner, side: THREE.DoubleSide }));
+    b.position.set(0, CEIL - 6, s * (HL - 30)); kartProps.add(b);
+  }
+}
+const garageProps = new THREE.Group(); garageProps.visible = false; scene.add(garageProps);
+{
+  // hanging shop lamps (warm), and big roll-up doors on the end walls behind the goals
+  const shade = std(0x2c3a2f, { metalness: 0.5, roughness: 0.5, side: THREE.DoubleSide }), bulb = glowMat(0xffd9a0, GLOW * 1.2);
+  for (let x = -HW + 22; x <= HW - 22; x += 30) for (let z = -HL + 24; z <= HL - 24; z += 34) {
+    const g = new THREE.Group(); g.position.set(x, CEIL - 3, z);
+    const s = new THREE.Mesh(new THREE.ConeGeometry(2.2, 1.4, 18, 1, true), shade); g.add(s);
+    const b = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 8), bulb); b.position.y = -0.5; g.add(b);
+    const wire = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 3, 4), MAT_DARK()); wire.position.y = 1.9; g.add(wire);
+    garageProps.add(g);
+  }
+  const door = canvasTex(256, 256, (g, w, h) => {
+    g.fillStyle = "#b9bcc2"; g.fillRect(0, 0, w, h);
+    for (let y = 0; y < h; y += 16) { g.fillStyle = "#8d9097"; g.fillRect(0, y + 12, w, 3); g.fillStyle = "#d4d7dc"; g.fillRect(0, y, w, 2); }
+    g.fillStyle = "#3b3e44"; g.fillRect(w * 0.42, h * 0.86, w * 0.16, h * 0.04);
+  });
+  for (const s of [-1, 1]) for (const x of [-HW + 22, HW - 22]) {
+    const d = new THREE.Mesh(new THREE.PlaneGeometry(26, 20), lam(0xffffff, { map: door, side: THREE.DoubleSide }));
+    d.position.set(x, RE + 10.5, s * (HL - 0.15)); garageProps.add(d);
+  }
+}
+const THEMES = {
+  field: { bg: 0x070814, hemi: [0xc8d0ff, 0x1c2a18], hemiK: 1, sun: 0xfff4e0, sunK: 1, curve: 0x2a7a44, strip: 0x2f8f4a, ceil: [0x1a1838, 0.35], stands: true, ads: true, roof: false },
+  turf: { bg: 0x070814, hemi: [0xc8d0ff, 0x1c2a18], hemiK: 0.95, sun: 0xffffff, sunK: 0.95, curve: 0x2f9a52, strip: 0x35a85a, ceil: [0x1a1838, 0.35], stands: true, ads: true, roof: false },
+  kart: { bg: 0x0a0a0e, hemi: [0xdde4ff, 0x202024], hemiK: 1.05, sun: 0xf2f6ff, sunK: 0.95, curve: 0xffffff, strip: 0x2e3036, ceil: [0x17181c, 0.96], stands: true, ads: true, roof: true },
+  garage: { bg: 0x0d0a08, hemi: [0xffe9c8, 0x2a2420], hemiK: 0.95, sun: 0xffe2b8, sunK: 0.85, curve: 0xffffff, strip: 0x86837c, ceil: [0x23211e, 1], stands: false, ads: false, roof: true },
+};
+const arenaCache = {};
+let arenaNow = -1;
+glassWall.userData.base = glassWall.material; ceil.userData.base = ceil.material; wallCurve.userData.base = wallCurve.material;
+function setArena(i) {
+  i = Math.max(0, Math.min(ARENAS.length - 1, i | 0));
+  if (i === arenaNow) return;
+  arenaNow = i;
+  const key = ARENAS[i].key, T = THEMES[key];
+  const A = arenaCache[key] || (arenaCache[key] = { floor: floorMaterial(key), wall: wallTex(key), upper: upperWallMat(key) });
+  floor.material = A.floor;
+  if (A.wall) { A.wall.wrapS = THREE.RepeatWrapping; wallCurve.material = A.wallMat || (A.wallMat = lam(0xffffff, { map: A.wall, side: THREE.DoubleSide })); }
+  else { wallCurve.material = wallCurve.userData.base; wallCurve.material.color.setHex(T.curve); }
+  glassWall.material = A.upper;
+  turf.color.setHex(T.strip);
+  ceil.material = T.ceil[1] >= 0.95 ? (A.ceilMat || (A.ceilMat = lam(T.ceil[0], { side: THREE.DoubleSide }))) : ceil.userData.base;
+  standsGroup.visible = T.stands; crowdBody.visible = T.stands;
+  for (const a of adBoards) a.visible = T.ads;
+  indoorRoof.visible = T.roof; kartProps.visible = key === "kart"; garageProps.visible = key === "garage";
+  const shells = key === "field" && quality.high;
+  if (shells) grassShells(A.floor).visible = true; else if (shellGroup) shellGroup.visible = false;
+  scene.background.setHex(T.bg); scene.fog.color.setHex(T.bg);
+  hemi.color.setHex(T.hemi[0]); hemi.groundColor.setHex(T.hemi[1]); hemi.intensity = (quality.high ? 0.7 : 0.85) * T.hemiK;
+  sun.color.setHex(T.sun); sun.intensity = (quality.high ? 1.0 : 0.75) * T.sunK;
+  stadiumEnv = null;                                                   // re-capture reflections of the new surroundings
+}
+// Small pictures of each arena's floor for the pickers
+function arenaPreview(i, w, h) {
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const big = document.createElement("canvas"); big.width = 400; big.height = Math.round(400 * HL / HW);
+  FLOOR_PAINT[ARENAS[i].key](big.getContext("2d"), big.width, big.height);
+  const g = c.getContext("2d");
+  g.drawImage(big, big.width * 0.1, big.height * 0.32, big.width * 0.8, big.width * 0.8 * h / w, 0, 0, w, h);
+  return c;
 }
 
 // ---- Boost pads ------------------------------------------------------------------------------
@@ -2027,6 +2391,48 @@ function chooseBall(i) {
   if (then) then();
 }
 function cancelBall() { $("ballpick").hidden = true; ballThen = null; }
+// Arena picker (games against bots) and the arena vote (online lobbies)
+let arenaThen = null;
+function arenaCards(box, onPick) {
+  if (box.childElementCount) return;
+  ARENAS.forEach((ar, i) => {
+    const btn = document.createElement("button"); btn.type = "button"; btn.className = "arena-card";
+    const pv = arenaPreview(i, 200, 120); pv.className = "arena-pv"; pv.setAttribute("aria-hidden", "true");
+    const nm = document.createElement("b"); nm.textContent = ar.name;
+    const bl = document.createElement("small"); bl.textContent = ar.blurb;
+    const k = document.createElement("kbd"); k.textContent = String(i + 1);
+    const cnt = document.createElement("span"); cnt.className = "votes";
+    btn.append(pv, k, nm, bl, cnt);
+    btn.addEventListener("click", () => onPick(i));
+    box.appendChild(btn);
+  });
+}
+function pickArena(then) {
+  arenaThen = then;
+  arenaCards($("arena-list"), chooseArena);
+  Array.from($("arena-list").children).forEach((b, i) => b.setAttribute("aria-current", String(i === (state.arena || 0))));
+  $("arenapick").hidden = false;
+  const cur = $("arena-list").children[state.arena || 0]; if (cur) cur.focus({ preventScroll: true });
+}
+function chooseArena(i) {
+  state.arena = i; persist();
+  $("arenapick").hidden = true;
+  const then = arenaThen; arenaThen = null;
+  if (then) then();
+}
+function cancelArena() { $("arenapick").hidden = true; arenaThen = null; }
+function showVote(v) {
+  if (state.screen !== "match" || !state.online) return;
+  const box = $("vote-list");
+  arenaCards(box, (i) => { netSend({ t: "vote", i }); });
+  Array.from(box.children).forEach((b, i) => {
+    b.setAttribute("aria-current", String(i === v.mine));
+    b.querySelector(".votes").textContent = v.counts && v.counts[i] ? `${v.counts[i]} vote${v.counts[i] > 1 ? "s" : ""}` : "";
+  });
+  $("vote-left").textContent = v.left > 0 ? `Match starts in ${v.left} s` : "Starting...";
+  if ($("vote").hidden) { $("vote").hidden = false; const f = box.children[v.mine >= 0 ? v.mine : 0]; if (f && !matchMedia("(pointer: coarse)").matches) f.focus({ preventScroll: true }); }
+}
+function hideVote() { $("vote").hidden = true; canvas.focus({ preventScroll: true }); }
 
 // Blob shadows
 const shadowTex = canvasTex(64, 64, (g, w, h) => {
@@ -2487,7 +2893,7 @@ flashGeo.setAttribute("position", new THREE.BufferAttribute(flashPos, 3));
 const flashes = new THREE.Points(flashGeo, new THREE.PointsMaterial({ size: 1.1, color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
 flashes.frustumCulled = false; scene.add(flashes);
 function updateFlashes() {
-  const on = cheer && cheer.t < 3.2;
+  const on = cheer && cheer.t < 3.2 && crowdBody.visible;
   const pool = on ? seats.filter((s) => s.team === cheer.team) : [];
   for (let i = 0; i < 60; i++) {
     if (on && Math.random() < 0.5) { const s = pool[(Math.random() * pool.length) | 0]; flashPos.set([s.x, s.y + 2.2, s.z], i * 3); }
@@ -2549,8 +2955,9 @@ try {
   if (typeof saved.nick === "string") state.nick = saved.nick;
   if (saved.look) state.look = cleanLook(saved.look);
   if (Number.isInteger(saved.ball) && saved.ball >= 0 && saved.ball < BALLS.length) state.ball = saved.ball;
+  if (Number.isInteger(saved.arena) && saved.arena >= 0 && saved.arena < ARENAS.length) state.arena = saved.arena;
 } catch (_) {}
-function persist() { try { localStorage.setItem("rocket-temu-3d", JSON.stringify({ skill: state.skill, ballCam: state.ballCam[0], sound: sound.on, nick: state.nick, look: state.look, ball: state.ball || 0, gfx: quality.chosen ? (quality.high ? "high" : "low") : undefined })); } catch (_) {} }
+function persist() { try { localStorage.setItem("rocket-temu-3d", JSON.stringify({ skill: state.skill, ballCam: state.ballCam[0], sound: sound.on, nick: state.nick, look: state.look, ball: state.ball || 0, arena: state.arena || 0, gfx: quality.chosen ? (quality.high ? "high" : "low") : undefined })); } catch (_) {} }
 
 const K = (...codes) => codes.some((c) => state.keys.has(c));
 const dead = (v) => (Math.abs(v) < 0.14 ? 0 : clamp((v - Math.sign(v) * 0.14) / 0.76, -1, 1));
@@ -2659,7 +3066,8 @@ window.addEventListener("keydown", () => { pads.lastDevice = "kb"; }, true);
 function padUi() {
   if (!pads.list.length) return;
   const any = (b) => pads.list.some((g) => pressed(g, b));
-  const overOpen = !$("over").hidden, pauseOpen = !$("pause").hidden, pickOpen = !$("ballpick").hidden;
+  const overOpen = !$("over").hidden, pauseOpen = !$("pause").hidden, arenaOpen = !$("arenapick").hidden, voteOpen = !$("vote").hidden;
+  const pickOpen = !$("ballpick").hidden || arenaOpen || voteOpen;
   if (state.screen === "match" && !overOpen && !pauseOpen && !pickOpen) {
     if (replay.active && any(PB.A)) { skipReplay(); return; }
     if (any(PB.START)) act("pause");
@@ -2668,7 +3076,7 @@ function padUi() {
     return;
   }
   // Menus: move between the buttons that are showing, A presses, B goes back
-  const root = pickOpen ? $("ballpick") : overOpen ? $("over") : pauseOpen ? $("pause") : $(state.screen === "match" ? "pause" : state.screen);
+  const root = arenaOpen ? $("arenapick") : voteOpen ? $("vote") : pickOpen ? $("ballpick") : overOpen ? $("over") : pauseOpen ? $("pause") : $(state.screen === "match" ? "pause" : state.screen);
   if (!root) return;
   let dir = 0;
   for (const g of pads.list) {
@@ -2709,7 +3117,7 @@ function padUi() {
   }
   if (any(PB.A)) { (i >= 0 ? buttons[i] : buttons[0]).click(); }
   else if (any(PB.B)) {
-    if (pickOpen) cancelBall();
+    if (arenaOpen) cancelArena(); else if (voteOpen) {} else if (pickOpen) cancelBall();
     else if (pauseOpen) act("pause");
     else if (overOpen) act("menu");
     else if (state.screen === "online") act("back");
@@ -2960,6 +3368,7 @@ function handleEvents(m, celebrate) {
       startShock(e.pos, e.team);
       replay.goalT = state.t; replay.startAt = state.t + 2.4; replay.side = Math.sign(e.pos.z) || 1;
       if (e.scorer >= 0) addFeed(m.cars[e.scorer], e.assist >= 0 ? `scored (assist: ${m.cars[e.assist].name})` : "scored");
+      else if (e.ownBy >= 0 && m.cars[e.ownBy]) addFeed(m.cars[e.ownBy], "scored an own goal");
       cheer = { team: e.team, t: 0 };                  // the scoring team's end of the stadium goes wild
       const fans = seats.filter((s) => s.team === e.team);
       for (let i = 0; i < 500; i++) {                  // confetti thrown from the celebrating stands
@@ -2968,7 +3377,7 @@ function handleEvents(m, celebrate) {
         emit(new THREE.Vector3(s.x, s.y + 2, s.z), towardField.add(new THREE.Vector3(0, 6 + Math.random() * 7, 0)), 3 + Math.random() * 2, [TEAM_HEX[e.team], 0xffc428, 0xffffff][(Math.random() * 3) | 0], 5);
       }
       state.goalSide = Math.sign(e.pos.z) || 1; state.goalT = state.t;
-      state.goalInfo = { scorer: e.scorer, assist: e.assist, team: e.team, t: state.t, shown: false };
+      state.goalInfo = { scorer: e.scorer, assist: e.assist, ownBy: e.ownBy == null ? -1 : e.ownBy, team: e.team, t: state.t, shown: false };
       if (celebrate) { sfx.goal(); state.shake = 0.6; state.local.forEach((ci, who) => rumble(who, 0.7, 0.9, 600)); }
     } else if (e.type === "touch" && celebrate) {
       if (e.power > 6) sfx.hit(e.power);
@@ -3027,6 +3436,8 @@ function onNet(m) {
   if (m.t === "lobbies") { net.lobbies = m.rooms; net.online = m.online; renderLobbies(); }
   else if (m.t === "joined") startOnline(m);
   else if (m.t === "roster") { if (net.match) applyRoster(m.roster); }
+  else if (m.t === "vote") { if (net.match) showVote(m); }
+  else if (m.t === "arena") { if (net.match) { setArena(m.a); hideVote(); showPop("ARENA: " + ARENAS[m.a].name); } }
   else if (m.t === "s") { if (net.match) applySnapshot(m); }
   else if (m.t === "pong") { const rtt = (performance.now() - m.c) / 1000; net.rtt = net.rtt * 0.7 + rtt * 0.3; }
   else if (m.t === "error") { if (state.online) { endOnline(); show("online"); } netStatus(m.msg, true); }
@@ -3044,7 +3455,7 @@ function renderLobbies() {
     const nm = document.createElement("div"); nm.className = "nm"; nm.textContent = r.name;
     const meta = document.createElement("div"); meta.className = "meta";
     const t = r.state === "over" ? "finished" : (r.ot ? "overtime" : Math.floor(r.time / 60) + ":" + String(r.time % 60).padStart(2, "0"));
-    meta.textContent = `${r.humans}/${r.max} players · ${r.score[0]}-${r.score[1]} · ${t}`;
+    meta.textContent = `${r.humans}/${r.max} players · ${r.voting ? "voting on arena" : (ARENAS[r.arena || 0] || ARENAS[0]).name.toLowerCase()} · ${r.score[0]}-${r.score[1]} · ${t}`;
     const b = document.createElement("button"); b.type = "button"; b.textContent = r.humans >= r.max ? "FULL" : "JOIN"; b.disabled = r.humans >= r.max;
     b.addEventListener("click", () => pickBall(() => netJoin({ t: "join", room: r.id })));
     row.append(nm, meta, b); box.appendChild(row);
@@ -3067,9 +3478,11 @@ function startOnline(j) {
   net.ballErr.set(0, 0, 0); net.carErr.set(0, 0, 0);
   m.cars[j.you].renderOff = net.carErr; m.ball.renderOff = net.ballErr;
   state.match = m; state.local = [j.you]; state.online = true; state.paused = false;
+  setArena(j.arena || 0);
   bindMatch(m);
   camState[0].pos.set(0, 8, j.you < j.size ? -HL - 2 : HL + 2);
   show("match");
+  if (j.vote) showVote(j.vote); else hideVote();
   canvas.focus({ preventScroll: true });
 }
 function endOnline() { state.online = false; net.match = null; state.match = null; state.local = []; }
@@ -3337,22 +3750,23 @@ function updateHud(m) {
     const sc = gi.scorer >= 0 ? m.cars[gi.scorer] : null;
     $("gc-head").textContent = m.goalMsg ? m.goalMsg[0] : "GOAL!"; $("gc-head").style.color = TEAM_CSS[gi.team];
     $("gc-score").textContent = `${m.score[0]}  -  ${m.score[1]}`;
-    const own = m.goalMsg && /^OWN GOAL/.test(m.goalMsg[0]);
-    $("gc-name").textContent = sc ? sc.name + " SCORED!" : own ? TEAM_NAMES[1 - gi.team] + " PUT IT IN THEIR OWN NET" : TEAM_NAMES[gi.team] + " SCORES!";
-    $("gc-name").style.color = TEAM_CSS[gi.team];
+    const ob = gi.ownBy >= 0 ? m.cars[gi.ownBy] : null;
+    $("gc-name").textContent = sc ? sc.name + " SCORED!" : ob ? ob.name + " SCORED AN OWN GOAL!" : TEAM_NAMES[gi.team] + " SCORES!";
+    $("gc-name").style.color = TEAM_CSS[ob ? ob.team : gi.team];
     $("gc-assist").textContent = gi.assist >= 0 ? "Assist: " + m.cars[gi.assist].name : "";
     $("gc-assist").hidden = gi.assist < 0;
-    renderScoreboard(m, $("gc-board"), gi.scorer);
+    renderScoreboard(m, $("gc-board"), gi.scorer >= 0 ? gi.scorer : gi.ownBy, gi.scorer < 0 && gi.ownBy >= 0);
   }
   const ban = inGoal && replay.active;
   setShown($("scorer-banner"), "sbOn", !!ban);
-  if (ban) setText($("scorer-banner"), "sbT", gi.scorer >= 0 ? `${m.cars[gi.scorer].name} scored` + (gi.assist >= 0 ? ` · assist ${m.cars[gi.assist].name}` : "") : `Own goal · ${TEAM_NAMES[gi.team]} scores`);
+  if (ban) setText($("scorer-banner"), "sbT", gi.scorer >= 0 ? `${m.cars[gi.scorer].name} scored` + (gi.assist >= 0 ? ` · assist ${m.cars[gi.assist].name}` : "")
+    : gi.ownBy >= 0 ? `${m.cars[gi.ownBy].name} scored an own goal` : `${TEAM_NAMES[gi.team]} scores`);
   if (m.state !== "goal" && gi) state.goalInfo = null;
   // Live scoreboard: hold Tab, hold the controller's View/Back button, or tap the score at the top
   const live = state.boardHeld || state.boardToggled || pads.list.some((g) => holding(g, PB.BACK));
   setShown($("liveboard"), "lbOn", !!live && m.state !== "over" && !card);
   if (live && state.t - (state.boardAt || 0) > 0.5) { state.boardAt = state.t; renderScoreboard(m, $("liveboard")); }
-  if (card) big = "", sub = "";
+  if (card || !$("vote").hidden) big = "", sub = "";
   setShown(elBig, "bigOn", !!big); setText(elBig, "big", big); elBig.style.color = bigColor;
   setShown(elSub, "subOn", !!sub); setText(elSub, "sub", sub);
   const toast = m.toast ? m.toast[0] : "";
@@ -3396,7 +3810,7 @@ function show(screen) {
   $("online").hidden = screen !== "online";
   hud.hidden = screen !== "match";
   $("pause").hidden = !(screen === "match" && state.paused);
-  $("over").hidden = true;
+  $("over").hidden = true; $("vote").hidden = true;
   $("touch").hidden = true; $("chat-row").hidden = true;
   state.stick.active = false;
   hudCache = {};
@@ -3407,6 +3821,7 @@ function startMatch(kind) {
   state.match = new Match(Object.assign({ mode: kind, skill: state.skill }, preset));
   state.local = preset.humans.slice();
   for (const i of state.local) state.match.cars[i].look = state.look.slice();
+  setArena(state.arena || 0);
   state.paused = false; state.online = false;
   bindMatch(state.match);
   camState[0].pos.set(0, 8, -HL - 2); camState[1].pos.set(0, 8, HL + 2);
@@ -3491,8 +3906,9 @@ function toOnline() {
 }
 function act(name) {
   audio();
-  if (name === "bot" || name === "duel" || name === "2p" || name === "watch") pickBall(() => startMatch(name));
+  if (name === "bot" || name === "duel" || name === "2p" || name === "watch") pickArena(() => pickBall(() => startMatch(name)));
   else if (name === "cancelball") cancelBall();
+  else if (name === "cancelarena") cancelArena();
   else if (name === "install") install();
   else if (name === "fullscreen") fullscreen();
   else if (name === "closehelp") $("install-help").hidden = true;
@@ -3531,7 +3947,7 @@ function showOver(m) {
   $("b-overmenu").textContent = state.online ? "Leave lobby (Esc)" : "Main menu (Esc)";
   $("over").hidden = false;
 }
-function renderScoreboard(m, box = $("scoreboard"), hi = -1) {
+function renderScoreboard(m, box = $("scoreboard"), hi = -1, hiOwn = false) {
   box.textContent = "";
   if (!m.stats) return;
   const rows = m.cars.map((c, i) => ({ c, i, st: m.stats[i] }));
@@ -3546,7 +3962,7 @@ function renderScoreboard(m, box = $("scoreboard"), hi = -1) {
       const tr = body.insertRow(); if (state.local.includes(r.i)) tr.className = "me";
       if (r.i === hi) tr.classList.add("scorer");
       const name = tr.insertCell(); name.textContent = r.c.name;
-      if (r.i === hi) { const b = document.createElement("span"); b.className = "goalbadge"; b.textContent = "GOAL"; name.appendChild(b); }
+      if (r.i === hi) { const b = document.createElement("span"); b.className = "goalbadge" + (hiOwn ? " own" : ""); b.textContent = hiOwn ? "OWN GOAL" : "GOAL"; name.appendChild(b); }
       if (r === mvp && r.st.score > 0) { const b = document.createElement("span"); b.className = "mvp"; b.textContent = "MVP"; name.appendChild(b); }
       for (const v of [r.st.score, r.st.goals, r.st.assists, r.st.saves, r.st.shots]) tr.insertCell().textContent = v;
     });
@@ -3557,6 +3973,13 @@ function renderScoreboard(m, box = $("scoreboard"), hi = -1) {
 const GAME_KEYS = new Set(["Space", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter", "Slash", "Comma", "Period"]);
 window.addEventListener("keydown", (e) => {
   if (e.target && e.target.tagName === "INPUT") { if (e.code === "Enter") act("quick"); return; }
+  if (!$("arenapick").hidden || !$("vote").hidden) {
+    if (e.repeat) return;
+    const d = /^(Digit|Numpad)([1-9])$/.exec(e.code), voting = !$("vote").hidden;
+    if (d && Number(d[2]) <= ARENAS.length) { const i = Number(d[2]) - 1; if (voting) netSend({ t: "vote", i }); else chooseArena(i); }
+    else if (e.code === "Escape") { if (voting) act("menu"); else cancelArena(); }
+    return;
+  }
   if (!$("ballpick").hidden) {
     if (e.repeat) return;
     const d = /^(Digit|Numpad)([1-9])$/.exec(e.code);
@@ -3895,6 +4318,7 @@ function autoQuality(now) {
   resize();
 }
 applyBall();
+setArena(state.arena || 0);
 toMenu();
 requestAnimationFrame(frame);
 // Small hook for automated testing
@@ -3950,7 +4374,7 @@ if (app_.pwa && "serviceWorker" in navigator && (location.protocol === "https:" 
 updateInstall();
 // Installed app (or a phone): use the whole screen, keeping clear of the notch and status bar
 if (app_.standalone || /[?&]app=1/.test(location.search) || matchMedia("(pointer: coarse)").matches) document.documentElement.classList.add("app-mode");
-window.rocketTemu = { state, act, net, replay, views: () => views, skids: () => skidN, addSkid, advance(secs) { for (let i = 0; i < secs * FPS; i++) step(1 / FPS); } };
+window.rocketTemu = { state, act, net, replay, setArena, views: () => views, skids: () => skidN, addSkid, advance(secs) { for (let i = 0; i < secs * FPS; i++) step(1 / FPS); } };
 })();
 </script>
 </body>
