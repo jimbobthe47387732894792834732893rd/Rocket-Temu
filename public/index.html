@@ -2,7 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#06050d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Rocket Temu">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
 <title>Rocket Temu</title>
 <meta name="description" content="Rocket-powered 3D car soccer: 3v3, online lobbies, drivable walls.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -27,6 +35,12 @@
     color-scheme: dark;
   }
   [hidden] { display: none !important; }
+  /* No pinch or double-tap zoom anywhere (a zoomed-in game can't be zoomed back out, since the game takes every touch);
+     panels that scroll still scroll */
+  html, body, #app { touch-action: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  button, .nav-btn, .item, .ball-card { touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+  .nav, .items, .gpanel, #lobbies, .overlay, .ball-list { touch-action: pan-y; }
+  input { touch-action: manipulation; font-size: max(16px, 1em); }
   html, body { height: 100%; }
   body {
     margin: 0; background: var(--stage); color: var(--fg); font-family: var(--font);
@@ -181,6 +195,7 @@
     background: linear-gradient(180deg, rgba(6,5,14,.85), rgba(6,5,14,0)); }
   .brand { font-weight: 900; font-style: italic; font-size: clamp(20px, 2.6vw, 34px); letter-spacing: .01em; text-shadow: 0 3px 0 #000; }
   .brand span { color: var(--temu); }
+  .topbar .pill { margin-left: auto; }
   .player-card { display: flex; align-items: center; gap: 10px; background: rgba(16,13,34,.75); border: 1px solid var(--line); border-radius: 10px; padding: 6px 14px 6px 6px; min-width: 0; }
   .player-card b { display: block; font-size: 15px; letter-spacing: .04em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 22ch; }
   .player-card small { display: block; color: var(--muted); font-weight: 700; font-size: 11px; letter-spacing: .08em; }
@@ -209,6 +224,22 @@
   .showroom #focus-hint { position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); }
   .pill { border: 1px solid var(--line); background: rgba(16,13,34,.8); border-radius: 999px; padding: 9px 16px; font-weight: 900; font-size: 13px; letter-spacing: .06em; }
   .pill.primary { background: var(--temu); border-color: var(--temu); }
+  .nav .keys .span2 { grid-column: 1 / -1; }
+  #pad-hint { position: absolute; left: 50%; top: 70px; transform: translateX(-50%); z-index: 5; background: #12382a; border: 1px solid #2f9c6a; color: #c9ffe2; border-radius: 999px;
+    padding: 8px 16px; font-weight: 800; font-size: 13px; white-space: nowrap; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+  .padfocus { outline: 3px solid var(--gold) !important; outline-offset: 3px; }
+  .nav-btn.padfocus { transform: translateX(8px); outline-offset: -3px; }
+  .pick-title { margin: 0; font-weight: 900; font-style: italic; font-size: clamp(32px, 5vw, 64px); text-shadow: 0 5px 0 #000; }
+  .ball-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; width: min(900px, 100%); }
+  .ball-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 10px 12px; border: 2px solid var(--line); border-radius: 14px;
+    background: linear-gradient(160deg, rgba(48,42,96,.92), rgba(22,19,46,.92)); text-align: center; }
+  .ball-card:hover, .ball-card:focus-visible { border-color: var(--temu); outline: none; transform: translateY(-2px); }
+  .ball-card[aria-current="true"] { border-color: var(--gold); box-shadow: 0 0 18px rgba(255,196,40,.3); }
+  .ball-pv { width: 84px; height: 84px; border-radius: 50%; box-shadow: 0 8px 18px rgba(0,0,0,.5); }
+  .ball-card b { font-weight: 900; font-style: italic; font-size: 17px; letter-spacing: .03em; }
+  .ball-card small { color: var(--muted); font-weight: 700; font-size: 12px; }
+  .ball-card kbd { position: absolute; top: 8px; left: 8px; color: var(--muted); font-size: 11px; border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; }
+  @media (max-width: 520px), (max-height: 480px) { .ball-list { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; } .ball-pv { width: 60px; height: 60px; } .ball-card small { display: none; } .ball-card { padding: 10px 6px; } }
   /* Garage */
   .gpanel { position: absolute; left: clamp(16px, 3vw, 40px); top: 76px; bottom: 40px; width: min(440px, 44vw); display: flex; flex-direction: column; gap: 10px;
     background: rgba(12,10,26,.82); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
@@ -238,6 +269,7 @@
     #garage .plate { top: 62px; }
   }
   @media (max-height: 480px) and (min-aspect-ratio: 11/10) {
+    .showroom .fine { display: none; }
     .nav { top: 64px; transform: none; max-height: calc(100% - 92px); gap: 6px; }
     .nav-btn { padding: 7px 14px 7px 18px; } .nav-btn small { display: none; }
     .gpanel { top: 60px; bottom: 26px; } .item { min-height: 64px; } .item .sw { height: 24px; }
@@ -287,6 +319,7 @@
   <div id="menu" class="showroom">
     <header class="topbar">
       <div class="brand">ROCKET <span>TEMU</span></div>
+      <button class="pill primary" type="button" data-act="install" id="install-pill" hidden>INSTALL APP</button>
       <div class="player-card"><div class="pc-badge" aria-hidden="true">T</div><div><b id="pc-name">PLAYER</b><small id="pc-car">BARGAIN RACER</small></div></div>
     </header>
     <nav class="nav" id="nav-home" aria-label="Main menu">
@@ -309,11 +342,14 @@
       <button class="nav-btn" type="button" data-act="gfx"><span>GRAPHICS</span><small id="gfx-name">HIGH</small></button>
       <button class="nav-btn" type="button" data-act="sound"><span>SOUND</span><small id="snd-name">ON</small></button>
       <button class="nav-btn" type="button" data-act="cam"><span>BALL CAM</span><small id="cam-name">ON</small></button>
+      <button class="nav-btn" type="button" data-act="fullscreen" id="fs-btn"><span>FULL SCREEN</span><small>Fill the whole screen (sideways on phones)</small></button>
+      <button class="nav-btn" type="button" data-act="install" id="install-btn" hidden><span>INSTALL APP</span><small id="install-note">Put Rocket Temu on your home screen</small></button>
       <div class="keys">
         <div><b style="color:var(--blu)">PLAYER 1</b>W / S drive &middot; A / D steer<br>Space jump &middot; Left Shift boost<br>Q / E air roll &middot; X powerslide</div>
         <div><b style="color:var(--org)">PLAYER 2</b>Arrow keys drive and steer<br>Enter or Right Ctrl jump &middot; Right Shift boost<br>, / . air roll</div>
         <div><b style="color:var(--gold)">IN THE AIR</b>Jump again to double jump. Jump plus a direction to flip. Upside down? Press jump to roll back over.</div>
         <div><b style="color:#cfc9ff">CAMERA, SOUND, CHAT</b>C ball cam &middot; M mute &middot; P pause &middot; Esc menu<br>Online: keys 1 to 6 send quick chat</div>
+        <div class="span2"><b style="color:#7dffb0">CONTROLLER</b>RT drive &middot; LT reverse &middot; left stick steer<br>A jump &middot; B boost &middot; X powerslide (hold X in the air to air roll) &middot; LB / RB air roll left / right<br>Y ball cam &middot; Start pause &middot; D-pad quick chat online &middot; menus: A select, B back</div>
       </div>
       <button class="nav-btn back" type="button" data-act="home"><span>BACK</span><kbd>Esc</kbd></button>
     </nav>
@@ -321,6 +357,8 @@
     <p id="focus-hint" hidden>Click the game so your keyboard works</p>
     <p class="fine">*Item may differ from picture. Not affiliated with any real car-soccer game or online store.</p>
   </div>
+
+  <div id="pad-hint" role="status" hidden>Controller connected &middot; A select &middot; B back &middot; RT drive &middot; A jump &middot; B boost</div>
 
   <div id="garage" class="showroom" hidden>
     <header class="topbar">
@@ -353,6 +391,24 @@
       </div>
       <p id="net-status" role="status"></p>
       <div id="lobbies"></div>
+    </div>
+  </div>
+
+  <div id="install-help" class="overlay" hidden>
+    <div class="card">
+      <h2 class="pick-title">INSTALL THE APP</h2>
+      <p class="tag" id="install-steps">Open this page in Safari, tap the Share button, then tap "Add to Home Screen".</p>
+      <p class="tag">It opens full screen like a normal app, and bot matches even work with no internet.</p>
+      <div class="row"><button class="btn primary" type="button" data-act="closehelp">Got it</button></div>
+    </div>
+  </div>
+
+  <div id="ballpick" class="overlay" hidden>
+    <div class="card">
+      <h2 class="pick-title">PICK A BALL</h2>
+      <p class="tag">Only changes how the ball looks on your screen.</p>
+      <div id="ball-list" class="ball-list"></div>
+      <div class="row"><button class="btn" type="button" data-act="cancelball">Back (Esc)</button></div>
     </div>
   </div>
 
@@ -455,7 +511,8 @@ const wrapAngle = (a) => mod(a + Math.PI, Math.PI * 2) - Math.PI;
 const flat = (v) => new V3(v.x, 0, v.z);
 
 class Controls {
-  constructor() { this.throttle = 0; this.steer = 0; this.jump = false; this.boost = false; this.roll = 0; this.slide = false; }
+  // pitch: the air pitch input when it comes from a separate stick (controllers); null means use throttle (keyboard, bots)
+  constructor() { this.throttle = 0; this.steer = 0; this.jump = false; this.boost = false; this.roll = 0; this.slide = false; this.pitch = null; }
   copy() { return Object.assign(new Controls(), this); }
 }
 
@@ -608,7 +665,7 @@ class Car {
     this.pos.copy(pos); this.pos.y = CAR_REST; this.vel.set(0, 0, 0); this.angVel.set(0, 0, 0);
     this.yaw = yaw; this.quat.setFromAxisAngle(UP, yaw);
     this.onGround = true; this.boosting = false; this.jumpPrev = false; this.airTime = 0; this.jumpT = 0; this.jumpHeld = false;
-    this.canDodge = false; this.hasDoubled = false; this.flipLeft = 0; this.flipAxis.set(0, 0, 0); this.contactT = 0;
+    this.canDodge = false; this.hasDoubled = false; this.flipLeft = 0; this.flipAxis.set(0, 0, 0); this.contactT = 0; this.slideT = 0;
     this.demolished = false; this.respawn = 0; this.supersonicT = 0;
   }
   forward() { return new V3(0, 0, 1).applyQuaternion(this.quat); }
@@ -620,14 +677,14 @@ class Car {
     const r = (v) => Math.round(v * 10000) / 10000;
     return [this.pos.x, this.pos.y, this.pos.z, this.vel.x, this.vel.y, this.vel.z, this.quat.x, this.quat.y, this.quat.z, this.quat.w,
       this.angVel.x, this.angVel.y, this.angVel.z, this.airTime, this.jumpT, this.flipLeft, this.flipAxis.x, this.flipAxis.y, this.flipAxis.z,
-      this.respawn, this.supersonicT, this.boost, this.contactT].map(r).concat([
+      this.respawn, this.supersonicT, this.boost, this.contactT, this.slideT || 0].map(r).concat([
       (this.onGround ? 1 : 0) | (this.canDodge ? 2 : 0) | (this.hasDoubled ? 4 : 0) | (this.jumpPrev ? 8 : 0) | (this.demolished ? 16 : 0) | (this.boosting ? 32 : 0) | (this.jumpHeld ? 64 : 0)]);
   }
   deserialize(v) {
     this.pos.set(v[0], v[1], v[2]); this.vel.set(v[3], v[4], v[5]); this.quat.set(v[6], v[7], v[8], v[9]).normalize();
     this.angVel.set(v[10], v[11], v[12]); this.airTime = v[13]; this.jumpT = v[14]; this.flipLeft = v[15]; this.flipAxis.set(v[16], v[17], v[18]);
-    this.respawn = v[19]; this.supersonicT = v[20]; this.boost = v[21]; this.contactT = v[22];
-    const f = v[23];
+    this.respawn = v[19]; this.supersonicT = v[20]; this.boost = v[21]; this.contactT = v[22]; this.slideT = v[23];
+    const f = v[24];
     this.onGround = !!(f & 1); this.canDodge = !!(f & 2); this.hasDoubled = !!(f & 4); this.jumpPrev = !!(f & 8);
     this.demolished = !!(f & 16); this.boosting = !!(f & 32); this.jumpHeld = !!(f & 64);
     const fw = this.forward(); this.yaw = Math.atan2(fw.x, fw.z);
@@ -672,7 +729,9 @@ class Car {
     let s = this.vel.dot(f);
     const vn = this.vel.dot(n);
     const lat = this.vel.clone().addScaledVector(f, -s).addScaledVector(n, -vn);
-    const grip = m.grip * (c.slide ? 0.25 : 1);
+    // Powerslide: grip fades out quickly while held and comes back more gently after letting go
+    this.slideT = clamp((this.slideT || 0) + (c.slide ? dt / 0.08 : -dt / 0.3), 0, 1);
+    const grip = m.grip * (1 - 0.75 * this.slideT);
     lat.multiplyScalar(Math.exp(-12 * grip * dt));
     const t = c.throttle;
     if (t !== 0 && t * s < -0.5) s += Math.sign(t) * BRAKE * dt;
@@ -681,7 +740,11 @@ class Car {
       if (Math.abs(s) < lim) s = clamp(s + t * throttleAccel(Math.abs(s)) * Math.max(grip, 0.35) * dt * m.speed, -lim, lim);
     } else if (!this.boosting) s -= Math.sign(s) * Math.min(Math.abs(s), COAST * dt);
     if (this.boosting) s += BOOST_ACCEL * dt;
-    const turn = curvature(s) * s * c.steer * (c.slide ? 1.5 : 1);
+    // Rocket League turning: a turn radius that grows with speed (same table as the real game), reached
+    // almost instantly; powersliding tightens it
+    const want = curvature(s) * s * c.steer * (1 + 0.55 * this.slideT);
+    const was = -this.angVel.dot(n);
+    const turn = was + (want - was) * (1 - Math.exp(-dt / 0.035));
     f = f.applyAxisAngle(n, -turn * dt);
     this.vel.copy(f).multiplyScalar(s).add(lat);
     // Gravity: the part along the surface slides you down a wall; the part into or out of it
@@ -713,7 +776,7 @@ class Car {
       w.copy(this.flipAxis);
       if (this.flipLeft <= 0) w.multiplyScalar(0.25);
     } else {
-      const p = c.throttle, y = -c.steer, r = c.roll;
+      const p = c.pitch == null ? c.throttle : c.pitch, y = -c.steer, r = c.roll;
       w.x += (T_PITCH * p + D_PITCH * (1 - Math.abs(p)) * w.x) * dt;
       w.y += (T_YAW * y + D_YAW * (1 - Math.abs(y)) * w.y) * dt;
       w.z += (T_ROLL * r + D_ROLL * w.z) * dt;
@@ -721,14 +784,15 @@ class Car {
     }
     if (jumpPressed && this.canDodge && this.airTime < DODGE_WINDOW && !this.jumpNow && !(this.contactT > 0)) {
       this.canDodge = false; this.jumpHeld = false;
-      if (c.throttle !== 0 || c.steer !== 0) {      // dodge / flip in the pressed direction
+      const fp = c.pitch == null ? c.throttle : c.pitch;
+      if (Math.hypot(fp, c.steer) > 0.5) {           // dodge / flip in the pressed direction (half-way stick or more)
         const fw = flat(this.forward()).normalize(), lf = new V3(fw.z, 0, -fw.x);
         const sp = flat(this.vel).length();
-        const fwd = c.throttle * DODGE_IMPULSE, side = -c.steer * DODGE_IMPULSE * (1 + 0.9 * sp / MAX_SPEED);
+        const fwd = fp * DODGE_IMPULSE, side = -c.steer * DODGE_IMPULSE * (1 + 0.9 * sp / MAX_SPEED);
         this.vel.addScaledVector(fw, fwd).addScaledVector(lf, side);
         this.vel.y = Math.max(this.vel.y * 0.35, 0);
-        const fl = Math.hypot(c.throttle, c.steer) || 1;
-        this.flipAxis.set((c.throttle / fl) * (Math.PI * 2) / FLIP_TIME, 0, (c.steer / fl) * (Math.PI * 2) / FLIP_TIME);
+        const fl = Math.hypot(fp, c.steer) || 1;
+        this.flipAxis.set((fp / fl) * (Math.PI * 2) / FLIP_TIME, 0, (c.steer / fl) * (Math.PI * 2) / FLIP_TIME);
         this.flipLeft = FLIP_TIME;
       } else {
         this.vel.addScaledVector(this.up(), DOUBLE_JUMP);
@@ -1775,6 +1839,131 @@ const ballTex = canvasTex(1024, 512, (g, w, h) => {
 const ballMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 28), std(0xffffff, { map: ballTex, roughness: 0.5, metalness: 0.05, envMapIntensity: 0.4 }));
 ballMesh.castShadow = true;
 scene.add(ballMesh);
+// ---- Ball styles (picked before each game; only changes how the ball looks on your screen) ----------
+// Textures are drawn per pixel in the sphere's own UV layout (longitude across, latitude down).
+function sphereTex(w, h, shade) {
+  return canvasTex(w, h, (g) => {
+    const img = g.createImageData(w, h), d = img.data;
+    for (let py = 0; py < h; py++) {
+      const th = ((py + 0.5) / h) * Math.PI, st = Math.sin(th), y = Math.cos(th);
+      for (let px = 0; px < w; px++) {
+        const ph = ((px + 0.5) / w) * Math.PI * 2;
+        const c = shade(-Math.cos(ph) * st, y, Math.sin(ph) * st, ph, th, px, py), k = (py * w + px) * 4;
+        d[k] = c[0]; d[k + 1] = c[1]; d[k + 2] = c[2]; d[k + 3] = 255;
+      }
+    }
+    g.putImageData(img, 0, 0);
+  });
+}
+const PHI = (1 + Math.sqrt(5)) / 2;
+const norm3 = (a) => { const l = Math.hypot(a[0], a[1], a[2]); return [a[0] / l, a[1] / l, a[2] / l]; };
+const PENT = [], HEXC = [];                        // the classic 32-panel ball: 12 pentagons, 20 hexagons
+for (const s1 of [-1, 1]) for (const s2 of [-1, 1]) { PENT.push(norm3([0, s1, s2 * PHI]), norm3([s1, s2 * PHI, 0]), norm3([s2 * PHI, 0, s1])); }
+for (const a of [-1, 1]) for (const b of [-1, 1]) for (const c of [-1, 1]) HEXC.push(norm3([a, b, c]));
+for (const s1 of [-1, 1]) for (const s2 of [-1, 1]) { HEXC.push(norm3([0, s1 / PHI, s2 * PHI]), norm3([s1 / PHI, s2 * PHI, 0]), norm3([s2 * PHI, 0, s1 / PHI])); }
+const BALLS = [
+  { name: "STANDARD", blurb: "The usual. Hex panels." },
+  { name: "CLASSIC", blurb: "Black and white panels." },
+  { name: "BEACH BALL", blurb: "Same bounce. More vacation." },
+  { name: "DISCO", blurb: "Mirror tiles. Very shiny." },
+  { name: "PLASMA", blurb: "Glows. Do not lick." },
+];
+const ballMats = [];
+function ballMat(i) {
+  if (ballMats[i]) return ballMats[i];
+  let m;
+  if (i === 0) m = ballMesh.material;
+  else if (i === 1) {
+    const tex = sphereTex(512, 256, (x, y, z) => {
+      let b1 = -2, b2 = -2, pent = false;
+      for (const p of PENT) { const v = p[0] * x + p[1] * y + p[2] * z; if (v > b1) { b2 = b1; b1 = v; pent = true; } else if (v > b2) b2 = v; }
+      for (const p of HEXC) { const v = p[0] * x + p[1] * y + p[2] * z; if (v > b1) { b2 = b1; b1 = v; pent = false; } else if (v > b2) b2 = v; }
+      if (b1 - b2 < 0.012) return [70, 72, 80];
+      return pent ? [22, 23, 28] : [242, 242, 240];
+    });
+    m = std(0xffffff, { map: tex, roughness: 0.45, metalness: 0.02, envMapIntensity: 0.4 });
+  } else if (i === 2) {
+    const cols = [[230, 50, 50], [250, 250, 250], [40, 110, 230], [255, 205, 40], [250, 250, 250], [40, 190, 90]];
+    const tex = sphereTex(512, 256, (x, y, z, ph) => {
+      if (Math.abs(y) > 0.94) return Math.abs(y) > 0.985 ? [230, 50, 50] : [250, 250, 250];
+      return cols[Math.floor(ph / (Math.PI * 2) * 6) % 6];
+    });
+    m = std(0xffffff, { map: tex, roughness: 0.3, metalness: 0, envMapIntensity: 0.6 });
+  } else if (i === 3) {
+    const rnd = (a, b) => { const s = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return s - Math.floor(s); };
+    const tex = sphereTex(512, 256, (x, y, z, ph, th) => {
+      const cu = ph / (Math.PI * 2) * 64, cv = th / Math.PI * 32;
+      const gu = cu - Math.floor(cu), gv = cv - Math.floor(cv);
+      if (gu < 0.08 || gv < 0.08) return [30, 30, 36];
+      const r = rnd(Math.floor(cu), Math.floor(cv)), v = 120 + r * 135;
+      return r > 0.93 ? [255, 255, 255] : [v, v, v + 10];
+    });
+    m = std(0xffffff, { map: tex, roughness: 0.12, metalness: quality.high ? 1 : 0.4, envMapIntensity: 1.5, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: quality.high ? 0.12 : 0.35 });
+  } else {
+    const tex = sphereTex(512, 256, (x, y, z, ph, th) => {
+      const a = Math.sin(ph * 3 + Math.sin(th * 4) * 2 + y * 4), b = Math.sin(ph * 5 - th * 6 + x * 3);
+      const k = Math.pow(Math.max(0, a * 0.5 + 0.5), 6), j = Math.pow(Math.max(0, b * 0.5 + 0.5), 8);
+      return [Math.min(255, 40 + 140 * j + 120 * k), Math.min(255, 20 + 230 * k), Math.min(255, 90 + 165 * k + 165 * j)];
+    });
+    tex.wrapS = THREE.RepeatWrapping;
+    m = new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(1, 1, 1).multiplyScalar(quality.high ? 1.35 : 1) });
+    m.userData.flow = tex;
+  }
+  ballMats[i] = m; return m;
+}
+function applyBall() { ballMesh.material = ballMat(state.ball || 0); }
+function animateBallLook(dt) { const f = ballMesh.material.userData.flow; if (f) f.offset.x = (f.offset.x + dt * 0.08) % 1; }
+// A flat preview of a ball for the picker: each pixel looks up the texture on the visible half of the sphere
+function ballPreview(i, size) {
+  const c = document.createElement("canvas"); c.width = c.height = size;
+  const m = ballMat(i), src = m.map && m.map.image;
+  const g = c.getContext("2d"), img = g.createImageData(size, size);
+  let sd = null, sw = 0, sh = 0;
+  if (src) { sw = src.width; sh = src.height; sd = src.getContext("2d").getImageData(0, 0, sw, sh).data; }
+  const L = norm3([-0.4, 0.6, 0.7]);
+  for (let py = 0; py < size; py++) for (let px = 0; px < size; px++) {
+    const x = (px + 0.5) / size * 2 - 1, y = 1 - (py + 0.5) / size * 2, r2 = x * x + y * y, k = (py * size + px) * 4;
+    if (r2 > 1) continue;
+    const z = Math.sqrt(1 - r2);
+    // tilt the ball a little so the poles aren't head-on
+    const ty = y * 0.94 + z * 0.34, tz = -y * 0.34 + z * 0.94;
+    const th = Math.acos(Math.max(-1, Math.min(1, ty))), ph = (Math.atan2(tz, -x) + Math.PI * 2) % (Math.PI * 2);
+    let col = [220, 220, 220];
+    if (sd) { const sx = Math.min(sw - 1, Math.floor(ph / (Math.PI * 2) * sw)), sy = Math.min(sh - 1, Math.floor(th / Math.PI * sh)), q = (sy * sw + sx) * 4; col = [sd[q], sd[q + 1], sd[q + 2]]; }
+    const lit = i === 4 ? 1.1 : 0.45 + 0.65 * Math.max(0, x * L[0] + y * L[1] + z * L[2]);
+    img.data[k] = Math.min(255, col[0] * lit); img.data[k + 1] = Math.min(255, col[1] * lit); img.data[k + 2] = Math.min(255, col[2] * lit); img.data[k + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  return c;
+}
+// The picker shows before each game; `then` runs once a ball is chosen
+let ballThen = null;
+function pickBall(then) {
+  ballThen = then;
+  const box = $("ball-list");
+  if (!box.childElementCount) {
+    BALLS.forEach((b, i) => {
+      const btn = document.createElement("button"); btn.type = "button"; btn.className = "ball-card";
+      const pv = ballPreview(i, 96); pv.className = "ball-pv"; pv.setAttribute("aria-hidden", "true");
+      const nm = document.createElement("b"); nm.textContent = b.name;
+      const bl = document.createElement("small"); bl.textContent = b.blurb;
+      const k = document.createElement("kbd"); k.textContent = String(i + 1);
+      btn.append(pv, nm, bl, k);
+      btn.addEventListener("click", () => chooseBall(i));
+      box.appendChild(btn);
+    });
+  }
+  Array.from(box.children).forEach((b, i) => b.setAttribute("aria-current", String(i === (state.ball || 0))));
+  $("ballpick").hidden = false;
+  const cur = box.children[state.ball || 0]; if (cur) cur.focus({ preventScroll: true });
+}
+function chooseBall(i) {
+  state.ball = i; persist(); applyBall();
+  $("ballpick").hidden = true;
+  const then = ballThen; ballThen = null;
+  if (then) then();
+}
+function cancelBall() { $("ballpick").hidden = true; ballThen = null; }
 
 // Blob shadows
 const shadowTex = canvasTex(64, 64, (g, w, h) => {
@@ -1907,9 +2096,30 @@ const paintMat = (opts) => quality.high
   ? new THREE.MeshPhysicalMaterial(Object.assign({ metalness: 0.15, roughness: 0.4, clearcoat: 0.8, clearcoatRoughness: 0.25, envMapIntensity: 0.3 }, opts))
   : std(0xffffff, Object.assign({ metalness: 0.25, roughness: 0.4 }, opts));
 function MAT_DARK() { return std(0x15161c, { metalness: 0.4, roughness: 0.6 }); }
+const CARBON_TEX = canvasTex(64, 64, (g, w) => {                       // woven carbon fibre
+  g.fillStyle = "#121318"; g.fillRect(0, 0, w, w);
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
+    const gr = (x + y) % 2 ? g.createLinearGradient(x * 8, 0, x * 8 + 8, 0) : g.createLinearGradient(0, y * 8, 0, y * 8 + 8);
+    gr.addColorStop(0, "#1b1d24"); gr.addColorStop(0.5, "#3a3e4a"); gr.addColorStop(1, "#1b1d24");
+    g.fillStyle = gr; g.fillRect(x * 8 + 0.5, y * 8 + 0.5, 7, 7);
+  }
+});
+CARBON_TEX.wrapS = CARBON_TEX.wrapT = THREE.RepeatWrapping; CARBON_TEX.repeat.set(3, 3);
+// Tire: tread blocks round the middle, raised lettering on the sidewalls (u runs round the wheel, v across it)
+const TIRE_TEX = canvasTex(1024, 64, (g, w, h) => {
+  g.fillStyle = "#1a1a1f"; g.fillRect(0, 0, w, h);
+  g.fillStyle = "#0e0e11";
+  for (let i = 0; i < 48; i++) { g.fillRect(i * w / 48, h * 0.33, w / 48 * 0.35, h * 0.34); g.fillRect(i * w / 48 + w / 96, h * 0.42, w / 48 * 0.6, h * 0.04); }
+  g.fillStyle = "#5c5d66"; g.font = `900 ${h * 0.16}px ${FONT}`; g.textBaseline = "middle";
+  for (let i = 0; i < 4; i++) { g.fillText("TEMU RACING", i * w / 4 + 20, h * 0.12); g.fillText("TEMU RACING", i * w / 4 + 140, h * 0.88); }
+});
 const MAT = {
   glass: std(0x0a1118, { metalness: 0.95, roughness: 0.08, envMapIntensity: 0.9 }),
   rubber: std(0x18181d, { roughness: 0.92 }),
+  tire: std(0xffffff, { map: TIRE_TEX, roughness: 0.9 }),
+  carbon: std(0xffffff, { map: CARBON_TEX, metalness: 0.3, roughness: 0.35, envMapIntensity: 0.5 }),
+  bezel: std(0x08080b, { metalness: 0.6, roughness: 0.3 }),
+  reverse: glowMat(0xffffff, GLOW),
   rim: std(0xd4d8e2, { metalness: quality.high ? 0.9 : 0.45, roughness: 0.25, envMapIntensity: 0.7 }),
   dark: MAT_DARK(),
   head: glowMat(0xfff6d8, GLOW * 1.15), tail: glowMat(0xff2020, GLOW * 0.95),
@@ -2028,6 +2238,10 @@ function buildRim(spin, kind, r, out, M) {
   add(HUB_GEO, kind === 1 ? MAT.rim : MAT.dark, out * 0.18);
   if (kind === 4) for (let k = 0; k < 14; k++) add(LUG_GEO, MAT.rubber, 0, (k / 14) * Math.PI * 2).translateY(r * 0.98);   // tread blocks
 }
+const PLATE_TEX = canvasTex(128, 40, (g, w, h) => {
+  g.fillStyle = "#f2f0e6"; g.fillRect(0, 0, w, h); g.strokeStyle = "#222"; g.lineWidth = 3; g.strokeRect(2, 2, w - 4, h - 4);
+  g.fillStyle = "#141414"; g.font = `900 26px ${FONT}`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("TEMU 1", w / 2, h / 2 + 1);
+});
 // Build the 3D car for a car (or a look preview). `where` is the scene it goes in.
 function makeCarView(car, where = scene) {
   const team = car.team, look = car.look || DEFAULT_LOOK, B = BODIES[look[0]], G = bodyGeos(look[0]), M = carMats(team, look);
@@ -2049,13 +2263,30 @@ function makeCarView(car, where = scene) {
   }
   // nose: splitter, headlights, grille
   const [hy, hz, hrx] = B.head;
-  add(body, new THREE.BoxGeometry(B.width * 1.8, 0.05, 0.28), MAT.dark, 0, -0.39, B.len - 0.15);
-  for (const sx of [-1, 1]) add(body, new THREE.BoxGeometry(0.34, 0.07, 0.14), MAT.head, sx * B.width * 0.57, hy, hz, hrx, sx * 0.25, 0, false);
+  add(body, new THREE.BoxGeometry(B.width * 1.8, 0.05, 0.28), MAT.carbon, 0, -0.39, B.len - 0.15);
+  for (const sx of [-1, 1]) {
+    add(body, new THREE.BoxGeometry(0.4, 0.11, 0.12), MAT.bezel, sx * B.width * 0.57, hy - 0.005, hz - 0.02, hrx, sx * 0.25, 0, false);
+    add(body, new THREE.BoxGeometry(0.34, 0.07, 0.14), MAT.head, sx * B.width * 0.57, hy, hz, hrx, sx * 0.25, 0, false);
+    add(body, new THREE.BoxGeometry(0.3, 0.018, 0.15), M.accent, sx * B.width * 0.57, hy + 0.055, hz - 0.01, hrx, sx * 0.25, 0, false);   // LED brow
+  }
   add(body, new THREE.BoxGeometry(0.62, 0.1, 0.06), MAT.dark, 0, -0.17, B.len - 0.03);
   // tail: lights, diffuser, the boost nozzle
   const [ty, tz] = B.tail;
-  for (const sx of [-1, 1]) add(body, new THREE.BoxGeometry(0.42, 0.06, 0.04), MAT.tail, sx * B.width * 0.58, ty, tz, 0, 0, 0, false);
-  add(body, new THREE.BoxGeometry(B.width * 1.58, 0.12, 0.2), MAT.dark, 0, -0.33, -B.len + 0.07, 0.35);
+  const tailMat = MAT.tail.clone(), revMat = MAT.reverse.clone(); revMat.visible = false;
+  for (const sx of [-1, 1]) {
+    add(body, new THREE.BoxGeometry(0.46, 0.09, 0.03), MAT.bezel, sx * B.width * 0.58, ty, tz + 0.012, 0, 0, 0, false);
+    add(body, new THREE.BoxGeometry(0.42, 0.06, 0.04), tailMat, sx * B.width * 0.58, ty, tz, 0, 0, 0, false);
+    add(body, new THREE.BoxGeometry(0.1, 0.05, 0.04), revMat, sx * B.width * 0.3, ty, tz, 0, 0, 0, false);
+  }
+  const plate = add(body, new THREE.PlaneGeometry(0.34, 0.1), basic(0xffffff, { map: PLATE_TEX }), 0, -0.24, -B.len + 0.005, 0, Math.PI, 0, false);
+  plate.position.z = -B.len - 0.02;
+  for (const sx of [-1, 1]) {                                                // wing mirrors
+    const mz = C.front[0] - 0.08, mx = sx * (C.w[0] + 0.06), my = C.y0 + 0.12;
+    add(body, new THREE.BoxGeometry(0.1, 0.03, 0.04), MAT.dark, sx * (C.w[0] - 0.01), my - 0.02, mz, 0, 0, 0, false);
+    add(body, new THREE.BoxGeometry(0.06, 0.09, 0.13), M.trim, mx, my, mz, 0, sx * 0.15, 0);
+    add(body, new THREE.BoxGeometry(0.065, 0.07, 0.01), MAT.glass, mx, my, mz - 0.065, 0, sx * 0.15, 0, false);
+  }
+  add(body, new THREE.BoxGeometry(B.width * 1.58, 0.12, 0.2), MAT.carbon, 0, -0.33, -B.len + 0.07, 0.35);
   add(body, new THREE.CylinderGeometry(0.17, 0.2, 0.22, 16), MAT.dark, 0, -0.08, -B.len, Math.PI / 2);
   add(body, new THREE.CircleGeometry(0.12, 16), M.accent, 0, -0.08, -B.len - 0.115, 0, Math.PI, 0, false);
   if (B.spoiler) {
@@ -2064,7 +2295,7 @@ function makeCarView(car, where = scene) {
       if (S.strut) add(body, new THREE.BoxGeometry(0.06, S.strut, 0.1), MAT.dark, sx * 0.4, S.y - S.strut / 2 + 0.01, S.z + 0.06);
       add(body, new THREE.BoxGeometry(0.035, 0.18, 0.4), M.trim, sx * S.w / 2, S.y, S.z);
     }
-    add(body, new THREE.BoxGeometry(S.w, 0.045, 0.36), MAT.dark, 0, S.y, S.z, -0.12);
+    add(body, new THREE.BoxGeometry(S.w, 0.045, 0.36), MAT.carbon, 0, S.y, S.z, -0.12);
     add(body, new THREE.BoxGeometry(S.w, 0.02, 0.05), M.accent, 0, S.y + 0.03, S.z - 0.17, 0, 0, 0, false);
   }
   const topper = look[4] ? buildTopper(look[4], body, roofY + 0.02, roofZ) : null;
@@ -2075,7 +2306,8 @@ function makeCarView(car, where = scene) {
     const steer = new THREE.Group(); mount.add(steer);
     const spin = new THREE.Group(); steer.add(spin);
     const out = Math.sign(x);
-    add(spin, TIRE_GEO[look[2] === 4 ? 1 : 0], MAT.rubber, 0, 0, 0).scale.set(1, r, r);
+    add(spin, TIRE_GEO[look[2] === 4 ? 1 : 0], MAT.tire, 0, 0, 0).scale.set(1, r, r);
+    add(steer, new THREE.BoxGeometry(0.07, r * 0.42, r * 0.28), M.rimAccent, out * 0.05, r * 0.3, -r * 0.22, 0.6, 0, 0, false);   // brake caliper
     buildRim(spin, look[2], r, out, M);
     wheels.push({ mount, steer, spin, r, front, rest: -0.7 + r });
   }
@@ -2087,15 +2319,17 @@ function makeCarView(car, where = scene) {
   core.rotation.x = -Math.PI / 2; core.position.set(0, -0.08, -B.len - 0.5); flame.userData.core = core; body.add(core);
   const label = labelSprite(car.name, team ? "#ffb070" : "#8fb8ff"); if (where === scene) where.add(label);
   where.add(g);
-  const shadow = makeShadow(where); shadow.visible = !quality.high;
-  return { car, g, body, wheels, flame, label, labelName: car.name, shadow, roll: 0, boost: BS, tail: B.len, topper, lookKey: look.join(","),
+  const shadow = makeShadow(where); shadow.visible = !quality.high || where !== scene;
+  return { car, g, body, wheels, flame, label, labelName: car.name, shadow, roll: 0, boost: BS, tail: B.len, topper, lookKey: look.join(","), tailMat, revMat, trails: null, skid: [null, null, null, null], width: B.width,
     vq: car.quat.clone(), susp: 0, suspV: 0, pitch: 0, pitchV: 0, bank: 0, bankV: 0, steer: 0, wasGround: car.onGround, lastVel: car.vel.clone() };
 }
 function disposeCarView(cv) {
   if (cv.g.parent) cv.g.parent.remove(cv.g);
   if (cv.label.parent) cv.label.parent.remove(cv.label);
   if (cv.shadow.parent) cv.shadow.parent.remove(cv.shadow);
+  removeTrails(cv);
 }
+const TAIL_BASE = MAT.tail.color.clone();
 
 // ---- Particles ----------------------------------------------------------------------------
 const MAXP = 3000;
@@ -2244,8 +2478,9 @@ try {
   if (typeof saved.sound === "boolean") sound.on = saved.sound;
   if (typeof saved.nick === "string") state.nick = saved.nick;
   if (saved.look) state.look = cleanLook(saved.look);
+  if (Number.isInteger(saved.ball) && saved.ball >= 0 && saved.ball < BALLS.length) state.ball = saved.ball;
 } catch (_) {}
-function persist() { try { localStorage.setItem("rocket-temu-3d", JSON.stringify({ skill: state.skill, ballCam: state.ballCam[0], sound: sound.on, nick: state.nick, look: state.look, gfx: quality.chosen ? (quality.high ? "high" : "low") : undefined })); } catch (_) {} }
+function persist() { try { localStorage.setItem("rocket-temu-3d", JSON.stringify({ skill: state.skill, ballCam: state.ballCam[0], sound: sound.on, nick: state.nick, look: state.look, ball: state.ball || 0, gfx: quality.chosen ? (quality.high ? "high" : "low") : undefined })); } catch (_) {} }
 
 const K = (...codes) => codes.some((c) => state.keys.has(c));
 const dead = (v) => (Math.abs(v) < 0.14 ? 0 : clamp((v - Math.sign(v) * 0.14) / 0.76, -1, 1));
@@ -2257,6 +2492,7 @@ function readP1(solo, car) {
   c.boost = K("ShiftLeft", "TouchBoost") || (solo && K("ShiftRight"));
   c.roll = (K("KeyE") || (solo && K("Period")) ? 1 : 0) - (K("KeyQ") || (solo && K("Comma")) ? 1 : 0);
   c.slide = K("KeyX") || (solo && K("Slash"));
+  padControls(c, padsFor(0), car);
   // Touch: the thumb stick works like a controller stick. Push up to drive, pull down to reverse,
   // let go to stop; left and right steer. In the air it tilts the car, and jump while pushing flips that way.
   if (state.touch && solo) {
@@ -2264,16 +2500,153 @@ function readP1(solo, car) {
     if (sx) c.steer = sx;
     if (sy) c.throttle = -sy;
   }
-  return c;
+  return finishControls(c);
 }
-function readP2() {
+function readP2(car) {
   const c = new Controls();
   c.throttle = (K("ArrowUp") ? 1 : 0) - (K("ArrowDown") ? 1 : 0);
   c.steer = (K("ArrowRight") ? 1 : 0) - (K("ArrowLeft") ? 1 : 0);
   c.jump = K("Enter", "ControlRight", "Numpad0"); c.boost = K("ShiftRight", "NumpadDecimal");
   c.roll = (K("Period") ? 1 : 0) - (K("Comma") ? 1 : 0); c.slide = K("Slash");
+  padControls(c, padsFor(1), car);
+  return finishControls(c);
+}
+
+// ---- Controllers (Gamepad API, standard layout: Xbox, PlayStation, Switch Pro and most others) ----
+// Rocket League's default layout: RT drive, LT reverse, left stick steer (and pitch in the air),
+// A jump, B boost, X powerslide (and free air roll in the air), LB / RB air roll left / right,
+// Y ball cam, Start pause, D-pad quick chat online. In menus: D-pad or stick to move, A select, B back.
+const PB = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START: 9, UP: 12, DOWN: 13, LEFT: 14, RIGHT: 15 };
+const pads = { list: [], held: new Map(), edge: new Map(), used: false, lastDevice: "kb", nav: { dir: 0, next: 0 } };
+function stick(x, y) {                                        // radial dead zone, rescaled so small moves still count
+  const m = Math.hypot(x, y), dz = 0.15;
+  if (m < dz) return [0, 0];
+  const k = Math.min(1, (m - dz) / (1 - dz)) / m;
+  return [x * k, y * k];
+}
+function pollPads() {
+  const all = navigator.getGamepads ? Array.from(navigator.getGamepads()) : [];
+  pads.list = all.filter((g) => g && g.connected && g.buttons.length >= 12 && g.axes.length >= 2);
+  for (const g of pads.list) {
+    const prev = pads.held.get(g.index) || [];
+    const now = g.buttons.map((b) => b.pressed || b.value > 0.5);
+    pads.edge.set(g.index, now.map((v, i) => v && !prev[i]));
+    pads.held.set(g.index, now);
+    const [lx, ly] = stick(g.axes[0], g.axes[1]);
+    if (now.some(Boolean) || lx || ly) {
+      if (!pads.used) { pads.used = true; showPadHint(); }
+      pads.lastDevice = "pad"; state.touch = false;
+    }
+  }
+}
+const pressed = (g, b) => !!(pads.edge.get(g.index) || [])[b];
+const holding = (g, b) => !!(pads.held.get(g.index) || [])[b];
+// Which controllers drive which local player: one player gets every controller; in split screen,
+// with two controllers each player gets one, with one controller it goes to player 2 (player 1 keeps the keyboard).
+function padsFor(player) {
+  const L = pads.list;
+  if (state.local.length < 2) return L;
+  if (L.length >= 2) return [L[player]];
+  return player === 1 && L.length ? [L[0]] : [];
+}
+function padControls(c, list, car) {
+  for (const g of list) {
+    const [lx, ly] = stick(g.axes[0], g.axes[1]);
+    const rt = g.buttons[PB.RT] ? g.buttons[PB.RT].value : 0, lt = g.buttons[PB.LT] ? g.buttons[PB.LT].value : 0;
+    const air = car && !car.onGround;
+    const freeRoll = air && holding(g, PB.X);
+    if (rt > 0.05 || lt > 0.05) c.throttle = rt - lt;
+    if (lx) { if (freeRoll) c.roll = lx; else c.steer = lx; }
+    if (pads.lastDevice === "pad") c.pitch = -ly;             // stick up tips the nose down, like the real game
+    c.jump = c.jump || holding(g, PB.A);
+    c.boost = c.boost || holding(g, PB.B);
+    c.slide = c.slide || holding(g, PB.X);
+    if (holding(g, PB.LB)) c.roll = -1;
+    if (holding(g, PB.RB)) c.roll = 1;
+  }
+}
+const q2 = (v) => Math.round(v * 100) / 100;                  // what gets sent online, so prediction matches the server
+function finishControls(c) {
+  c.throttle = q2(c.throttle); c.steer = q2(c.steer); c.roll = q2(c.roll);
+  if (c.pitch != null) c.pitch = q2(c.pitch);
   return c;
 }
+// Rumble the controller(s) of a local player
+function rumble(player, strong, weak, ms) {
+  for (const g of padsFor(player)) {
+    const a = g.vibrationActuator;
+    if (a && a.playEffect) a.playEffect("dual-rumble", { duration: ms, strongMagnitude: strong, weakMagnitude: weak }).catch(() => {});
+  }
+}
+function showPadHint() {
+  const el = $("pad-hint"); if (!el) return;
+  el.hidden = false; clearTimeout(showPadHint.t);
+  showPadHint.t = setTimeout(() => { el.hidden = true; }, 5000);
+}
+window.addEventListener("gamepadconnected", () => { pads.used = false; });
+window.addEventListener("keydown", () => { pads.lastDevice = "kb"; }, true);
+// Buttons that matter outside of driving: menus, pause, ball cam, chat, replays
+function padUi() {
+  if (!pads.list.length) return;
+  const any = (b) => pads.list.some((g) => pressed(g, b));
+  const overOpen = !$("over").hidden, pauseOpen = !$("pause").hidden, pickOpen = !$("ballpick").hidden;
+  if (state.screen === "match" && !overOpen && !pauseOpen && !pickOpen) {
+    if (replay.active && any(PB.A)) { skipReplay(); return; }
+    if (any(PB.START)) act("pause");
+    if (any(PB.Y)) act("cam");
+    if (state.online) [PB.UP, PB.LEFT, PB.RIGHT, PB.DOWN].forEach((b, i) => { if (any(b)) sendChat(i); });
+    return;
+  }
+  // Menus: move between the buttons that are showing, A presses, B goes back
+  const root = pickOpen ? $("ballpick") : overOpen ? $("over") : pauseOpen ? $("pause") : $(state.screen === "match" ? "pause" : state.screen);
+  if (!root) return;
+  let dir = 0;
+  for (const g of pads.list) {
+    const [, ly] = stick(g.axes[0], g.axes[1]);
+    if (holding(g, PB.UP) || ly < -0.6) dir = -1;
+    else if (holding(g, PB.DOWN) || ly > 0.6) dir = 1;
+  }
+  let hdir = 0;
+  for (const g of pads.list) {
+    const [lx] = stick(g.axes[0], g.axes[1]);
+    if (holding(g, PB.LEFT) || lx < -0.6) hdir = -1;
+    else if (holding(g, PB.RIGHT) || lx > 0.6) hdir = 1;
+  }
+  const nav = pads.nav, now = performance.now(), d = dir || hdir * 10;
+  let fire = 0;
+  if (d && (d !== nav.dir || now >= nav.next)) { fire = d; nav.next = now + (d === nav.dir ? 160 : 380); }
+  nav.dir = d;
+  if (state.screen === "garage" && !overOpen && !pauseOpen && !pickOpen) {
+    const tab = state.gtab || 0, n = LOOK_PARTS[tab].names.length;
+    if (fire === 10 || fire === -10) equip(tab, (state.look[tab] + (fire > 0 ? 1 : n - 1)) % n);
+    if (fire === 1 || fire === -1 || any(PB.RB) || any(PB.LB)) {
+      const step = fire === -1 || any(PB.LB) ? LOOK_PARTS.length - 1 : 1;
+      state.gtab = (tab + step) % LOOK_PARTS.length; garage.boostPreview = state.gtab === 3; renderGarageUI();
+    }
+    if (any(PB.Y)) act("team");
+    if (any(PB.B) || any(PB.A) || any(PB.START)) act("home");
+    return;
+  }
+  const buttons = Array.from(root.querySelectorAll("button")).filter((b) => b.offsetParent !== null && !b.disabled);
+  if (!buttons.length) return;
+  let i = buttons.indexOf(document.activeElement);
+  if (fire === 1 || fire === -1 || fire === 10 || fire === -10) {
+    const step = fire > 0 ? 1 : -1;
+    i = i < 0 ? 0 : (i + step + buttons.length) % buttons.length;
+    buttons[i].focus({ preventScroll: false });
+    document.querySelectorAll(".padfocus").forEach((b) => b.classList.remove("padfocus"));
+    buttons[i].classList.add("padfocus");
+  }
+  if (any(PB.A)) { (i >= 0 ? buttons[i] : buttons[0]).click(); }
+  else if (any(PB.B)) {
+    if (pickOpen) cancelBall();
+    else if (pauseOpen) act("pause");
+    else if (overOpen) act("menu");
+    else if (state.screen === "online") act("back");
+    else if (state.screen === "menu" && state.panel !== "home") act("home");
+  } else if (any(PB.START) && pauseOpen) act("pause");
+}
+document.addEventListener("pointerdown", () => document.querySelectorAll(".padfocus").forEach((b) => b.classList.remove("padfocus")));
 
 // ---- World views for a match ---------------------------------------------------------------
 let views = null;
@@ -2289,7 +2662,102 @@ function bindMatch(m) {
     for (const pv of views.pads) scene.remove(pv.glow.parent);
   }
   views = { match: m, cars: m.cars.map((c) => makeCarView(c)), pads: m.pads.map(makePadView) };
+  clearSkids();
   plist.length = 0; cheer = null; feed.length = 0;
+}
+
+// ---- Skid marks, drift smoke and supersonic trails ------------------------------------------------
+// Skid marks: a ring buffer of thin dark quads laid on the floor behind sliding tyres.
+const SKID_MAX = 1600;
+const skidGeo = new THREE.BufferGeometry();
+const skidPos = new Float32Array(SKID_MAX * 4 * 3), skidCol = new Float32Array(SKID_MAX * 4 * 3), skidIdx = new Uint32Array(SKID_MAX * 6);
+for (let i = 0; i < SKID_MAX; i++) skidIdx.set([i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3], i * 6);
+skidGeo.setAttribute("position", new THREE.BufferAttribute(skidPos, 3)); skidGeo.setAttribute("color", new THREE.BufferAttribute(skidCol, 3));
+skidGeo.setIndex(new THREE.BufferAttribute(skidIdx, 1));
+const skidMesh = new THREE.Mesh(skidGeo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.55, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, blending: THREE.MultiplyBlending, premultipliedAlpha: true, side: THREE.DoubleSide }));
+skidMesh.frustumCulled = false; skidMesh.renderOrder = 1; scene.add(skidMesh);
+let skidN = 0;
+function addSkid(a, b, w, strength) {
+  const i = skidN % SKID_MAX; skidN++;
+  const dx = b.x - a.x, dz = b.z - a.z, l = Math.hypot(dx, dz) || 1, nx = (-dz / l) * w, nz = (dx / l) * w;
+  skidPos.set([a.x + nx, 0.025, a.z + nz, a.x - nx, 0.025, a.z - nz, b.x - nx, 0.025, b.z - nz, b.x + nx, 0.025, b.z + nz], i * 12);
+  const v = 1 - 0.42 * Math.max(0.4, strength);                                    // multiply blending: 1 = no mark, lower = darker
+  for (let k = 0; k < 12; k++) skidCol[i * 12 + k] = v;
+  skidGeo.attributes.position.needsUpdate = true; skidGeo.attributes.color.needsUpdate = true;
+}
+function clearSkids() { skidPos.fill(0); skidCol.fill(1); skidGeo.attributes.position.needsUpdate = true; skidGeo.attributes.color.needsUpdate = true; skidN = 0; }
+clearSkids();
+// Supersonic trails: two ribbons of white wind streaming off the back corners
+const TRAIL_N = 26;
+function makeTrails(cv) {
+  const out = [];
+  for (let k = 0; k < 2; k++) {
+    const geo = new THREE.BufferGeometry(), pos = new Float32Array(TRAIL_N * 2 * 3), col = new Float32Array(TRAIL_N * 2 * 3), idx = [];
+    for (let i = 0; i < TRAIL_N - 1; i++) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3)); geo.setAttribute("color", new THREE.BufferAttribute(col, 3)); geo.setIndex(idx);
+    const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    mesh.frustumCulled = false; scene.add(mesh);
+    out.push({ mesh, pts: [] });
+  }
+  return out;
+}
+const _tp = new THREE.Vector3(), _tl = new THREE.Vector3();
+function updateTrails(cv, on) {
+  if (!cv.trails) { if (!on) return; cv.trails = makeTrails(cv); }
+  const car = cv.car, q = cv.g.quaternion;
+  cv.trails.forEach((tr, k) => {
+    if (on) {
+      _tp.set((k ? -1 : 1) * cv.width * 0.92, 0.12, -cv.tail + 0.1).applyQuaternion(q).add(cv.g.position);
+      tr.pts.unshift(_tp.clone()); if (tr.pts.length > TRAIL_N) tr.pts.pop();
+    } else if (tr.pts.length) tr.pts.pop();
+    const geo = tr.mesh.geometry, P = geo.attributes.position.array, Cc = geo.attributes.color.array;
+    _tl.set(0, 1, 0).applyQuaternion(q).multiplyScalar(0.04);
+    for (let i = 0; i < TRAIL_N; i++) {
+      const p = tr.pts[Math.min(i, tr.pts.length - 1)] || cv.g.position, f = tr.pts.length ? Math.max(0, 1 - i / tr.pts.length) * 0.55 : 0;
+      P.set([p.x + _tl.x, p.y + _tl.y, p.z + _tl.z, p.x - _tl.x, p.y - _tl.y, p.z - _tl.z], i * 6);
+      Cc.set([f, f, f * 1.1, f, f, f * 1.1], i * 6);
+    }
+    geo.attributes.position.needsUpdate = true; geo.attributes.color.needsUpdate = true;
+    tr.mesh.visible = tr.pts.length > 1;
+  });
+}
+function removeTrails(cv) { if (cv.trails) for (const tr of cv.trails) scene.remove(tr.mesh); cv.trails = null; }
+// Tyre effects for one car each frame: marks and smoke when sliding sideways or braking hard on the floor
+const _wp = new THREE.Vector3();
+function tyreFx(cv, accelFwd) {
+  const car = cv.car, up = cv.g.quaternion ? _lu : null;
+  const lat = Math.abs(car.vel.dot(_ll)), fwd = car.vel.dot(_lf);
+  const onFloor = car.onGround && _lu.y > 0.9 && car.pos.y < 1.5;
+  const braking = Math.abs(fwd) > 9 && accelFwd * Math.sign(fwd) < -30;
+  const slide = Math.max(lat > 3 ? Math.min(1, (lat - 3) / 5) : 0, (car.slideT || 0) > 0.4 && Math.abs(fwd) > 6 ? 0.6 : 0);
+  cv.wheels.forEach((w, k) => {
+    const marking = onFloor && (slide > 0 || (braking && !w.front)) && (!w.front || slide > 0.5);
+    if (!marking) { cv.skid[k] = null; return; }
+    _wp.set(w.mount.position.x * 0.98, -0.68, w.mount.position.z).applyQuaternion(car.quat).add(car.pos);
+    const prev = cv.skid[k];
+    if (prev && prev.distanceToSquared(_wp) > 0.04) { addSkid(prev, _wp, 0.11, Math.max(slide, braking ? 0.6 : 0)); cv.skid[k] = _wp.clone(); }
+    else if (!prev) cv.skid[k] = _wp.clone();
+    if (!w.front && Math.random() < 0.35 * Math.max(slide, braking ? 0.5 : 0)) emit(_wp, new THREE.Vector3((Math.random() - 0.5) * 2, 1 + Math.random(), (Math.random() - 0.5) * 2), 0.9, 0xc9ccd6, -1.2);
+  });
+}
+// Reflections of the actual stadium on cars and the ball (high graphics): rendered once from above midfield
+let stadiumEnv = null, roomEnv = scene.environment;
+function captureStadiumEnv() {
+  if (!quality.high || stadiumEnv || !THREE.PMREMGenerator) return;
+  try {
+    const pm = new THREE.PMREMGenerator(renderer), hidden = [];
+    scene.traverse((o) => { if (o.isSprite || o === skidMesh) { if (o.visible) hidden.push(o); o.visible = false; } });
+    scene.environment = null;
+    // an ordinary 8-bit cube map, so bright lights clip to white instead of flooding the reflections
+    const rt = new THREE.WebGLCubeRenderTarget(256, { format: THREE.RGBAFormat, generateMipmaps: false });
+    const cc = new THREE.CubeCamera(0.5, 400, rt); cc.position.set(0, 9, 0); scene.add(cc);
+    cc.update(renderer, scene); scene.remove(cc);
+    stadiumEnv = pm.fromCubemap(rt.texture).texture;
+    rt.dispose();
+    hidden.forEach((o) => { o.visible = true; });
+    pm.dispose();
+    scene.environment = stadiumEnv;
+  } catch (_) { scene.environment = roomEnv; }
 }
 
 // Suspension, body lean, steering wheels, spinning wheels and landings (all cosmetic)
@@ -2314,9 +2782,9 @@ function animateCar(cv, dt) {
     if (2 * Math.acos(Math.min(1, Math.abs(cv.qoff.w))) < 0.002) cv.qoff = null; else cv.g.quaternion.multiply(cv.qoff);
   }
   // body pitches back under acceleration, dives under braking, leans out of turns
-  let pT = 0, bT = 0;
+  let pT = 0, bT = 0, accF = 0;
   if (ground && cv.wasGround && dt > 0) {
-    _la.copy(car.vel).sub(cv.lastVel).multiplyScalar(1 / dt);
+    _la.copy(car.vel).sub(cv.lastVel).multiplyScalar(1 / dt); accF = _la.dot(_lf);
     pT = clamp(-_la.dot(_lf) * 0.0035, -0.06, 0.05);
     bT = clamp(_la.dot(_ll) * 0.004, -0.07, 0.07);
   }
@@ -2343,6 +2811,14 @@ function animateCar(cv, dt) {
     w.spin.rotation.x = cv.roll / w.r;
   }
   if (cv.topper && cv.topper.userData.spin) cv.topper.userData.spin.rotation.y += dt * (5 + car.speed() * 0.7);
+  if (cv.g.parent === scene && dt > 0) {                                  // in a match: lights, tyre marks, trails
+    const fs = car.vel.dot(_lf), braking = ground && Math.abs(fs) > 2 && accF * Math.sign(fs) < -25;
+    cv.brakeT = braking ? 0.25 : Math.max(0, (cv.brakeT || 0) - dt);
+    cv.tailMat.color.copy(TAIL_BASE).multiplyScalar(cv.brakeT > 0 ? 2.4 : 1);
+    cv.revMat.visible = ground && fs < -1;
+    tyreFx(cv, accF);
+    updateTrails(cv, car.speed() > SUPERSONIC);
+  }
   cv.wasGround = ground; cv.lastVel.copy(car.vel);
 }
 // A thump of turf and a thud when a car lands hard
@@ -2359,6 +2835,7 @@ function landingFx(cv, impact) {
   const d = car.pos.distanceTo(focus);
   if (d < 45) noiseBurst(0.18, 160, 0.8, Math.min(0.35, 0.04 + impact * 0.02) * (1 - d / 45), 0.005);
   if (state.local.length && state.match && car === state.match.cars[state.local[0]] && impact > 7) state.shake = Math.max(state.shake, Math.min(0.12, impact * 0.01));
+  if (state.match) state.local.forEach((ci, who) => { if (state.match.cars[ci] === car && impact > 4) rumble(who, Math.min(0.8, impact / 14), 0.3, 120); });
 }
 
 function syncWorld(m, dt, t) {
@@ -2385,11 +2862,13 @@ function syncWorld(m, dt, t) {
     cv.g.position.copy(cp);
     animateCar(cv, dt);
     boostFx(cv, cp, cv.g.quaternion, car.vel, car.boosting);
-    if (car.speed() > SUPERSONIC) emit(car.pos.clone().add(car.forward().multiplyScalar(-1.3)), new THREE.Vector3(), 0.35, 0xdfe6ff, 0);
     cv.label.position.set(cp.x, cp.y + 2.6, cp.z);
-    cv.shadow.visible = !quality.high && (!car.onGround || car.up().y > 0.7);
-    const h = Math.max(0, cp.y - CAR_REST), cs = 3.4 * Math.max(0.4, 1 - h / 20);
-    cv.shadow.position.set(cp.x, 0.03, cp.z); cv.shadow.scale.set(cs, cs * 1.3, 1);
+    // a soft contact shadow under the car (with real shadows on top of it on high graphics)
+    const h = Math.max(0, cp.y - CAR_REST);
+    cv.shadow.visible = (quality.high ? h < 4 : true) && (!car.onGround || car.up().y > 0.7);
+    const cs = (quality.high ? 2.5 : 3.4) * Math.max(0.4, 1 - h / 20);
+    cv.shadow.position.set(cp.x, 0.03, cp.z); cv.shadow.scale.set(cs, cs * 1.45, 1); cv.shadow.rotation.z = car.yaw;
+    if (quality.high) cv.shadow.material.opacity = 0.55 * Math.max(0, 1 - h / 4);
   }
   for (const pv of views.pads) {
     const on = pv.pad.timer <= 0;
@@ -2412,12 +2891,16 @@ function handleEvents(m, celebrate) {
         emit(new THREE.Vector3(s.x, s.y + 2, s.z), towardField.add(new THREE.Vector3(0, 6 + Math.random() * 7, 0)), 3 + Math.random() * 2, [TEAM_HEX[e.team], 0xffc428, 0xffffff][(Math.random() * 3) | 0], 5);
       }
       state.goalSide = Math.sign(e.pos.z) || 1; state.goalT = state.t;
-      if (celebrate) { sfx.goal(); state.shake = 0.6; }
-    } else if (e.type === "touch" && celebrate) { if (e.power > 6) sfx.hit(e.power); }
+      if (celebrate) { sfx.goal(); state.shake = 0.6; state.local.forEach((ci, who) => rumble(who, 0.7, 0.9, 600)); }
+    } else if (e.type === "touch" && celebrate) {
+      if (e.power > 6) sfx.hit(e.power);
+      const who = state.local.indexOf(e.car); if (who >= 0) rumble(who, Math.min(1, e.power / 40), Math.min(1, e.power / 25), 90);
+    }
     else if (e.type === "demo") {
       burst(e.pos, [TEAM_HEX[e.team], 0xffc428, 0xff5a00], 180, 18, 1.0, 4, true); burst(e.pos, [0x333333, 0x555555], 80, 10, 1.6, 3);
       if (m.cars[e.by]) addFeed(m.cars[e.by], `demolished ${m.cars[e.car].name}`);
       if (celebrate) { sfx.demo(); state.shake = Math.max(state.shake, 0.35); }
+      state.local.forEach((ci, who) => { if (ci === e.car || ci === e.by) rumble(who, ci === e.car ? 1 : 0.5, 0.6, ci === e.car ? 400 : 200); });
     }
     else if (e.type === "stat") {
       if (e.kind === "save") addFeed(m.cars[e.car], "made a save");
@@ -2485,7 +2968,7 @@ function renderLobbies() {
     const t = r.state === "over" ? "finished" : (r.ot ? "overtime" : Math.floor(r.time / 60) + ":" + String(r.time % 60).padStart(2, "0"));
     meta.textContent = `${r.humans}/${r.max} players · ${r.score[0]}-${r.score[1]} · ${t}`;
     const b = document.createElement("button"); b.type = "button"; b.textContent = r.humans >= r.max ? "FULL" : "JOIN"; b.disabled = r.humans >= r.max;
-    b.addEventListener("click", () => netJoin({ t: "join", room: r.id }));
+    b.addEventListener("click", () => pickBall(() => netJoin({ t: "join", room: r.id })));
     row.append(nm, meta, b); box.appendChild(row);
   }
   if (net.ws && net.ws.readyState === 1 && !net.bad) netStatus(`${net.online} ${net.online === 1 ? "person" : "people"} online.`);
@@ -2558,7 +3041,7 @@ function netStep(dt) {
   net.seq++;
   net.pending.push({ s: net.seq, c });
   if (net.pending.length > 180) net.pending.shift();
-  netSend({ t: "in", s: net.seq, c: [Math.round(c.throttle * 100) / 100, Math.round(c.steer * 100) / 100, c.jump ? 1 : 0, c.boost ? 1 : 0, c.roll, c.slide ? 1 : 0] });
+  netSend({ t: "in", s: net.seq, c: [c.throttle, c.steer, c.jump ? 1 : 0, c.boost ? 1 : 0, c.roll, c.slide ? 1 : 0].concat(c.pitch == null ? [] : [c.pitch]) });
   if (net.predicting) for (let k = 0; k < SUBSTEPS; k++) car.update(c, 1 / FPS / SUBSTEPS, NEUTRAL);
   if (m.state === "play" || m.state === "goal") for (let k = 0; k < SUBSTEPS; k++) m.ball.step(1 / FPS / SUBSTEPS, NEUTRAL);
   net.carErr.multiplyScalar(Math.exp(-9 * dt)); net.ballErr.multiplyScalar(Math.exp(-7 * dt));
@@ -2898,13 +3381,17 @@ function toOnline() {
 }
 function act(name) {
   audio();
-  if (name === "bot" || name === "duel" || name === "2p" || name === "watch") startMatch(name);
+  if (name === "bot" || name === "duel" || name === "2p" || name === "watch") pickBall(() => startMatch(name));
+  else if (name === "cancelball") cancelBall();
+  else if (name === "install") install();
+  else if (name === "fullscreen") fullscreen();
+  else if (name === "closehelp") $("install-help").hidden = true;
   else if (name === "play" || name === "settings") setPanel(name);
   else if (name === "home") { if (state.screen !== "menu") show("menu"); setPanel("home"); }
   else if (name === "garage") toGarage();
   else if (name === "team") { garage.team = 1 - garage.team; renderGarageUI(); }
   else if (name === "online") toOnline();
-  else if (name === "quick" || name === "create") netJoin({ t: name });
+  else if (name === "quick" || name === "create") pickBall(() => netJoin({ t: name }));
   else if (name === "back") toMenu();
   else if (name === "gfx") {
     try { const sv = JSON.parse(localStorage.getItem("rocket-temu-3d") || "{}"); sv.gfx = quality.high ? "low" : "high"; localStorage.setItem("rocket-temu-3d", JSON.stringify(sv)); } catch (_) {}
@@ -2958,6 +3445,13 @@ function renderScoreboard(m) {
 const GAME_KEYS = new Set(["Space", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter", "Slash", "Comma", "Period"]);
 window.addEventListener("keydown", (e) => {
   if (e.target && e.target.tagName === "INPUT") { if (e.code === "Enter") act("quick"); return; }
+  if (!$("ballpick").hidden) {
+    if (e.repeat) return;
+    const d = /^(Digit|Numpad)([1-9])$/.exec(e.code);
+    if (d && Number(d[2]) <= BALLS.length) chooseBall(Number(d[2]) - 1);
+    else if (e.code === "Escape") cancelBall();
+    return;
+  }
   if (GAME_KEYS.has(e.code) && state.screen === "match") e.preventDefault();
   if (e.repeat) return;
   if (replay.active && (e.code === "Space" || e.code === "Enter")) { skipReplay(); return; }
@@ -3143,7 +3637,7 @@ function step(dt) {
     if (state.paused) return;
     const inputs = [];
     if (state.local.length === 1) inputs[state.local[0]] = readP1(true, m.cars[state.local[0]]);
-    else if (state.local.length === 2) { inputs[state.local[0]] = readP1(false); inputs[state.local[1]] = readP2(); }
+    else if (state.local.length === 2) { inputs[state.local[0]] = readP1(false, m.cars[state.local[0]]); inputs[state.local[1]] = readP2(m.cars[state.local[1]]); }
     m.update(dt, inputs);
     handleEvents(m, true);
   }
@@ -3154,6 +3648,8 @@ function step(dt) {
 }
 function render(dt) {
   if (LOBBY.has(state.screen)) { renderGarage(dt); return; }
+  if (!stadiumEnv && quality.high) captureStadiumEnv();
+  animateBallLook(dt);
   for (const o of [parts, glowParts]) if (o.parent !== scene) scene.add(o);
   const m = state.screen === "match" ? state.match : state.attract;
   if (!m) return;
@@ -3211,6 +3707,7 @@ function render(dt) {
 }
 function frame(now) {
   const real = Math.min(0.1, (now - last) / 1000); last = now;
+  pollPads(); padUi();
   acc += real;
   let n = 0;
   while (acc >= 1 / FPS && n < 5) { step(1 / FPS); acc -= 1 / FPS; n++; }
@@ -3235,10 +3732,61 @@ function autoQuality(now) {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25)); ballShadow.visible = true;
   resize();
 }
+applyBall();
 toMenu();
 requestAnimationFrame(frame);
 // Small hook for automated testing
-window.rocketTemu = { state, act, net, replay, views: () => views, advance(secs) { for (let i = 0; i < secs * FPS; i++) step(1 / FPS); } };
+// ---- Never get stuck zoomed in on phones ----------------------------------------------------------
+document.addEventListener("gesturestart", (e) => e.preventDefault(), { passive: false });      // iOS pinch
+document.addEventListener("gesturechange", (e) => e.preventDefault(), { passive: false });
+document.addEventListener("dblclick", (e) => e.preventDefault(), { passive: false });
+let lastTouchEnd = 0;
+document.addEventListener("touchend", (e) => {                                                 // iOS double-tap zoom
+  const now = Date.now();
+  if (now - lastTouchEnd < 320 && !(e.target && e.target.tagName === "INPUT")) e.preventDefault();
+  lastTouchEnd = now;
+}, { passive: false });
+document.addEventListener("touchmove", (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+// If the page did get zoomed (by the browser or an accessibility setting), snap it back
+function unzoom() {
+  const vv = window.visualViewport;
+  if (!vv || vv.scale <= 1.01) return;
+  const meta = document.querySelector('meta[name="viewport"]');
+  if (!meta) return;
+  const base = "width=device-width, initial-scale=1, viewport-fit=cover";
+  meta.setAttribute("content", base + ", maximum-scale=1, user-scalable=no");
+  setTimeout(() => { meta.setAttribute("content", base + ", maximum-scale=1, user-scalable=no"); window.scrollTo(0, 0); }, 50);
+}
+if (window.visualViewport) window.visualViewport.addEventListener("resize", unzoom);
+window.addEventListener("orientationchange", () => setTimeout(unzoom, 300));
+// ---- Install as an app (home screen, full screen, works offline for bot matches) -------------------
+const app_ = { prompt: null, standalone: matchMedia("(display-mode: standalone)").matches || matchMedia("(display-mode: fullscreen)").matches || navigator.standalone === true,
+  pwa: !!document.querySelector('link[rel="manifest"]'), ios: /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) };
+function updateInstall() {
+  const can = app_.pwa && !app_.standalone && (app_.prompt || app_.ios || matchMedia("(pointer: coarse)").matches);
+  $("install-btn").hidden = !can; $("install-pill").hidden = !(can && (app_.prompt || app_.ios));
+  $("fs-btn").hidden = app_.standalone || !document.documentElement.requestFullscreen;
+}
+window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); app_.prompt = e; updateInstall(); });
+window.addEventListener("appinstalled", () => { app_.prompt = null; app_.standalone = true; updateInstall(); });
+function install() {
+  if (app_.prompt) { app_.prompt.prompt(); app_.prompt.userChoice.finally(() => { app_.prompt = null; updateInstall(); }); return; }
+  $("install-steps").textContent = app_.ios ? 'In Safari, tap the Share button, then "Add to Home Screen".'
+    : 'Open your browser menu (the three dots), then tap "Install app" or "Add to Home screen".';
+  $("install-help").hidden = false;
+}
+function fullscreen() {
+  const el = document.documentElement;
+  if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; }
+  if (el.requestFullscreen) el.requestFullscreen({ navigationUI: "hide" }).then(() => {
+    if (screen.orientation && screen.orientation.lock && matchMedia("(pointer: coarse)").matches) screen.orientation.lock("landscape").catch(() => {});
+  }).catch(() => {});
+}
+if (app_.pwa && "serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
+}
+updateInstall();
+window.rocketTemu = { state, act, net, replay, views: () => views, skids: () => skidN, addSkid, advance(secs) { for (let i = 0; i < secs * FPS; i++) step(1 / FPS); } };
 })();
 </script>
 </body>

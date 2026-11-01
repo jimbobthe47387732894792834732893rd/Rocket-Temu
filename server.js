@@ -30,6 +30,14 @@ const FILES = {
   "/": [path.join(PUBLIC, "index.html"), "text/html; charset=utf-8"],
   "/index.html": [path.join(PUBLIC, "index.html"), "text/html; charset=utf-8"],
   "/three.min.js": [require.resolve("three/build/three.min.js"), "application/javascript"],
+  // Installable app: manifest, offline service worker and icons
+  "/manifest.webmanifest": [path.join(PUBLIC, "manifest.webmanifest"), "application/manifest+json"],
+  "/sw.js": [path.join(PUBLIC, "sw.js"), "application/javascript"],
+  "/icon-192.png": [path.join(PUBLIC, "icon-192.png"), "image/png"],
+  "/icon-512.png": [path.join(PUBLIC, "icon-512.png"), "image/png"],
+  "/icon-maskable-512.png": [path.join(PUBLIC, "icon-maskable-512.png"), "image/png"],
+  "/apple-touch-icon.png": [path.join(PUBLIC, "apple-touch-icon.png"), "image/png"],
+  "/favicon.ico": [path.join(PUBLIC, "icon-192.png"), "image/png"],
 };
 // Graphics add-ons (glow and reflections) served from the three package
 for (const a of ["shaders/CopyShader.js", "shaders/LuminosityHighPassShader.js", "postprocessing/EffectComposer.js", "postprocessing/RenderPass.js",
@@ -43,7 +51,7 @@ const server = http.createServer((req, res) => {
   if (!f) { res.writeHead(404, { "content-type": "text/plain" }); res.end("Not found"); return; }
   fs.readFile(f[0], (err, data) => {
     if (err) { res.writeHead(500); res.end("Server error"); return; }
-    res.writeHead(200, { "content-type": f[1], "cache-control": url.endsWith(".js") ? "public, max-age=86400" : "no-cache" });
+    res.writeHead(200, { "content-type": f[1], "cache-control": url.endsWith(".js") && url !== "/sw.js" ? "public, max-age=86400" : url.endsWith(".png") ? "public, max-age=604800" : "no-cache" });
     res.end(data);
   });
 });
@@ -60,6 +68,7 @@ function toControls(a) {
   if (!Array.isArray(a)) return c;
   const num = (x) => (Number.isFinite(x) ? Math.max(-1, Math.min(1, x)) : 0);
   c.throttle = num(a[0]); c.steer = num(a[1]); c.jump = !!a[2]; c.boost = !!a[3]; c.roll = num(a[4]); c.slide = !!a[5];
+  if (Number.isFinite(a[6])) c.pitch = num(a[6]);
   return c;
 }
 let nextId = 1;

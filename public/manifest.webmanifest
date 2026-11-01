@@ -1,0 +1,38 @@
+{
+ "name": "Rocket Temu",
+ "short_name": "Rocket Temu",
+ "description": "Rocket-powered 3D car soccer: 3v3, online lobbies, drivable walls.",
+ "id": "/",
+ "start_url": "/?app=1",
+ "scope": "/",
+ "display": "fullscreen",
+ "display_override": [
+  "fullscreen",
+  "standalone"
+ ],
+ "orientation": "landscape",
+ "background_color": "#06050d",
+ "theme_color": "#06050d",
+ "categories": [
+  "games",
+  "sports"
+ ],
+ "icons": [
+  {
+   "src": "/icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "/icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "/icon-maskable-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ]
+}

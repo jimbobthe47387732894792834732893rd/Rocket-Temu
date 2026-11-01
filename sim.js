@@ -62,7 +62,8 @@ const wrapAngle = (a) => mod(a + Math.PI, Math.PI * 2) - Math.PI;
 const flat = (v) => new V3(v.x, 0, v.z);
 
 class Controls {
-  constructor() { this.throttle = 0; this.steer = 0; this.jump = false; this.boost = false; this.roll = 0; this.slide = false; }
+  // pitch: the air pitch input when it comes from a separate stick (controllers); null means use throttle (keyboard, bots)
+  constructor() { this.throttle = 0; this.steer = 0; this.jump = false; this.boost = false; this.roll = 0; this.slide = false; this.pitch = null; }
   copy() { return Object.assign(new Controls(), this); }
 }
 
@@ -215,7 +216,7 @@ class Car {
     this.pos.copy(pos); this.pos.y = CAR_REST; this.vel.set(0, 0, 0); this.angVel.set(0, 0, 0);
     this.yaw = yaw; this.quat.setFromAxisAngle(UP, yaw);
     this.onGround = true; this.boosting = false; this.jumpPrev = false; this.airTime = 0; this.jumpT = 0; this.jumpHeld = false;
-    this.canDodge = false; this.hasDoubled = false; this.flipLeft = 0; this.flipAxis.set(0, 0, 0); this.contactT = 0;
+    this.canDodge = false; this.hasDoubled = false; this.flipLeft = 0; this.flipAxis.set(0, 0, 0); this.contactT = 0; this.slideT = 0;
     this.demolished = false; this.respawn = 0; this.supersonicT = 0;
   }
   forward() { return new V3(0, 0, 1).applyQuaternion(this.quat); }
@@ -227,14 +228,14 @@ class Car {
     const r = (v) => Math.round(v * 10000) / 10000;
     return [this.pos.x, this.pos.y, this.pos.z, this.vel.x, this.vel.y, this.vel.z, this.quat.x, this.quat.y, this.quat.z, this.quat.w,
       this.angVel.x, this.angVel.y, this.angVel.z, this.airTime, this.jumpT, this.flipLeft, this.flipAxis.x, this.flipAxis.y, this.flipAxis.z,
-      this.respawn, this.supersonicT, this.boost, this.contactT].map(r).concat([
+      this.respawn, this.supersonicT, this.boost, this.contactT, this.slideT || 0].map(r).concat([
       (this.onGround ? 1 : 0) | (this.canDodge ? 2 : 0) | (this.hasDoubled ? 4 : 0) | (this.jumpPrev ? 8 : 0) | (this.demolished ? 16 : 0) | (this.boosting ? 32 : 0) | (this.jumpHeld ? 64 : 0)]);
   }
   deserialize(v) {
     this.pos.set(v[0], v[1], v[2]); this.vel.set(v[3], v[4], v[5]); this.quat.set(v[6], v[7], v[8], v[9]).normalize();
     this.angVel.set(v[10], v[11], v[12]); this.airTime = v[13]; this.jumpT = v[14]; this.flipLeft = v[15]; this.flipAxis.set(v[16], v[17], v[18]);
-    this.respawn = v[19]; this.supersonicT = v[20]; this.boost = v[21]; this.contactT = v[22];
-    const f = v[23];
+    this.respawn = v[19]; this.supersonicT = v[20]; this.boost = v[21]; this.contactT = v[22]; this.slideT = v[23];
+    const f = v[24];
     this.onGround = !!(f & 1); this.canDodge = !!(f & 2); this.hasDoubled = !!(f & 4); this.jumpPrev = !!(f & 8);
     this.demolished = !!(f & 16); this.boosting = !!(f & 32); this.jumpHeld = !!(f & 64);
     const fw = this.forward(); this.yaw = Math.atan2(fw.x, fw.z);
@@ -279,7 +280,9 @@ class Car {
     let s = this.vel.dot(f);
     const vn = this.vel.dot(n);
     const lat = this.vel.clone().addScaledVector(f, -s).addScaledVector(n, -vn);
-    const grip = m.grip * (c.slide ? 0.25 : 1);
+    // Powerslide: grip fades out quickly while held and comes back more gently after letting go
+    this.slideT = clamp((this.slideT || 0) + (c.slide ? dt / 0.08 : -dt / 0.3), 0, 1);
+    const grip = m.grip * (1 - 0.75 * this.slideT);
     lat.multiplyScalar(Math.exp(-12 * grip * dt));
     const t = c.throttle;
     if (t !== 0 && t * s < -0.5) s += Math.sign(t) * BRAKE * dt;
@@ -288,7 +291,11 @@ class Car {
       if (Math.abs(s) < lim) s = clamp(s + t * throttleAccel(Math.abs(s)) * Math.max(grip, 0.35) * dt * m.speed, -lim, lim);
     } else if (!this.boosting) s -= Math.sign(s) * Math.min(Math.abs(s), COAST * dt);
     if (this.boosting) s += BOOST_ACCEL * dt;
-    const turn = curvature(s) * s * c.steer * (c.slide ? 1.5 : 1);
+    // Rocket League turning: a turn radius that grows with speed (same table as the real game), reached
+    // almost instantly; powersliding tightens it
+    const want = curvature(s) * s * c.steer * (1 + 0.55 * this.slideT);
+    const was = -this.angVel.dot(n);
+    const turn = was + (want - was) * (1 - Math.exp(-dt / 0.035));
     f = f.applyAxisAngle(n, -turn * dt);
     this.vel.copy(f).multiplyScalar(s).add(lat);
     // Gravity: the part along the surface slides you down a wall; the part into or out of it
@@ -320,7 +327,7 @@ class Car {
       w.copy(this.flipAxis);
       if (this.flipLeft <= 0) w.multiplyScalar(0.25);
     } else {
-      const p = c.throttle, y = -c.steer, r = c.roll;
+      const p = c.pitch == null ? c.throttle : c.pitch, y = -c.steer, r = c.roll;
       w.x += (T_PITCH * p + D_PITCH * (1 - Math.abs(p)) * w.x) * dt;
       w.y += (T_YAW * y + D_YAW * (1 - Math.abs(y)) * w.y) * dt;
       w.z += (T_ROLL * r + D_ROLL * w.z) * dt;
@@ -328,14 +335,15 @@ class Car {
     }
     if (jumpPressed && this.canDodge && this.airTime < DODGE_WINDOW && !this.jumpNow && !(this.contactT > 0)) {
       this.canDodge = false; this.jumpHeld = false;
-      if (c.throttle !== 0 || c.steer !== 0) {      // dodge / flip in the pressed direction
+      const fp = c.pitch == null ? c.throttle : c.pitch;
+      if (Math.hypot(fp, c.steer) > 0.5) {           // dodge / flip in the pressed direction (half-way stick or more)
         const fw = flat(this.forward()).normalize(), lf = new V3(fw.z, 0, -fw.x);
         const sp = flat(this.vel).length();
-        const fwd = c.throttle * DODGE_IMPULSE, side = -c.steer * DODGE_IMPULSE * (1 + 0.9 * sp / MAX_SPEED);
+        const fwd = fp * DODGE_IMPULSE, side = -c.steer * DODGE_IMPULSE * (1 + 0.9 * sp / MAX_SPEED);
         this.vel.addScaledVector(fw, fwd).addScaledVector(lf, side);
         this.vel.y = Math.max(this.vel.y * 0.35, 0);
-        const fl = Math.hypot(c.throttle, c.steer) || 1;
-        this.flipAxis.set((c.throttle / fl) * (Math.PI * 2) / FLIP_TIME, 0, (c.steer / fl) * (Math.PI * 2) / FLIP_TIME);
+        const fl = Math.hypot(fp, c.steer) || 1;
+        this.flipAxis.set((fp / fl) * (Math.PI * 2) / FLIP_TIME, 0, (c.steer / fl) * (Math.PI * 2) / FLIP_TIME);
         this.flipLeft = FLIP_TIME;
       } else {
         this.vel.addScaledVector(this.up(), DOUBLE_JUMP);
