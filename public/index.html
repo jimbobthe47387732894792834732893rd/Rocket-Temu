@@ -2282,59 +2282,34 @@ function sphereTex(w, h, shade) {
     g.putImageData(img, 0, 0);
   });
 }
-const PHI = (1 + Math.sqrt(5)) / 2;
 const norm3 = (a) => { const l = Math.hypot(a[0], a[1], a[2]); return [a[0] / l, a[1] / l, a[2] / l]; };
-const PENT = [], HEXC = [];                        // the classic 32-panel ball: 12 pentagons, 20 hexagons
-for (const s1 of [-1, 1]) for (const s2 of [-1, 1]) { PENT.push(norm3([0, s1, s2 * PHI]), norm3([s1, s2 * PHI, 0]), norm3([s2 * PHI, 0, s1])); }
-for (const a of [-1, 1]) for (const b of [-1, 1]) for (const c of [-1, 1]) HEXC.push(norm3([a, b, c]));
-for (const s1 of [-1, 1]) for (const s2 of [-1, 1]) { HEXC.push(norm3([0, s1 / PHI, s2 * PHI]), norm3([s1 / PHI, s2 * PHI, 0]), norm3([s2 * PHI, 0, s1 / PHI])); }
+const STANDARD_BALL = ballMesh.material;
 const BALLS = [
   { name: "STANDARD", blurb: "The usual. Hex panels." },
-  { name: "CLASSIC", blurb: "Black and white panels." },
   { name: "BEACH BALL", blurb: "Same bounce. More vacation." },
-  { name: "DISCO", blurb: "Mirror tiles. Very shiny." },
-  { name: "PLASMA", blurb: "Glows. Do not lick." },
+  { name: "BASKETBALL", blurb: "Wrong sport. Still counts." },
 ];
 const ballMats = [];
 function ballMat(i) {
   if (ballMats[i]) return ballMats[i];
   let m;
-  if (i === 0) m = ballMesh.material;
-  else if (i === 1) {
-    const tex = sphereTex(512, 256, (x, y, z) => {
-      let b1 = -2, b2 = -2, pent = false;
-      for (const p of PENT) { const v = p[0] * x + p[1] * y + p[2] * z; if (v > b1) { b2 = b1; b1 = v; pent = true; } else if (v > b2) b2 = v; }
-      for (const p of HEXC) { const v = p[0] * x + p[1] * y + p[2] * z; if (v > b1) { b2 = b1; b1 = v; pent = false; } else if (v > b2) b2 = v; }
-      if (b1 - b2 < 0.012) return [70, 72, 80];
-      return pent ? [22, 23, 28] : [242, 242, 240];
-    });
-    m = std(0xffffff, { map: tex, roughness: 0.45, metalness: 0.02, envMapIntensity: 0.4 });
-  } else if (i === 2) {
+  if (i === 0) m = STANDARD_BALL;
+  else if (i === 1) {                                         // beach ball: six coloured panels, white caps
     const cols = [[230, 50, 50], [250, 250, 250], [40, 110, 230], [255, 205, 40], [250, 250, 250], [40, 190, 90]];
     const tex = sphereTex(512, 256, (x, y, z, ph) => {
       if (Math.abs(y) > 0.94) return Math.abs(y) > 0.985 ? [230, 50, 50] : [250, 250, 250];
       return cols[Math.floor(ph / (Math.PI * 2) * 6) % 6];
     });
     m = std(0xffffff, { map: tex, roughness: 0.3, metalness: 0, envMapIntensity: 0.6 });
-  } else if (i === 3) {
-    const rnd = (a, b) => { const s = Math.sin(a * 127.1 + b * 311.7) * 43758.5453; return s - Math.floor(s); };
-    const tex = sphereTex(512, 256, (x, y, z, ph, th) => {
-      const cu = ph / (Math.PI * 2) * 64, cv = th / Math.PI * 32;
-      const gu = cu - Math.floor(cu), gv = cv - Math.floor(cv);
-      if (gu < 0.08 || gv < 0.08) return [30, 30, 36];
-      const r = rnd(Math.floor(cu), Math.floor(cv)), v = 120 + r * 135;
-      return r > 0.93 ? [255, 255, 255] : [v, v, v + 10];
+  } else {                                                    // basketball: pebbled orange with black seams
+    const tex = sphereTex(1024, 512, (x, y, z, ph, th, px, py) => {
+      const w = 0.018, ring = Math.abs(Math.hypot(y, z) - 0.72);
+      if (Math.abs(x) < w || Math.abs(y) < w || ring < w * 1.1) return [26, 20, 16];
+      const h = Math.sin(px * 12.9898 + py * 78.233) * 43758.5453, r = h - Math.floor(h);
+      const k = r < 0.35 ? 0.82 : r > 0.9 ? 1.08 : 1;
+      return [222 * k, 104 * k, 38 * k];
     });
-    m = std(0xffffff, { map: tex, roughness: 0.12, metalness: quality.high ? 1 : 0.4, envMapIntensity: 1.5, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: quality.high ? 0.12 : 0.35 });
-  } else {
-    const tex = sphereTex(512, 256, (x, y, z, ph, th) => {
-      const a = Math.sin(ph * 3 + Math.sin(th * 4) * 2 + y * 4), b = Math.sin(ph * 5 - th * 6 + x * 3);
-      const k = Math.pow(Math.max(0, a * 0.5 + 0.5), 6), j = Math.pow(Math.max(0, b * 0.5 + 0.5), 8);
-      return [Math.min(255, 40 + 140 * j + 120 * k), Math.min(255, 20 + 230 * k), Math.min(255, 90 + 165 * k + 165 * j)];
-    });
-    tex.wrapS = THREE.RepeatWrapping;
-    m = new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(1, 1, 1).multiplyScalar(quality.high ? 1.35 : 1) });
-    m.userData.flow = tex;
+    m = std(0xffffff, { map: tex, roughness: 0.75, metalness: 0, envMapIntensity: 0.3 });
   }
   ballMats[i] = m; return m;
 }
@@ -2357,7 +2332,7 @@ function ballPreview(i, size) {
     const th = Math.acos(Math.max(-1, Math.min(1, ty))), ph = (Math.atan2(tz, -x) + Math.PI * 2) % (Math.PI * 2);
     let col = [220, 220, 220];
     if (sd) { const sx = Math.min(sw - 1, Math.floor(ph / (Math.PI * 2) * sw)), sy = Math.min(sh - 1, Math.floor(th / Math.PI * sh)), q = (sy * sw + sx) * 4; col = [sd[q], sd[q + 1], sd[q + 2]]; }
-    const lit = i === 4 ? 1.1 : 0.45 + 0.65 * Math.max(0, x * L[0] + y * L[1] + z * L[2]);
+    const lit = 0.45 + 0.65 * Math.max(0, x * L[0] + y * L[1] + z * L[2]);
     img.data[k] = Math.min(255, col[0] * lit); img.data[k + 1] = Math.min(255, col[1] * lit); img.data[k + 2] = Math.min(255, col[2] * lit); img.data[k + 3] = 255;
   }
   g.putImageData(img, 0, 0);
@@ -2954,10 +2929,11 @@ try {
   if (typeof saved.sound === "boolean") sound.on = saved.sound;
   if (typeof saved.nick === "string") state.nick = saved.nick;
   if (saved.look) state.look = cleanLook(saved.look);
-  if (Number.isInteger(saved.ball) && saved.ball >= 0 && saved.ball < BALLS.length) state.ball = saved.ball;
+  if (Number.isInteger(saved.ball)) state.ball = saved.ballv === 2 ? saved.ball : saved.ball === 2 ? 1 : 0;   // older saves had 5 balls
+  if (!(state.ball >= 0 && state.ball < BALLS.length)) state.ball = 0;
   if (Number.isInteger(saved.arena) && saved.arena >= 0 && saved.arena < ARENAS.length) state.arena = saved.arena;
 } catch (_) {}
-function persist() { try { localStorage.setItem("rocket-temu-3d", JSON.stringify({ skill: state.skill, ballCam: state.ballCam[0], sound: sound.on, nick: state.nick, look: state.look, ball: state.ball || 0, arena: state.arena || 0, gfx: quality.chosen ? (quality.high ? "high" : "low") : undefined })); } catch (_) {} }
+function persist() { try { localStorage.setItem("rocket-temu-3d", JSON.stringify({ skill: state.skill, ballCam: state.ballCam[0], sound: sound.on, nick: state.nick, look: state.look, ball: state.ball || 0, ballv: 2, arena: state.arena || 0, gfx: quality.chosen ? (quality.high ? "high" : "low") : undefined })); } catch (_) {} }
 
 const K = (...codes) => codes.some((c) => state.keys.has(c));
 const dead = (v) => (Math.abs(v) < 0.14 ? 0 : clamp((v - Math.sign(v) * 0.14) / 0.76, -1, 1));
