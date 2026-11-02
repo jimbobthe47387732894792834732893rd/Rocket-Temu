@@ -309,6 +309,18 @@
   #practice-bar kbd { margin-left: 4px; color: var(--muted); font-size: 10px; }
   #hud.touch #practice-bar kbd { display: none; }
   #hud.compact #practice-bar { top: 58px; } #hud.compact #practice-bar button { padding: 6px 10px; font-size: 11px; }
+  .nav-btn.ranked::before { background: #b98cff; }
+  .nav-btn.ranked small { color: #d9c8ff; }
+  .rank-note { margin: 2px 4px; color: var(--muted); font-size: 12px; font-weight: 700; line-height: 1.45; }
+  #over-rank { display: flex; align-items: center; gap: 14px; background: rgba(40,24,80,.85); border: 1px solid #8a6cff; border-radius: 12px; padding: 8px 18px; font-weight: 900; }
+  #over-rank b { font-style: italic; font-size: clamp(18px, 2.4vw, 28px); color: #e8dcff; }
+  #or-mode { color: var(--muted); font-size: 13px; letter-spacing: .08em; }
+  #or-delta { font-size: clamp(18px, 2.4vw, 26px); }
+  #or-delta.up { color: #7dffb0; } #or-delta.down { color: #ff8a8a; }
+  #queue { z-index: 4; }
+  .q-spinner { width: 54px; height: 54px; border-radius: 50%; border: 5px solid rgba(255,255,255,.15); border-top-color: #b98cff; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .q-spinner { animation: none; } }
   /* Garage */
   .gpanel { position: absolute; left: clamp(16px, 3vw, 40px); top: 76px; bottom: 40px; width: min(440px, 44vw); display: flex; flex-direction: column; gap: 10px;
     background: rgba(12,10,26,.82); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
@@ -414,13 +426,22 @@
     </nav>
     <nav class="nav" id="nav-play" aria-label="Play" hidden>
       <h2 class="nav-title">PLAY</h2>
-      <button class="nav-btn primary" type="button" data-act="online"><span>ONLINE</span><small>Public 3v3 lobbies</small><kbd>1</kbd></button>
-      <button class="nav-btn" type="button" data-act="bot"><span>3V3 VS TEMUBOTS</span><small>You and 2 bot teammates</small><kbd>2</kbd></button>
-      <button class="nav-btn" type="button" data-act="duel"><span>1V1 VS TEMUBOT</span><small>Just you and a bot</small><kbd>3</kbd></button>
-      <button class="nav-btn" type="button" data-act="2p"><span>SPLIT SCREEN</span><small>2 players, one keyboard. Bundle Deal</small><kbd>4</kbd></button>
-      <button class="nav-btn" type="button" data-act="practice"><span>PRACTICE</span><small>Just you and the ball. No clock.</small><kbd>5</kbd></button>
-      <button class="nav-btn" type="button" data-act="watch"><span>WATCH BOTS</span><small>Display Model</small><kbd>6</kbd></button>
+      <button class="nav-btn primary" type="button" data-act="online"><span>ONLINE</span><small>Casual 3v3 and 5v5 lobbies</small><kbd>1</kbd></button>
+      <button class="nav-btn ranked" type="button" data-act="rankedmenu"><span>RANKED</span><small>1v1 and 3v3. Climb from Bronze to Temu Legend</small><kbd>2</kbd></button>
+      <button class="nav-btn" type="button" data-act="bot"><span>3V3 VS TEMUBOTS</span><small>You and 2 bot teammates</small><kbd>3</kbd></button>
+      <button class="nav-btn" type="button" data-act="bot5"><span>5V5 VS TEMUBOTS</span><small>You and 4 bot teammates. Chaos Deal</small><kbd>4</kbd></button>
+      <button class="nav-btn" type="button" data-act="duel"><span>1V1 VS TEMUBOT</span><small>Just you and a bot</small><kbd>5</kbd></button>
+      <button class="nav-btn" type="button" data-act="2p"><span>SPLIT SCREEN</span><small>2 players, one keyboard. Bundle Deal</small><kbd>6</kbd></button>
+      <button class="nav-btn" type="button" data-act="practice"><span>PRACTICE</span><small>Just you and the ball. No clock.</small><kbd>7</kbd></button>
+      <button class="nav-btn" type="button" data-act="watch"><span>WATCH BOTS</span><small>Display Model</small><kbd>8</kbd></button>
       <button class="nav-btn back" type="button" data-act="home"><span>BACK</span><kbd>Esc</kbd></button>
+    </nav>
+    <nav class="nav" id="nav-ranked" aria-label="Ranked" hidden>
+      <h2 class="nav-title">RANKED</h2>
+      <button class="nav-btn ranked" type="button" data-act="ranked1"><span>RANKED 1V1</span><small id="rank1-name">GOLD I</small><kbd>1</kbd></button>
+      <button class="nav-btn ranked" type="button" data-act="ranked3"><span>RANKED 3V3</span><small id="rank3-name">GOLD I</small><kbd>2</kbd></button>
+      <p class="rank-note">Matched with players near your rank. If nobody's around after a few seconds, TemuBots matched to your rank fill the empty seats. Leaving a ranked match early counts as a loss. Your rank is saved on this device.</p>
+      <button class="nav-btn back" type="button" data-act="play"><span>BACK</span><kbd>Esc</kbd></button>
     </nav>
     <nav class="nav wide" id="nav-settings" aria-label="Settings" hidden>
       <h2 class="nav-title">SETTINGS</h2>
@@ -474,8 +495,10 @@
         <small>Pick a nickname, not your real name. Chat is quick-chat buttons only.</small>
       </div>
       <div class="row left">
-        <button class="btn primary" type="button" data-act="quick">Quick play</button>
-        <button class="btn" type="button" data-act="create">Create lobby</button>
+        <button class="btn primary" type="button" data-act="quick">Quick play 3v3</button>
+        <button class="btn primary" type="button" data-act="quick5">Quick play 5v5</button>
+        <button class="btn" type="button" data-act="create">Create 3v3 lobby</button>
+        <button class="btn" type="button" data-act="create5">Create 5v5 lobby</button>
         <button class="btn" type="button" data-act="back">Back</button>
       </div>
       <p id="net-status" role="status"></p>
@@ -498,6 +521,17 @@
       <p class="tag">Same pitch, same physics, different place.</p>
       <div id="arena-list" class="arena-list"></div>
       <div class="row"><button class="btn" type="button" data-act="cancelarena">Back (Esc)</button></div>
+    </div>
+  </div>
+
+  <div id="queue" class="overlay" hidden>
+    <div class="card">
+      <h2 class="pick-title" id="q-title">RANKED 3V3</h2>
+      <p class="tag" id="q-rank"></p>
+      <div class="q-spinner" aria-hidden="true"></div>
+      <p class="tag" id="q-have">Finding players: 1 / 6</p>
+      <p class="fine" id="q-left">TemuBots fill the empty seats in 20 s</p>
+      <div class="row"><button class="btn" type="button" data-act="menu">Cancel</button></div>
     </div>
   </div>
 
@@ -533,8 +567,9 @@
       <div id="over-score" class="final">0 - 0</div>
       <p id="over-line" class="tag"></p>
       <div id="scoreboard"></div>
+      <div id="over-rank" hidden><span id="or-mode">RANKED 3V3</span><b id="or-name">GOLD I</b><span id="or-delta">+16</span></div>
       <p id="over-next" class="tag" hidden></p>
-      <div class="row"><button id="b-rematch" class="btn primary" type="button" data-act="rematch">Rematch (Enter)</button><button id="b-overmenu" class="btn" type="button" data-act="menu">Main menu (Esc)</button></div>
+      <div class="row"><button id="b-requeue" class="btn primary" type="button" data-act="requeue" hidden>Play ranked again</button><button id="b-rematch" class="btn primary" type="button" data-act="rematch">Rematch (Enter)</button><button id="b-overmenu" class="btn" type="button" data-act="menu">Main menu (Esc)</button></div>
     </div>
   </div>
 </div>
@@ -1434,7 +1469,26 @@ const PRESETS = {                    // used by the browser menus
   "2p": { teamSize: 3, humans: [0, 3] },
   watch: { teamSize: 3, humans: [] },
   practice: { teamSize: 1, humans: [0] },         // just you and the ball: no opponents, no clock
+  bot5: { teamSize: 5, humans: [0] },             // 5v5 against TemuBots
 };
+// ---- Ranked ---------------------------------------------------------------------------------------
+// MMR (matchmaking rating) goes up when you win and down when you lose, more when the other team was
+// rated higher than yours (Elo). Every 100 MMR is a division; three divisions make a rank.
+const RANK_TIERS = ["BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "CHAMPION", "GRAND CHAMPION", "TEMU LEGEND"];
+const START_MMR = 600, BOT_MMR = [450, 800, 1150], PLACEMENT_GAMES = 5;
+function rankOf(mmr) {
+  mmr = Math.max(0, mmr | 0);
+  const t = Math.min(7, Math.floor(mmr / 300));
+  if (t === 7) return { tier: 7, div: 0, name: RANK_TIERS[7] };
+  const div = Math.min(2, Math.floor((mmr - t * 300) / 100));
+  return { tier: t, div, name: RANK_TIERS[t] + " " + ["I", "II", "III"][div] };
+}
+function botSkillFor(mmr) { return mmr < 650 ? 0 : mmr < 1000 ? 1 : 2; }
+function mmrDelta(mine, theirs, won, games) {
+  const expected = 1 / (1 + Math.pow(10, (theirs - mine) / 400));
+  const k = games < PLACEMENT_GAMES ? 60 : 32;                 // placement matches move you faster
+  return Math.round(k * ((won ? 1 : 0) - expected));
+}
 const PRACTICE_MODS = Object.assign({}, NEUTRAL, { unlimited: true });
 function shuffled(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; }
 class Match {
@@ -1518,7 +1572,7 @@ class Match {
     const car = this.cars[i];
     car.human = human; if (name) car.name = name;
     if (human) delete this.bots[i];
-    else if (!this.bots[i]) { this.bots[i] = new TemuBot(car, 1); this.bots[i].mode = "attack"; }
+    else if (!this.bots[i]) { this.bots[i] = new TemuBot(car, this.skill); this.bots[i].mode = "attack"; }
   }
   kickoff() {
     const n = this.teamSize;
@@ -1709,7 +1763,7 @@ class Match {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { Match, Car, Ball, TemuBot, Controls, Pad, predictBall, collideArena, sdArena, arenaNormal, BOT_SKILLS, PRESETS, LOOK_SIZES, DEFAULT_LOOK, cleanLook, randomLook, SUBSTEPS, NEUTRAL, RE, GRAVITY, GOAL_PAUSE,
+  module.exports = { Match, Car, Ball, TemuBot, Controls, Pad, predictBall, collideArena, sdArena, arenaNormal, BOT_SKILLS, PRESETS, LOOK_SIZES, RANK_TIERS, START_MMR, BOT_MMR, rankOf, botSkillFor, mmrDelta, DEFAULT_LOOK, cleanLook, randomLook, SUBSTEPS, NEUTRAL, RE, GRAVITY, GOAL_PAUSE,
     HW, HL, CEIL, GW, GH, GD, BALL_R, CAR_REST, MAX_SPEED, SUPERSONIC, MATCH_TIME, FPS, TEAM_NAMES, CAR_HX, CAR_HY, CAR_HZ };
 }
 </script>
@@ -3017,7 +3071,7 @@ const sfx = {
 const CHATS = ["Nice shot!", "What a save!", "I got it!", "Defending...", "Thanks!", "Sorry! (refund issued)"];
 const STATES = ["countdown", "play", "goal", "over"];
 const state = { screen: "menu", match: null, attract: null, paused: false, skill: 1, ballCam: [true, true], t: 0, keys: new Set(), shake: 0,
-  local: [], online: false, touch: false, stick: { active: false, x: 0, y: 0, id: null }, nick: "", look: DEFAULT_LOOK.slice(), assist: true };
+  local: [], online: false, touch: false, stick: { active: false, x: 0, y: 0, id: null }, nick: "", look: DEFAULT_LOOK.slice(), assist: true, rank: { 1: { mmr: START_MMR, games: 0 }, 3: { mmr: START_MMR, games: 0 } }, pendingRank: null };
 try {
   const saved = JSON.parse(localStorage.getItem("rocket-temu-3d") || "{}");
   if (Number.isInteger(saved.skill) && saved.skill >= 0 && saved.skill < BOT_SKILLS.length) state.skill = saved.skill;
@@ -3026,11 +3080,13 @@ try {
   if (typeof saved.nick === "string") state.nick = saved.nick;
   if (saved.look) state.look = cleanLook(saved.look);
   if (typeof saved.assist === "boolean") state.assist = saved.assist;
+  for (const k of [1, 3]) { const r = saved.rank && saved.rank[k]; if (r && Number.isFinite(r.mmr) && Number.isInteger(r.games)) state.rank[k] = { mmr: Math.max(0, r.mmr), games: Math.max(0, r.games) }; }
+  if (saved.pendingRank && [1, 3].includes(saved.pendingRank.size) && Number.isFinite(saved.pendingRank.loss)) state.pendingRank = saved.pendingRank;
   if (Number.isInteger(saved.ball)) state.ball = saved.ballv === 2 ? saved.ball : saved.ball === 2 ? 1 : 0;   // older saves had 5 balls
   if (!(state.ball >= 0 && state.ball < BALLS.length)) state.ball = 0;
   if (Number.isInteger(saved.arena) && saved.arena >= 0 && saved.arena < ARENAS.length) state.arena = saved.arena;
 } catch (_) {}
-function persist() { try { localStorage.setItem("rocket-temu-3d", JSON.stringify({ skill: state.skill, ballCam: state.ballCam[0], sound: sound.on, nick: state.nick, look: state.look, ball: state.ball || 0, ballv: 2, assist: state.assist, arena: state.arena || 0, gfx: quality.chosen ? (quality.high ? "high" : "low") : undefined })); } catch (_) {} }
+function persist() { try { localStorage.setItem("rocket-temu-3d", JSON.stringify({ skill: state.skill, ballCam: state.ballCam[0], sound: sound.on, nick: state.nick, look: state.look, ball: state.ball || 0, ballv: 2, assist: state.assist, rank: state.rank, pendingRank: state.pendingRank, arena: state.arena || 0, gfx: quality.chosen ? (quality.high ? "high" : "low") : undefined })); } catch (_) {} }
 
 const K = (...codes) => codes.some((c) => state.keys.has(c));
 const dead = (v) => (Math.abs(v) < 0.14 ? 0 : clamp((v - Math.sign(v) * 0.14) / 0.76, -1, 1));
@@ -3545,6 +3601,9 @@ function nickValue() { const v = $("nick").value.replace(/[^A-Za-z0-9 _\-]/g, ""
 function onNet(m) {
   if (m.t === "lobbies") { net.lobbies = m.rooms; net.online = m.online; renderLobbies(); }
   else if (m.t === "joined") startOnline(m);
+  else if (m.t === "queue") { if (net.match) showQueue(m); }
+  else if (m.t === "rankstart") { hideQueue(); state.pendingRank = { size: m.size, loss: m.loss }; persist(); showPop(`RANKED · WIN +${m.win} · LOSS ${m.loss}`); }
+  else if (m.t === "rankres") applyRankResult(m.size, m.delta, true);
   else if (m.t === "roster") { if (net.match) applyRoster(m.roster); }
   else if (m.t === "vote") { if (net.match) showVote(m); }
   else if (m.t === "arena") { if (net.match) { setArena(m.a); hideVote(); showPop("ARENA: " + ARENAS[m.a].name); } }
@@ -3565,7 +3624,7 @@ function renderLobbies() {
     const nm = document.createElement("div"); nm.className = "nm"; nm.textContent = r.name;
     const meta = document.createElement("div"); meta.className = "meta";
     const t = r.state === "over" ? "finished" : (r.ot ? "overtime" : Math.floor(r.time / 60) + ":" + String(r.time % 60).padStart(2, "0"));
-    meta.textContent = `${r.humans}/${r.max} players · ${r.voting ? "voting on arena" : (ARENAS[r.arena || 0] || ARENAS[0]).name.toLowerCase()} · ${r.score[0]}-${r.score[1]} · ${t}`;
+    meta.textContent = `${r.size || 3}v${r.size || 3} · ${r.humans}/${r.max} players · ${r.voting ? "voting on arena" : (ARENAS[r.arena || 0] || ARENAS[0]).name.toLowerCase()} · ${r.score[0]}-${r.score[1]} · ${t}`;
     const b = document.createElement("button"); b.type = "button"; b.textContent = r.humans >= r.max ? "FULL" : "JOIN"; b.disabled = r.humans >= r.max;
     b.addEventListener("click", () => pickBall(() => netJoin({ t: "join", room: r.id })));
     row.append(nm, meta, b); box.appendChild(row);
@@ -3591,11 +3650,52 @@ function startOnline(j) {
   setArena(j.arena || 0);
   bindMatch(m);
   camState[0].pos.set(0, 8, j.you < j.size ? -HL - 2 : HL + 2);
+  net.ranked = j.ranked ? j.size : 0; net.rankResult = null;
   show("match");
   if (j.vote) showVote(j.vote); else hideVote();
+  if (j.queue) showQueue(j.queue); else hideQueue();
   canvas.focus({ preventScroll: true });
 }
-function endOnline() { state.online = false; net.match = null; state.match = null; state.local = []; }
+function endOnline() {
+  // leaving a ranked match before it finished counts as a loss
+  if (state.pendingRank) applyRankResult(state.pendingRank.size, state.pendingRank.loss, false);
+  state.online = false; net.match = null; state.match = null; state.local = []; net.ranked = 0; hideQueue();
+}
+// ---- Ranked ------------------------------------------------------------------------------------------
+function rankText(k) { const r = state.rank[k], g = r.games; return rankOf(r.mmr).name + ` · ${Math.round(r.mmr)} MMR` + (g < 5 ? ` · placement ${g}/5` : ""); }
+function updateRankMenu() { $("rank1-name").textContent = rankText(1); $("rank3-name").textContent = rankText(3); }
+function startRanked(size) {
+  pickBall(() => {
+    toOnline();
+    const r = state.rank[size];
+    netJoin({ t: "ranked", size, mmr: Math.round(r.mmr), games: r.games });
+  });
+}
+function applyRankResult(size, delta, finished) {
+  const r = state.rank[size]; if (!r) return;
+  const before = rankOf(r.mmr).name;
+  r.mmr = Math.max(0, r.mmr + delta); r.games++;
+  state.pendingRank = null; persist();
+  net.rankResult = { size, delta, before, after: rankOf(r.mmr).name, finished };
+  if (finished && !$("over").hidden) showRankResult();
+}
+function showRankResult() {
+  const rr = net.rankResult, box = $("over-rank");
+  if (!rr) { box.hidden = true; return; }
+  $("or-mode").textContent = `RANKED ${rr.size}V${rr.size}`;
+  $("or-name").textContent = rr.before === rr.after ? rr.after : `${rr.before}  →  ${rr.after}`;
+  $("or-delta").textContent = (rr.delta >= 0 ? "+" : "") + rr.delta + " MMR";
+  $("or-delta").className = rr.delta >= 0 ? "up" : "down";
+  box.hidden = false;
+}
+function showQueue(q) {
+  $("q-title").textContent = `RANKED ${net.ranked}V${net.ranked}`;
+  $("q-rank").textContent = rankText(net.ranked);
+  $("q-have").textContent = `Finding players: ${q.have} / ${q.need}`;
+  $("q-left").textContent = q.left > 0 ? `TemuBots fill the empty seats in ${q.left} s` : "Starting...";
+  $("queue").hidden = false;
+}
+function hideQueue() { $("queue").hidden = true; }
 function applyRoster(roster) { roster.forEach((r, i) => { const c = net.match.cars[i]; c.name = r[0]; c.human = !!r[1]; if (r[2]) c.look = cleanLook(r[2]); }); }
 function applySnapshot(s) {
   const m = net.match;
@@ -3603,7 +3703,7 @@ function applySnapshot(s) {
   m.goWord = s.gw; m.goFlash = s.gf ? 0.1 : 0; m.goalMsg = s.gm || null; m.toast = s.to ? [s.to[0], s.to[1], 1] : null;
   m.winner = s.w; m.overLine = s.ol || ""; net.nextIn = s.nx;
   if (s.stx) m.stats = s.stx.map((a) => ({ score: a[0], goals: a[1], assists: a[2], saves: a[3], shots: a[4], demos: a[5] }));
-  m.pads.forEach((p, i) => { p.timer = (s.p >> i) & 1 ? 0 : 1; });
+  m.pads.forEach((p, i) => { p.timer = s.p[i] === "1" ? 0 : 1; });
   for (const e of s.ev) {
     if (e.pos) e.pos = new THREE.Vector3(e.pos[0], e.pos[1], e.pos[2]);
     if (e.type === "newmatch") { $("over").hidden = true; hudCache = {}; }
@@ -3904,7 +4004,7 @@ function updateHud(m) {
   const live = state.boardHeld || state.boardToggled || pads.list.some((g) => holding(g, PB.BACK));
   setShown($("liveboard"), "lbOn", !!live && m.state !== "over" && !card);
   if (live && state.t - (state.boardAt || 0) > 0.5) { state.boardAt = state.t; renderScoreboard(m, $("liveboard")); }
-  if (card || !$("vote").hidden) big = "", sub = "";
+  if (card || !$("vote").hidden || !$("queue").hidden) big = "", sub = "";
   setShown(elBig, "bigOn", !!big); setText(elBig, "big", big); elBig.style.color = bigColor;
   setShown(elSub, "subOn", !!sub); setText(elSub, "sub", sub);
   const toast = m.toast ? m.toast[0] : "";
@@ -3948,7 +4048,7 @@ function show(screen) {
   $("online").hidden = screen !== "online";
   hud.hidden = screen !== "match";
   $("pause").hidden = !(screen === "match" && state.paused);
-  $("over").hidden = true; $("vote").hidden = true;
+  $("over").hidden = true; $("vote").hidden = true; $("queue").hidden = true; $("over-rank").hidden = true;
   $("touch").hidden = true; $("chat-row").hidden = true;
   state.stick.active = false;
   hudCache = {};
@@ -3977,7 +4077,8 @@ function toMenu() {
 // ---- Lobby menus and the garage ----------------------------------------------------------------
 function setPanel(name) {
   state.panel = name;
-  for (const k of ["home", "play", "settings"]) $("nav-" + k).hidden = k !== name;
+  for (const k of ["home", "play", "ranked", "settings"]) $("nav-" + k).hidden = k !== name;
+  if (name === "ranked") updateRankMenu();
   updateSettings();
   const first = $("nav-" + name).querySelector("button");
   if (first && document.activeElement && document.activeElement.closest && document.activeElement.closest(".nav")) first.focus({ preventScroll: true });
@@ -4046,7 +4147,11 @@ function toOnline() {
 }
 function act(name) {
   audio();
-  if (name === "bot" || name === "duel" || name === "2p" || name === "watch" || name === "practice") pickArena(() => pickBall(() => startMatch(name)));
+  if (name === "bot" || name === "bot5" || name === "duel" || name === "2p" || name === "watch" || name === "practice") pickArena(() => pickBall(() => startMatch(name)));
+  else if (name === "rankedmenu") setPanel("ranked");
+  else if (name === "ranked1" || name === "ranked3") startRanked(name === "ranked1" ? 1 : 3);
+  else if (name === "requeue") { if (net.ranked) { const sz = net.ranked; netSend({ t: "leave" }); endOnline(); startRanked(sz); } }
+  else if (name === "quick5" || name === "create5") pickBall(() => netJoin({ t: name.slice(0, -1), size: 5 }));
   else if (name === "pball" || name === "preset") { if (state.match && state.match.practice) { state.match.practiceBall(name === "pball" ? "front" : "reset"); stopReplay(); } }
   else if (name === "pboost") { if (state.match && state.match.practice) { state.match.unlimited = !state.match.unlimited; $("pboost").firstChild.textContent = "BOOST: " + (state.match.unlimited ? "UNLIMITED " : "NORMAL "); } }
   else if (name === "cancelball") cancelBall();
@@ -4060,14 +4165,14 @@ function act(name) {
   else if (name === "garage") toGarage();
   else if (name === "team") { garage.team = 1 - garage.team; renderGarageUI(); }
   else if (name === "online") toOnline();
-  else if (name === "quick" || name === "create") pickBall(() => netJoin({ t: name }));
+  else if (name === "quick" || name === "create") pickBall(() => netJoin({ t: name, size: 3 }));
   else if (name === "back") toMenu();
   else if (name === "gfx") {
     try { const sv = JSON.parse(localStorage.getItem("rocket-temu-3d") || "{}"); sv.gfx = quality.high ? "low" : "high"; localStorage.setItem("rocket-temu-3d", JSON.stringify(sv)); } catch (_) {}
     location.reload();
   }
   else if (name === "skill") { state.skill = (state.skill + 1) % BOT_SKILLS.length; updateSettings(); persist(); }
-  else if (name === "menu") { if (state.online) toOnline(); else toMenu(); }
+  else if (name === "menu") { if (state.online && net.ranked) { netSend({ t: "leave" }); endOnline(); toMenu(); } else if (state.online) toOnline(); else toMenu(); }
   else if (name === "pause") { if (!state.online && state.match && state.match.state !== "over") { state.paused = !state.paused; $("pause").hidden = !state.paused; } }
   else if (name === "rematch" && state.match && !state.online) startMatch(state.match.mode);
   else if (name === "cam") { state.ballCam[0] = !state.ballCam[0]; persist(); updateSettings(); }
@@ -4085,9 +4190,11 @@ function showOver(m) {
   $("over-score").textContent = `${m.score[0]}  -  ${m.score[1]}`;
   $("over-line").textContent = m.overLine;
   renderScoreboard(m);
-  $("over-next").hidden = !state.online;
+  $("over-next").hidden = !state.online || !!net.ranked;
   $("b-rematch").hidden = state.online;
-  $("b-overmenu").textContent = state.online ? "Leave lobby (Esc)" : "Main menu (Esc)";
+  $("b-requeue").hidden = !net.ranked;
+  $("b-overmenu").textContent = net.ranked ? "Main menu (Esc)" : state.online ? "Leave lobby (Esc)" : "Main menu (Esc)";
+  showRankResult();
   $("over").hidden = false;
 }
 function renderScoreboard(m, box = $("scoreboard"), hi = -1, hiOwn = false) {
@@ -4136,9 +4243,12 @@ window.addEventListener("keydown", (e) => {
   state.keys.add(e.code);
   audio();
   if (state.screen === "menu") {
-    const map = { Digit1: "online", Digit2: "bot", Digit3: "duel", Digit4: "2p", Digit5: "practice", Numpad1: "online", Numpad2: "bot", Numpad3: "duel", Numpad4: "2p", Numpad5: "practice", Digit6: "watch", Numpad6: "watch", KeyD: "skill", KeyG: "garage" };
+    const ranked = state.panel === "ranked";
+    const map = ranked ? { Digit1: "ranked1", Digit2: "ranked3", Numpad1: "ranked1", Numpad2: "ranked3" }
+      : { Digit1: "online", Digit2: "rankedmenu", Digit3: "bot", Digit4: "bot5", Digit5: "duel", Digit6: "2p", Digit7: "practice", Digit8: "watch",
+        Numpad1: "online", Numpad2: "rankedmenu", Numpad3: "bot", Numpad4: "bot5", Numpad5: "duel", Numpad6: "2p", Numpad7: "practice", Numpad8: "watch", KeyD: "skill", KeyG: "garage" };
     if (map[e.code]) act(map[e.code]);
-    else if (e.code === "Escape") act("home");
+    else if (e.code === "Escape") act(state.panel === "ranked" ? "play" : "home");
   } else if (state.screen === "garage") {
     const tab = state.gtab || 0, n = LOOK_PARTS[tab].names.length;
     if (e.code === "Escape" || e.code === "Enter") act("home");
@@ -4469,6 +4579,7 @@ function autoQuality(now) {
 }
 applyBall();
 setArena(state.arena || 0);
+if (state.pendingRank) { const pr = state.pendingRank; state.pendingRank = null; const r = state.rank[pr.size]; r.mmr = Math.max(0, r.mmr + pr.loss); r.games++; persist(); }
 toMenu();
 requestAnimationFrame(frame);
 // Small hook for automated testing

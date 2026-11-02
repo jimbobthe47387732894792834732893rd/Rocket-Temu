@@ -878,7 +878,26 @@ const PRESETS = {                    // used by the browser menus
   "2p": { teamSize: 3, humans: [0, 3] },
   watch: { teamSize: 3, humans: [] },
   practice: { teamSize: 1, humans: [0] },         // just you and the ball: no opponents, no clock
+  bot5: { teamSize: 5, humans: [0] },             // 5v5 against TemuBots
 };
+// ---- Ranked ---------------------------------------------------------------------------------------
+// MMR (matchmaking rating) goes up when you win and down when you lose, more when the other team was
+// rated higher than yours (Elo). Every 100 MMR is a division; three divisions make a rank.
+const RANK_TIERS = ["BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "CHAMPION", "GRAND CHAMPION", "TEMU LEGEND"];
+const START_MMR = 600, BOT_MMR = [450, 800, 1150], PLACEMENT_GAMES = 5;
+function rankOf(mmr) {
+  mmr = Math.max(0, mmr | 0);
+  const t = Math.min(7, Math.floor(mmr / 300));
+  if (t === 7) return { tier: 7, div: 0, name: RANK_TIERS[7] };
+  const div = Math.min(2, Math.floor((mmr - t * 300) / 100));
+  return { tier: t, div, name: RANK_TIERS[t] + " " + ["I", "II", "III"][div] };
+}
+function botSkillFor(mmr) { return mmr < 650 ? 0 : mmr < 1000 ? 1 : 2; }
+function mmrDelta(mine, theirs, won, games) {
+  const expected = 1 / (1 + Math.pow(10, (theirs - mine) / 400));
+  const k = games < PLACEMENT_GAMES ? 60 : 32;                 // placement matches move you faster
+  return Math.round(k * ((won ? 1 : 0) - expected));
+}
 const PRACTICE_MODS = Object.assign({}, NEUTRAL, { unlimited: true });
 function shuffled(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; }
 class Match {
@@ -962,7 +981,7 @@ class Match {
     const car = this.cars[i];
     car.human = human; if (name) car.name = name;
     if (human) delete this.bots[i];
-    else if (!this.bots[i]) { this.bots[i] = new TemuBot(car, 1); this.bots[i].mode = "attack"; }
+    else if (!this.bots[i]) { this.bots[i] = new TemuBot(car, this.skill); this.bots[i].mode = "attack"; }
   }
   kickoff() {
     const n = this.teamSize;
@@ -1153,6 +1172,6 @@ class Match {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { Match, Car, Ball, TemuBot, Controls, Pad, predictBall, collideArena, sdArena, arenaNormal, BOT_SKILLS, PRESETS, LOOK_SIZES, DEFAULT_LOOK, cleanLook, randomLook, SUBSTEPS, NEUTRAL, RE, GRAVITY, GOAL_PAUSE,
+  module.exports = { Match, Car, Ball, TemuBot, Controls, Pad, predictBall, collideArena, sdArena, arenaNormal, BOT_SKILLS, PRESETS, LOOK_SIZES, RANK_TIERS, START_MMR, BOT_MMR, rankOf, botSkillFor, mmrDelta, DEFAULT_LOOK, cleanLook, randomLook, SUBSTEPS, NEUTRAL, RE, GRAVITY, GOAL_PAUSE,
     HW, HL, CEIL, GW, GH, GD, BALL_R, CAR_REST, MAX_SPEED, SUPERSONIC, MATCH_TIME, FPS, TEAM_NAMES, CAR_HX, CAR_HY, CAR_HZ };
 }

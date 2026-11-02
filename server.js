@@ -16,7 +16,7 @@ const S = require("./sim.js");
 
 const PORT = Number(process.env.PORT) || 3000;
 const FAKE_LAG_MS = Number(process.env.FAKE_LAG_MS) || 0;   // testing only: adds round-trip delay
-const MAX_ROOMS = 40, TEAM_SIZE = 3, ROOM_SIZE = TEAM_SIZE * 2;
+const MAX_ROOMS = 40, SIZES = [1, 3, 5], QUEUE_MS = Number(process.env.QUEUE_SECONDS || 20) * 1000;
 const TICK = 1 / S.FPS, SNAPSHOT_EVERY = 2;                // 60 Hz physics, 30 Hz updates to players
 const MAX_PER_IP = Number(process.env.MAX_PER_IP) || 8;   // connections allowed from one network address
 const CHATS = ["Nice shot!", "What a save!", "I got it!", "Defending...", "Thanks!", "Sorry! (refund issued)"];
@@ -78,7 +78,11 @@ let nextId = 1;
 // ---- Rooms ------------------------------------------------------------------------
 const rooms = new Map();
 class Room {
-  constructor() {
+  // size: players per team (3 or 5 for casual lobbies; 1 or 3 for ranked). Ranked rooms wait in a queue
+  // for players, fill the rest with TemuBots, play one match, then report everyone's new rating.
+  constructor(size = 3, ranked = false) {
+    this.size = size; this.ranked = ranked;
+    if (ranked) this.queue = { ends: Date.now() + (size === 1 ? QUEUE_MS * 0.75 : QUEUE_MS), sent: 0 };
     this.id = Math.random().toString(36).slice(2, 7).toUpperCase();
     const used = new Set([...rooms.values()].map((r) => r.name));
     let name;
@@ -88,9 +92,11 @@ class Room {
     this.tick = 0; this.emptySince = Date.now(); this.events = [];
     this.newMatch();
   }
-  newMatch() {
-    this.match = new S.Match({ mode: "online", teamSize: TEAM_SIZE, humans: [], skill: 1 });
-    this.startVote();
+  max() { return this.size * 2; }
+  avgMmr() { const ps = [...this.players]; return ps.length ? ps.reduce((a, p) => a + p.mmr, 0) / ps.length : S.START_MMR; }
+  newMatch(skill = 1) {
+    this.match = new S.Match({ mode: "online", teamSize: this.size, humans: [], skill });
+    if (this.queue) { this.match.state = "countdown"; this.match.countdown = 3; } else this.startVote();
     if (Number(process.env.MATCH_SECONDS)) this.match.timeLeft = Number(process.env.MATCH_SECONDS);   // testing only
     for (const p of this.players) { this.match.setHuman(p.slot, true, p.name); this.match.cars[p.slot].look = p.look; this.match.cars[p.slot].assist = p.assist; }
     this.overSince = 0;
@@ -119,11 +125,11 @@ class Room {
   }
   freeSlot() {
     const counts = [0, 0];
-    for (const p of this.players) counts[p.slot < TEAM_SIZE ? 0 : 1]++;
+    for (const p of this.players) counts[p.slot < this.size ? 0 : 1]++;
     const team = counts[0] < counts[1] ? 0 : counts[1] < counts[0] ? 1 : (Math.random() < 0.5 ? 0 : 1);
     for (const t of [team, 1 - team]) {
-      for (let k = 0; k < TEAM_SIZE; k++) {
-        const i = t * TEAM_SIZE + k;
+      for (let k = 0; k < this.size; k++) {
+        const i = t * this.size + k;
         if (![...this.players].some((p) => p.slot === i)) return i;
       }
     }
@@ -135,9 +141,39 @@ class Room {
     p.slot = slot; p.room = this; p.queue = []; p.ack = 0; p.last = new S.Controls(); p.lastInputAt = Date.now();
     this.players.add(p);
     this.match.setHuman(slot, true, p.name); this.match.cars[slot].look = p.look; this.match.cars[slot].assist = p.assist;
-    send(p, { t: "joined", room: { id: this.id, name: this.name }, you: slot, size: TEAM_SIZE, roster: this.roster(), arena: this.arena || 0, vote: this.voteInfo(p) });
+    send(p, { t: "joined", room: { id: this.id, name: this.name }, you: slot, size: this.size, ranked: this.ranked, roster: this.roster(), arena: this.arena || 0, vote: this.voteInfo(p), queue: this.queueInfo() });
+    if (this.queue) this.sendQueue();
     this.broadcastRoster();
     return true;
+  }
+  // Ranked queue: shows how many players have been found; bots fill the empty seats when time runs out
+  queueInfo() { return this.queue ? { have: this.players.size, need: this.max(), left: Math.max(0, Math.ceil((this.queue.ends - Date.now()) / 1000)) } : null; }
+  sendQueue() { if (!this.queue) return; this.queue.sent = Date.now(); const msg = JSON.stringify(Object.assign({ t: "queue" }, this.queueInfo())); for (const p of this.players) sendRaw(p, msg); }
+  startRanked() {
+    this.queue = null; this.locked = true;
+    const skill = S.botSkillFor(this.avgMmr());
+    this.newMatch(skill);
+    this.botMmr = S.BOT_MMR[skill];
+    this.events.push({ type: "newmatch" }); this.broadcastRoster();
+    // tell each player what a win or a loss is worth (a loss also counts if they leave early)
+    for (const p of this.players) { const d = this.deltas(p); send(p, { t: "rankstart", size: this.size, win: d.win, loss: d.loss, botSkill: skill }); }
+  }
+  teamMmr(team) {
+    let sum = 0;
+    for (let i = team * this.size; i < (team + 1) * this.size; i++) { const p = [...this.players].find((q) => q.slot === i); sum += p ? p.mmr : this.botMmr; }
+    return sum / this.size;
+  }
+  deltas(p) {
+    const mine = p.slot < this.size ? 0 : 1, a = this.teamMmr(mine), b = this.teamMmr(1 - mine);
+    return { win: S.mmrDelta(a, b, true, p.games), loss: S.mmrDelta(a, b, false, p.games) };
+  }
+  finishRanked() {
+    this.rankedDone = true;
+    const m = this.match;
+    for (const p of this.players) {
+      const won = (p.slot < this.size ? 0 : 1) === m.winner, d = this.deltas(p);
+      send(p, { t: "rankres", size: this.size, won, delta: won ? d.win : d.loss });
+    }
   }
   remove(p) {
     if (!this.players.delete(p)) return;
@@ -160,6 +196,14 @@ class Room {
       else if (now - p.lastInputAt > 300) p.last = new S.Controls();     // tab hidden or connection stalled
       inputs[p.slot] = p.last;
     }
+    if (this.queue) {                                  // ranked: waiting for players before the match
+      if (!this.players.size) { this.queue.ends = now + QUEUE_MS; }
+      else if (this.players.size >= this.max() || now >= this.queue.ends) this.startRanked();
+      else if (now - this.queue.sent > 1000) this.sendQueue();
+      this.tick++;
+      if (this.tick % SNAPSHOT_EVERY === 0) this.snapshot();
+      return;
+    }
     if (this.vote) {                                   // waiting at kickoff while the lobby votes on the arena
       const all = this.players.size > 0 && this.vote.votes.size >= this.players.size;
       if (now >= this.vote.ends || !this.players.size || (all && now - this.vote.start > 1500)) this.finishVote();
@@ -173,15 +217,16 @@ class Room {
     m.events.length = 0;
     if (m.state === "over") {
       if (!this.overSince) this.overSince = now;
-      if (now - this.overSince > 12000) { this.newMatch(); this.events.push({ type: "newmatch" }); this.broadcastRoster(); }
+      if (this.ranked) { if (!this.rankedDone) this.finishRanked(); }
+      else if (now - this.overSince > 12000) { this.newMatch(); this.events.push({ type: "newmatch" }); this.broadcastRoster(); }
     }
     this.tick++;
     if (this.tick % SNAPSHOT_EVERY === 0) this.snapshot();
   }
   snapshot() {
     const m = this.match;
-    let pads = 0;
-    m.pads.forEach((pd, i) => { if (pd.timer <= 0) pads |= 1 << i; });
+    let pads = "";
+    pads = m.pads.map((pd) => (pd.timer <= 0 ? "1" : "0")).join("");   // one character per pad (there are 34)
     const ev = this.events.map((e) => {
       const o = Object.assign({}, e);
       if (o.pos) o.pos = v3(o.pos);
@@ -193,7 +238,7 @@ class Room {
       t: "s", k: this.tick, st: STATES.indexOf(m.state), cd: r2(m.countdown), tl: r2(m.timeLeft), ov: m.overtime ? 1 : 0, ot: r2(m.otTime),
       sc: m.score, gw: m.goWord, gf: m.goFlash > 0 ? 1 : 0, gm: m.state === "goal" ? m.goalMsg : 0,
       to: m.toast ? [m.toast[0], m.toast[1]] : 0, w: m.winner, ol: m.state === "over" ? m.overLine : 0,
-      nx: m.state === "over" ? Math.max(0, 12 - Math.floor((Date.now() - this.overSince) / 1000)) : 0,
+      nx: m.state === "over" && !this.ranked ? Math.max(0, 12 - Math.floor((Date.now() - this.overSince) / 1000)) : 0,
       b: [...v3(m.ball.pos), ...v3(m.ball.vel), r2(m.ball.r)],
       c: m.cars.map((c) => [...v3(c.pos), r3(c.quat.x), r3(c.quat.y), r3(c.quat.z), r3(c.quat.w), ...v3(c.vel), Math.round(c.boost),
         (c.demolished ? 1 : 0) | (c.boosting ? 2 : 0) | (c.onGround ? 4 : 0)]),
@@ -209,22 +254,33 @@ class Room {
   }
 }
 function lobbyList() {
-  return [...rooms.values()].sort((a, b) => b.humans() - a.humans()).map((r) => ({
-    id: r.id, name: r.name, humans: r.humans(), max: ROOM_SIZE, score: r.match.score, state: r.match.state,
+  return [...rooms.values()].filter((r) => !r.ranked).sort((a, b) => b.humans() - a.humans()).map((r) => ({
+    id: r.id, name: r.name, humans: r.humans(), max: r.max(), size: r.size, score: r.match.score, state: r.match.state,
     time: Math.ceil(r.match.timeLeft), ot: r.match.overtime, arena: r.arena || 0, voting: !!r.vote,
   }));
 }
-function quickRoom() {
+function quickRoom(size) {
   let best = null;
-  for (const r of rooms.values()) if (r.humans() < ROOM_SIZE && r.match.state !== "over" && (!best || r.humans() > best.humans())) best = r;
-  return best || createRoom();
+  for (const r of rooms.values()) if (!r.ranked && r.size === size && r.humans() < r.max() && r.match.state !== "over" && (!best || r.humans() > best.humans())) best = r;
+  return best || createRoom(size);
 }
-function createRoom() {
+// Ranked matchmaking: a queueing room of the same size whose players are rated close to you
+// (the allowed gap widens the longer a room has been waiting)
+function rankedRoom(size, mmr) {
+  let best = null, bestGap = Infinity;
+  for (const r of rooms.values()) {
+    if (!r.ranked || r.size !== size || !r.queue || r.humans() >= r.max()) continue;
+    const waited = (Date.now() - (r.queue.ends - QUEUE_MS)) / 1000, gap = Math.abs(r.avgMmr() - mmr);
+    if (gap <= 300 + waited * 25 && gap < bestGap) { best = r; bestGap = gap; }
+  }
+  return best || createRoom(size, true);
+}
+function createRoom(size = 3, ranked = false) {
   if (rooms.size >= MAX_ROOMS) {
     for (const r of rooms.values()) if (!r.humans()) { rooms.delete(r.id); break; }
     if (rooms.size >= MAX_ROOMS) return null;
   }
-  const r = new Room(); rooms.set(r.id, r); return r;
+  const r = new Room(size, ranked); rooms.set(r.id, r); return r;
 }
 
 // ---- Connections ---------------------------------------------------------------------
@@ -266,9 +322,16 @@ function onMessage(p, msg, now) {
     case "hello": p.name = cleanName(msg.name); if (msg.look) p.look = S.cleanLook(msg.look); if (typeof msg.assist === "boolean") p.assist = msg.assist;
       if (p.room) { const c = p.room.match.cars[p.slot]; c.name = p.name; c.look = p.look; c.assist = p.assist; p.room.broadcastRoster(); } break;
     case "list": send(p, { t: "lobbies", rooms: lobbyList(), online: wss.clients.size }); break;
-    case "quick": case "create": case "join": {
+    case "quick": case "create": case "join": case "ranked": {
       if (p.room) p.room.remove(p);
-      const room = msg.t === "quick" ? quickRoom() : msg.t === "create" ? createRoom() : rooms.get(String(msg.room || ""));
+      const size = SIZES.includes(msg.size) ? msg.size : 3;
+      if (msg.t === "ranked") {
+        if (size === 5) break;
+        p.mmr = Number.isFinite(msg.mmr) ? Math.max(0, Math.min(4000, msg.mmr)) : S.START_MMR;
+        p.games = Number.isInteger(msg.games) && msg.games >= 0 ? msg.games : 0;
+      }
+      let room = msg.t === "quick" ? quickRoom(size === 1 ? 3 : size) : msg.t === "create" ? createRoom(size === 5 ? 5 : 3) : msg.t === "ranked" ? rankedRoom(size, p.mmr) : rooms.get(String(msg.room || ""));
+      if (room && msg.t === "join" && room.ranked) room = null;
       if (!room) { send(p, { t: "error", msg: msg.t === "join" ? "That lobby closed. Pick another one." : "All lobbies are busy. Try again in a minute." }); break; }
       if (!room.add(p)) send(p, { t: "error", msg: "That lobby is full. Try Quick Play." });
       break;

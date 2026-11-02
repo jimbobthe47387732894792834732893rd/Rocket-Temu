@@ -1,6 +1,6 @@
 // Rocket Temu service worker: keeps the game on the phone so it opens instantly and bot matches work offline.
 // The page itself is fetched fresh whenever there's a connection (so updates show up), with the saved copy as backup.
-const CACHE = "rocket-temu-b56ae05c74";
+const CACHE = "rocket-temu-d340b62425";
 const ASSETS = ["/", "/three.min.js", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png", "/apple-touch-icon.png", "/three-addons/shaders/CopyShader.js", "/three-addons/shaders/LuminosityHighPassShader.js", "/three-addons/postprocessing/EffectComposer.js", "/three-addons/postprocessing/RenderPass.js", "/three-addons/postprocessing/ShaderPass.js", "/three-addons/postprocessing/UnrealBloomPass.js", "/three-addons/environments/RoomEnvironment.js"];
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
