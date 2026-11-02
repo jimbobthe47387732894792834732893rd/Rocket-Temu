@@ -153,26 +153,16 @@ class Room {
     this.queue = null; this.locked = true;
     const skill = S.botSkillFor(this.avgMmr());
     this.newMatch(skill);
-    this.botMmr = S.BOT_MMR[skill];
     this.events.push({ type: "newmatch" }); this.broadcastRoster();
-    // tell each player what a win or a loss is worth (a loss also counts if they leave early)
-    for (const p of this.players) { const d = this.deltas(p); send(p, { t: "rankstart", size: this.size, win: d.win, loss: d.loss, botSkill: skill }); }
+    for (const p of this.players) send(p, { t: "rankstart", size: this.size, botSkill: skill });
   }
-  teamMmr(team) {
-    let sum = 0;
-    for (let i = team * this.size; i < (team + 1) * this.size; i++) { const p = [...this.players].find((q) => q.slot === i); sum += p ? p.mmr : this.botMmr; }
-    return sum / this.size;
-  }
-  deltas(p) {
-    const mine = p.slot < this.size ? 0 : 1, a = this.teamMmr(mine), b = this.teamMmr(1 - mine);
-    return { win: S.mmrDelta(a, b, true, p.games), loss: S.mmrDelta(a, b, false, p.games) };
-  }
+  // Each player's scoreboard score is what counts toward their rank
   finishRanked() {
     this.rankedDone = true;
     const m = this.match;
     for (const p of this.players) {
-      const won = (p.slot < this.size ? 0 : 1) === m.winner, d = this.deltas(p);
-      send(p, { t: "rankres", size: this.size, won, delta: won ? d.win : d.loss });
+      const won = (p.slot < this.size ? 0 : 1) === m.winner;
+      send(p, { t: "rankres", size: this.size, won, score: m.stats[p.slot].score });
     }
   }
   remove(p) {
@@ -271,7 +261,7 @@ function rankedRoom(size, mmr) {
   for (const r of rooms.values()) {
     if (!r.ranked || r.size !== size || !r.queue || r.humans() >= r.max()) continue;
     const waited = (Date.now() - (r.queue.ends - QUEUE_MS)) / 1000, gap = Math.abs(r.avgMmr() - mmr);
-    if (gap <= 300 + waited * 25 && gap < bestGap) { best = r; bestGap = gap; }
+    if (gap <= 800 + waited * 60 && gap < bestGap) { best = r; bestGap = gap; }
   }
   return best || createRoom(size, true);
 }
@@ -327,7 +317,7 @@ function onMessage(p, msg, now) {
       const size = SIZES.includes(msg.size) ? msg.size : 3;
       if (msg.t === "ranked") {
         if (size === 5) break;
-        p.mmr = Number.isFinite(msg.mmr) ? Math.max(0, Math.min(4000, msg.mmr)) : S.START_MMR;
+        p.mmr = Number.isFinite(msg.mmr) ? Math.max(0, Math.min(1e7, msg.mmr)) : 0;
         p.games = Number.isInteger(msg.games) && msg.games >= 0 ? msg.games : 0;
       }
       let room = msg.t === "quick" ? quickRoom(size === 1 ? 3 : size) : msg.t === "create" ? createRoom(size === 5 ? 5 : 3) : msg.t === "ranked" ? rankedRoom(size, p.mmr) : rooms.get(String(msg.room || ""));

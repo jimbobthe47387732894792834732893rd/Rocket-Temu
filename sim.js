@@ -189,13 +189,14 @@ function predictBall(ball, mods, secs = 3, step = 1 / 30) {
 
 // ---- Car loadouts (looks only; every body has the same hitbox) ----------------------------------
 // [body, decal, wheels, boost trail, topper, accent colour]
-const LOOK_SIZES = [4, 6, 5, 6, 6, 10];
+const LOOK_SIZES = [4, 12, 5, 8, 8, 10];
+const FREE_LOOK = [4, 6, 5, 6, 6, 10];                // the rest are sold in the shop
 const DEFAULT_LOOK = [0, 0, 0, 0, 0, 0];
 function cleanLook(a) {
   if (!Array.isArray(a) || a.length !== LOOK_SIZES.length) return DEFAULT_LOOK.slice();
   return LOOK_SIZES.map((n, i) => (Number.isInteger(a[i]) && a[i] >= 0 && a[i] < n ? a[i] : 0));
 }
-function randomLook() { return LOOK_SIZES.map((n, i) => (i === 4 && Math.random() < 0.6 ? 0 : (Math.random() * n) | 0)); }
+function randomLook() { return FREE_LOOK.map((n, i) => (i === 4 && Math.random() < 0.6 ? 0 : (Math.random() * n) | 0)); }
 
 // ---- Car -------------------------------------------------------------------
 const _m4 = new THREE.Matrix4();
@@ -881,23 +882,19 @@ const PRESETS = {                    // used by the browser menus
   bot5: { teamSize: 5, humans: [0] },             // 5v5 against TemuBots
 };
 // ---- Ranked ---------------------------------------------------------------------------------------
-// MMR (matchmaking rating) goes up when you win and down when you lose, more when the other team was
-// rated higher than yours (Elo). Every 100 MMR is a division; three divisions make a rank.
-const RANK_TIERS = ["BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "CHAMPION", "GRAND CHAMPION", "TEMU LEGEND"];
-const START_MMR = 600, BOT_MMR = [450, 800, 1150], PLACEMENT_GAMES = 5;
-function rankOf(mmr) {
-  mmr = Math.max(0, mmr | 0);
-  const t = Math.min(7, Math.floor(mmr / 300));
-  if (t === 7) return { tier: 7, div: 0, name: RANK_TIERS[7] };
-  const div = Math.min(2, Math.floor((mmr - t * 300) / 100));
-  return { tier: t, div, name: RANK_TIERS[t] + " " + ["I", "II", "III"][div] };
+// Rank points: your scoreboard score from each ranked game (plus a bonus for a win) adds to your points.
+// Every 1,000 points is a new rank, split into divisions I, II and III.
+const RANK_TIERS = ["BRONZE", "SILVER", "GOLD", "PLATINUM", "DIAMOND", "EMERALD"];
+const RANK_STEP = 1000, WIN_BONUS = 100, START_MMR = 0, BOT_MMR = [0, 0, 0];
+function rankOf(pts) {
+  pts = Math.max(0, pts | 0);
+  const t = Math.min(RANK_TIERS.length - 1, Math.floor(pts / RANK_STEP));
+  const div = Math.min(2, Math.floor((pts - t * RANK_STEP) / (RANK_STEP / 3)));
+  const next = t === RANK_TIERS.length - 1 && div === 2 ? null : Math.ceil((t * RANK_STEP + (div + 1) * RANK_STEP / 3) - 1e-6);
+  return { tier: t, div, name: RANK_TIERS[t] + " " + ["I", "II", "III"][div], next };
 }
-function botSkillFor(mmr) { return mmr < 650 ? 0 : mmr < 1000 ? 1 : 2; }
-function mmrDelta(mine, theirs, won, games) {
-  const expected = 1 / (1 + Math.pow(10, (theirs - mine) / 400));
-  const k = games < PLACEMENT_GAMES ? 60 : 32;                 // placement matches move you faster
-  return Math.round(k * ((won ? 1 : 0) - expected));
-}
+function botSkillFor(pts) { return pts < 2000 ? 0 : pts < 4000 ? 1 : 2; }     // TemuBots get tougher as you climb
+function mmrDelta() { return 0; }
 const PRACTICE_MODS = Object.assign({}, NEUTRAL, { unlimited: true });
 function shuffled(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; }
 class Match {
@@ -1172,6 +1169,6 @@ class Match {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { Match, Car, Ball, TemuBot, Controls, Pad, predictBall, collideArena, sdArena, arenaNormal, BOT_SKILLS, PRESETS, LOOK_SIZES, RANK_TIERS, START_MMR, BOT_MMR, rankOf, botSkillFor, mmrDelta, DEFAULT_LOOK, cleanLook, randomLook, SUBSTEPS, NEUTRAL, RE, GRAVITY, GOAL_PAUSE,
+  module.exports = { Match, Car, Ball, TemuBot, Controls, Pad, predictBall, collideArena, sdArena, arenaNormal, BOT_SKILLS, PRESETS, LOOK_SIZES, FREE_LOOK, RANK_TIERS, RANK_STEP, WIN_BONUS, START_MMR, BOT_MMR, rankOf, botSkillFor, mmrDelta, DEFAULT_LOOK, cleanLook, randomLook, SUBSTEPS, NEUTRAL, RE, GRAVITY, GOAL_PAUSE,
     HW, HL, CEIL, GW, GH, GD, BALL_R, CAR_REST, MAX_SPEED, SUPERSONIC, MATCH_TIME, FPS, TEAM_NAMES, CAR_HX, CAR_HY, CAR_HZ };
 }
