@@ -296,6 +296,7 @@
   .arena-card kbd { position: absolute; top: 14px; left: 14px; background: rgba(0,0,0,.6); color: #fff; font-size: 11px; border-radius: 6px; padding: 2px 6px; }
   .arena-card .votes { position: absolute; top: 14px; right: 14px; background: var(--gold); color: #1a1426; font-weight: 900; font-size: 12px; border-radius: 999px; padding: 2px 8px; }
   .arena-card .votes:empty { display: none; }
+  .arena-card .special-badge { position: absolute; top: 14px; right: 14px; background: linear-gradient(135deg, #ff9a3c, #ffd23c); color: #2a1400; font-weight: 900; font-size: 10px; letter-spacing: .08em; border-radius: 999px; padding: 2px 8px; }
   #vote { background: radial-gradient(ellipse at center, rgba(6,5,14,.7), rgba(6,5,14,.92)); z-index: 4; }
   @media (max-width: 640px), (max-height: 520px) { .arena-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .arena-card small { display: none; } .arena-card b { font-size: 15px; } .arena-pv { aspect-ratio: 2 / 1; } }
   #shotspeed { position: absolute; left: 50%; bottom: 18%; transform: translateX(-50%); font-weight: 900; font-style: italic; font-size: clamp(20px, 3vw, 36px); color: #fff;
@@ -2096,7 +2097,14 @@ const ARENAS = [
   { key: "turf", name: "TURF", blurb: "Plastic grass. Same great price." },
   { key: "kart", name: "KART TRACK", blurb: "Indoor karting hall. Mind the tyres." },
   { key: "garage", name: "GARAGE", blurb: "Somebody's garage. Don't scratch the car." },
+  { key: "hardwood", name: "HARDWOOD", blurb: "Special map. A polished basketball court.", special: true },
+  { key: "fall", name: "FALL LEAVES", blurb: "Special map. Autumn evening, leaves everywhere.", special: true },
 ];
+const NORMAL_ARENAS = 4;                       // the ones you can vote for; the rest are special maps
+// Special maps turn up by chance in games that aren't ranked: 1 in 10 games, then a 50/50 between them.
+// (The version of the game shared as a Claude artifact can also pick them directly.)
+const PICK_SPECIALS = !!window.ROCKET_TEMU_PICK_SPECIALS;
+function rollSpecial() { return Math.random() < 0.1 ? NORMAL_ARENAS + (Math.random() < 0.5 ? 0 : 1) : -1; }
 // Painting helpers: everything is drawn in field metres, so the same painter works at any texture size
 function noiseCanvas(cw, ch, lo = 0, hi = 255) {
   const c = document.createElement("canvas"); c.width = cw; c.height = ch;
@@ -2228,6 +2236,58 @@ const FLOOR_PAINT = {
     teamTint(g, w, h, 0.05);
     pitchMarkings(g, w, h, "rgba(250,250,245,0.85)", 0);
   },
+  // Hardwood: varnished maple planks running the length of the court, team-coloured keys and court lines
+  hardwood(g, w, h) {
+    const X = (x) => (x + HW) / (2 * HW) * w, Z = (z) => (z + HL) / (2 * HL) * h, S = w / (2 * HW);
+    const pw = 1.4 * S;                                                   // plank width
+    let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    for (let x = 0, col = 0; x < w; x += pw, col++) {
+      let z = -rnd() * 20 * S;
+      while (z < h) {
+        const len = (6 + rnd() * 10) * S, t = rnd();
+        g.fillStyle = `rgb(${(150 + t * 34) | 0},${(96 + t * 28) | 0},${(52 + t * 20) | 0})`;
+        g.fillRect(x, z, pw - Math.max(1, 0.05 * S), len - Math.max(1, 0.05 * S));
+        z += len;
+      }
+    }
+    g.globalAlpha = 0.35; g.fillStyle = strokesPattern(g, 128, 500, ["#8a5a2a", "#e8c08a", "#a8703a"], 14, 1.1, true); g.fillRect(0, 0, w, h); g.globalAlpha = 1;
+    noiseLayer(g, w, h, 30, 0.18, "soft-light");
+    for (const s of [-1, 1]) {                                            // painted keys at each end, team coloured
+      const z0 = Z(s * HL), z1 = Z(s * (HL - 26)), c = s < 0 ? "rgba(40,100,230,0.45)" : "rgba(240,110,30,0.45)";
+      g.fillStyle = c; g.fillRect(X(-GW - 4), Math.min(z0, z1), (2 * GW + 8) * S, Math.abs(z1 - z0));
+      g.strokeStyle = "rgba(255,255,255,0.9)"; g.lineWidth = 0.45 * S;
+      g.beginPath(); g.arc(X(0), Z(s * (HL - 26)), (GW + 4) * S, s < 0 ? 0 : Math.PI, s < 0 ? Math.PI : 2 * Math.PI); g.stroke();
+      g.beginPath(); g.arc(X(0), Z(s * HL), 44 * S, s < 0 ? 0.25 : Math.PI + 0.25, s < 0 ? Math.PI - 0.25 : 2 * Math.PI - 0.25); g.stroke();   // three-point line
+    }
+    g.fillStyle = "rgba(251,119,1,0.55)"; g.beginPath(); g.arc(X(0), Z(0), 18 * S, 0, Math.PI * 2); g.fill();
+    pitchMarkings(g, w, h, "rgba(255,255,255,0.9)", 0.16);
+    const gl = g.createLinearGradient(0, 0, w, h); gl.addColorStop(0, "rgba(255,255,255,0.04)"); gl.addColorStop(0.5, "rgba(255,255,255,0)"); gl.addColorStop(1, "rgba(255,255,255,0.03)");
+    g.fillStyle = gl; g.fillRect(0, 0, w, h);                             // varnish sheen
+  },
+  // Fall leaves: autumn grass with fallen leaves everywhere, piled up more along the walls
+  fall(g, w, h) {
+    const Z = (z) => (z + HL) / (2 * HL) * h, S = w / (2 * HW);
+    g.fillStyle = "#5a7f34"; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 13; i++) { const z0 = Z(-HL + i * 16); g.fillStyle = i % 2 ? "rgba(20,40,10,0.12)" : "rgba(200,190,90,0.10)"; g.fillRect(0, z0, w, 16 * S + 1); }
+    noiseLayer(g, w, h, 40, 0.35, "soft-light");
+    g.globalAlpha = 0.45; g.fillStyle = strokesPattern(g, 96, 1200, ["#4a6a28", "#6e8f3a", "#8a9a40", "#3e5a22"], 2.2, 1.3, false); g.fillRect(0, 0, w, h); g.globalAlpha = 1;
+    pitchMarkings(g, w, h, "rgba(250,248,235,0.85)", 0.12);
+    const cols = ["#d9541e", "#e8892a", "#f2b632", "#b8321c", "#8a4a1c", "#c96a1e", "#e0a030"];
+    let seed = 11; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    const leaf = (x, y, r, a, c) => {
+      g.save(); g.translate(x, y); g.rotate(a); g.fillStyle = c;
+      g.beginPath(); g.moveTo(0, -r); g.quadraticCurveTo(r * 0.75, -r * 0.2, 0, r); g.quadraticCurveTo(-r * 0.75, -r * 0.2, 0, -r); g.fill();
+      g.strokeStyle = "rgba(60,25,8,0.5)"; g.lineWidth = Math.max(0.5, r * 0.08); g.beginPath(); g.moveTo(0, -r * 0.9); g.lineTo(0, r * 1.15); g.stroke();
+      g.restore();
+    };
+    for (let i = 0; i < 9000; i++) {
+      let x = rnd() * w, y = rnd() * h;
+      const edge = Math.min(x, w - x, y, h - y) / w;
+      if (edge > 0.08 && rnd() < 0.55) continue;                          // fewer in the middle, piles at the edges
+      leaf(x, y, (0.35 + rnd() * 0.45) * S, rnd() * 6.28, cols[(rnd() * cols.length) | 0]);
+    }
+    teamTint(g, w, h, 0.04);
+  },
 };
 // Close-up detail, tiled many times over the floor and blended in by the shader (sharp blades, grit)
 const DETAIL_PAINT = {
@@ -2235,8 +2295,10 @@ const DETAIL_PAINT = {
   turf(g, w) { g.fillStyle = "#808080"; g.fillRect(0, 0, w, w); g.fillStyle = "rgba(0,0,0,0.1)"; for (let x = 0; x < w; x += 8) g.fillRect(x, 0, 2, w); g.fillStyle = strokesPattern(g, w, 1800, ["#6c6c6c", "#989898"], 2, 1.4, false); g.fillRect(0, 0, w, w); },
   kart(g, w) { g.fillStyle = "#808080"; g.fillRect(0, 0, w, w); g.fillStyle = strokesPattern(g, w, 2200, ["#5c5c5c", "#a4a4a4", "#4c4c4c", "#b8b8b8"], 1, 2.2, false); g.fillRect(0, 0, w, w); },
   garage(g, w) { g.fillStyle = "#808080"; g.fillRect(0, 0, w, w); g.fillStyle = strokesPattern(g, w, 800, ["#747474", "#8e8e8e", "#686868"], 1, 1.6, false); g.fillRect(0, 0, w, w); },
+  hardwood(g, w) { g.fillStyle = "#808080"; g.fillRect(0, 0, w, w); g.fillStyle = strokesPattern(g, w, 600, ["#6e6e6e", "#949494", "#7a7a7a"], 26, 1.2, true); g.fillRect(0, 0, w, w); },
+  fall(g, w) { g.fillStyle = "#808080"; g.fillRect(0, 0, w, w); g.fillStyle = strokesPattern(g, w, 3000, ["#5e5e5e", "#a2a2a2", "#707070", "#949494"], 3, 1.6, false); g.fillRect(0, 0, w, w); },
 };
-const DETAIL_REPEAT = { field: 46, turf: 60, kart: 34, garage: 24 };
+const DETAIL_REPEAT = { field: 46, turf: 60, kart: 34, garage: 24, hardwood: 20, fall: 46 };
 // Floor material: Lambert with the arena texture, plus the tiled detail multiplied in at close range
 function floorMaterial(key) {
   const big = quality.high ? 2048 : 1024;
@@ -2244,7 +2306,7 @@ function floorMaterial(key) {
   tex.anisotropy = quality.high ? 8 : 4;
   const det = canvasTex(256, 256, (g, w) => DETAIL_PAINT[key](g, w));
   det.wrapS = det.wrapT = THREE.RepeatWrapping; det.anisotropy = 8;
-  const m = lam(0xffffff, { map: tex });
+  const m = key === "hardwood" ? std(0xffffff, { map: tex, roughness: 0.5, metalness: 0, envMapIntensity: 0.12 }) : lam(0xffffff, { map: tex });
   const rep = DETAIL_REPEAT[key];
   m.onBeforeCompile = (sh) => {
     sh.uniforms.detailMap = { value: det };
@@ -2292,6 +2354,11 @@ function grassShells(floorMat) {
 }
 // Walls, roof and props for each arena
 function wallTex(key) {
+  if (key === "hardwood") return canvasTex(256, 64, (g, w, h) => {        // padded gym wall in team colours
+    for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? "#1c2c66" : "#22347a"; g.fillRect(i * w / 8, 0, w / 8, h); }
+    g.fillStyle = "rgba(255,255,255,0.12)"; for (let i = 0; i < 8; i++) g.fillRect(i * w / 8, 0, 2, h);
+    g.fillStyle = "#fb7701"; g.fillRect(0, h * 0.82, w, h * 0.06);
+  });
   if (key === "kart") return canvasTex(256, 64, (g, w, h) => {              // tyre barrier: red and white blocks
     for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? "#f0f0f0" : "#c8222a"; g.fillRect(i * w / 8, 0, w / 8, h); }
     g.fillStyle = "rgba(0,0,0,0.18)"; for (let y = 0; y < h; y += 8) g.fillRect(0, y, w, 2);
@@ -2375,7 +2442,38 @@ const THEMES = {
   turf: { bg: 0x070814, hemi: [0xc8d0ff, 0x1c2a18], hemiK: 0.95, sun: 0xffffff, sunK: 0.95, curve: 0x2f9a52, strip: 0x35a85a, ceil: [0x1a1838, 0.35], stands: true, ads: true, roof: false },
   kart: { bg: 0x0a0a0e, hemi: [0xdde4ff, 0x202024], hemiK: 1.05, sun: 0xf2f6ff, sunK: 0.95, curve: 0xffffff, strip: 0x2e3036, ceil: [0x17181c, 0.96], stands: true, ads: true, roof: true },
   garage: { bg: 0x0d0a08, hemi: [0xffe9c8, 0x2a2420], hemiK: 0.95, sun: 0xffe2b8, sunK: 0.85, curve: 0xffffff, strip: 0x86837c, ceil: [0x23211e, 1], stands: false, ads: false, roof: true },
+  hardwood: { bg: 0x0c0a08, hemi: [0xfff0dc, 0x3a2614], hemiK: 0.85, sun: 0xfff4e4, sunK: 0.8, curve: 0xffffff, strip: 0xc8925a, ceil: [0x1a1612, 0.97], stands: true, ads: true, roof: true },
+  fall: { bg: 0x2a1626, hemi: [0xffc89a, 0x2a2010], hemiK: 1.0, sun: 0xffb478, sunK: 0.95, curve: 0x5f7a34, strip: 0x5a7f34, ceil: [0x1a1838, 0.35], stands: true, ads: true, roof: false },
 };
+// Falling leaves (fall map): little tumbling leaves drifting down over the pitch
+const LEAF_N = quality.high ? 420 : 220;
+const leafTex = canvasTex(64, 64, (g, w) => {
+  g.translate(w / 2, w / 2); g.fillStyle = "#fff";
+  g.beginPath(); g.moveTo(0, -28); g.quadraticCurveTo(22, -6, 0, 28); g.quadraticCurveTo(-22, -6, 0, -28); g.fill();
+  g.strokeStyle = "rgba(0,0,0,0.35)"; g.lineWidth = 2.5; g.beginPath(); g.moveTo(0, -24); g.lineTo(0, 30); g.stroke();
+});
+const leaves = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.9, 0.9), lam(0xffffff, { map: leafTex, alphaTest: 0.5, side: THREE.DoubleSide }), LEAF_N);
+leaves.visible = false; leaves.frustumCulled = false; scene.add(leaves);
+const leafData = [];
+{
+  const cols = [0xd9541e, 0xe8892a, 0xf2b632, 0xb8321c, 0xc96a1e];
+  for (let i = 0; i < LEAF_N; i++) {
+    leafData.push({ x: (Math.random() * 2 - 1) * (HW + 30), y: Math.random() * 40, z: (Math.random() * 2 - 1) * (HL + 30), ph: Math.random() * 6.3, sp: 1.2 + Math.random() * 1.6, rx: Math.random() * 6, ry: Math.random() * 6 });
+    leaves.setColorAt(i, _c.setHex(cols[i % cols.length]));
+  }
+}
+const _lfq = new THREE.Quaternion(), _lfe = new THREE.Euler(), _lfp = new THREE.Vector3(), _lfs = new THREE.Vector3(1, 1, 1);
+function updateLeaves(dt, t) {
+  if (!leaves.visible) return;
+  for (let i = 0; i < LEAF_N; i++) {
+    const L = leafData[i];
+    L.y -= L.sp * dt; L.x += Math.sin(t * 0.7 + L.ph) * 1.4 * dt + 0.6 * dt; L.z += Math.cos(t * 0.5 + L.ph) * 1.1 * dt;
+    if (L.y < 0.05) { L.y = 34 + Math.random() * 8; L.x = (Math.random() * 2 - 1) * (HW + 30); L.z = (Math.random() * 2 - 1) * (HL + 30); }
+    _lfe.set(L.rx + t * 1.7 + L.ph, L.ry + t * 1.1, Math.sin(t * 2 + L.ph)); _lfq.setFromEuler(_lfe);
+    _lfp.set(L.x, L.y, L.z); _m4.compose(_lfp, _lfq, _lfs); leaves.setMatrixAt(i, _m4);
+  }
+  leaves.instanceMatrix.needsUpdate = true;
+}
 const arenaCache = {};
 let arenaNow = -1;
 glassWall.userData.base = glassWall.material; ceil.userData.base = ceil.material; wallCurve.userData.base = wallCurve.material;
@@ -2393,7 +2491,7 @@ function setArena(i) {
   ceil.material = T.ceil[1] >= 0.95 ? (A.ceilMat || (A.ceilMat = lam(T.ceil[0], { side: THREE.DoubleSide }))) : ceil.userData.base;
   standsGroup.visible = T.stands; crowdBody.visible = T.stands;
   for (const a of adBoards) a.visible = T.ads;
-  indoorRoof.visible = T.roof; kartProps.visible = key === "kart"; garageProps.visible = key === "garage";
+  indoorRoof.visible = T.roof; kartProps.visible = key === "kart"; garageProps.visible = key === "garage"; leaves.visible = key === "fall";
   const shells = key === "field" && quality.high;
   if (shells) grassShells(A.floor).visible = true; else if (shellGroup) shellGroup.visible = false;
   scene.background.setHex(T.bg); scene.fog.color.setHex(T.bg);
@@ -2464,9 +2562,24 @@ function sphereTex(w, h, shade) {
   });
 }
 const norm3 = (a) => { const l = Math.hypot(a[0], a[1], a[2]); return [a[0] / l, a[1] / l, a[2] / l]; };
-const STANDARD_BALL = ballMesh.material;
+// The normal ball: a classic soccer ball, 12 black pentagons and 20 white hexagons
+const PHI = (1 + Math.sqrt(5)) / 2, PENT = [], HEXC = [];
+for (const s1 of [-1, 1]) for (const s2 of [-1, 1]) { PENT.push(norm3([0, s1, s2 * PHI]), norm3([s1, s2 * PHI, 0]), norm3([s2 * PHI, 0, s1])); }
+for (const a of [-1, 1]) for (const b of [-1, 1]) for (const c of [-1, 1]) HEXC.push(norm3([a, b, c]));
+for (const s1 of [-1, 1]) for (const s2 of [-1, 1]) { HEXC.push(norm3([0, s1 / PHI, s2 * PHI]), norm3([s1 / PHI, s2 * PHI, 0]), norm3([s2 * PHI, 0, s1 / PHI])); }
+const STANDARD_BALL = (() => {
+  const tex = sphereTex(1024, 512, (x, y, z) => {
+    let b1 = -2, b2 = -2, pent = false;
+    for (const p of PENT) { const v = p[0] * x + p[1] * y + p[2] * z; if (v > b1) { b2 = b1; b1 = v; pent = true; } else if (v > b2) b2 = v; }
+    for (const p of HEXC) { const v = p[0] * x + p[1] * y + p[2] * z; if (v > b1) { b2 = b1; b1 = v; pent = false; } else if (v > b2) b2 = v; }
+    if (b1 - b2 < 0.01) return [58, 60, 68];                              // seams
+    const shade = 1 - Math.max(0, 0.03 - (b1 - b2)) * 4;                   // slight puff towards each panel's middle
+    return pent ? [24 * shade, 25 * shade, 30 * shade] : [244 * shade, 244 * shade, 240 * shade];
+  });
+  return std(0xffffff, { map: tex, roughness: 0.42, metalness: 0.02, envMapIntensity: 0.45 });
+})();
 const BALLS = [
-  { name: "STANDARD", blurb: "The usual. Hex panels." },
+  { name: "SOCCER BALL", blurb: "The classic. Black and white panels." },
   { name: "BEACH BALL", blurb: "Same bounce. More vacation." },
   { name: "BASKETBALL", blurb: "Wrong sport. Still counts." },
 ];
@@ -2549,15 +2662,16 @@ function chooseBall(i) {
 function cancelBall() { $("ballpick").hidden = true; ballThen = null; }
 // Arena picker (games against bots) and the arena vote (online lobbies)
 let arenaThen = null;
-function arenaCards(box, onPick) {
+function arenaCards(box, onPick, count = NORMAL_ARENAS) {
   if (box.childElementCount) return;
-  ARENAS.forEach((ar, i) => {
+  ARENAS.slice(0, count).forEach((ar, i) => {
     const btn = document.createElement("button"); btn.type = "button"; btn.className = "arena-card";
     const pv = arenaPreview(i, 200, 120); pv.className = "arena-pv"; pv.setAttribute("aria-hidden", "true");
     const nm = document.createElement("b"); nm.textContent = ar.name;
     const bl = document.createElement("small"); bl.textContent = ar.blurb;
     const k = document.createElement("kbd"); k.textContent = String(i + 1);
     const cnt = document.createElement("span"); cnt.className = "votes";
+    if (ar.special) { const sb = document.createElement("span"); sb.className = "special-badge"; sb.textContent = "SPECIAL"; btn.appendChild(sb); }
     btn.append(pv, k, nm, bl, cnt);
     btn.addEventListener("click", () => onPick(i));
     box.appendChild(btn);
@@ -2565,7 +2679,7 @@ function arenaCards(box, onPick) {
 }
 function pickArena(then) {
   arenaThen = then;
-  arenaCards($("arena-list"), chooseArena);
+  arenaCards($("arena-list"), chooseArena, PICK_SPECIALS ? ARENAS.length : NORMAL_ARENAS);
   Array.from($("arena-list").children).forEach((b, i) => b.setAttribute("aria-current", String(i === (state.arena || 0))));
   $("arenapick").hidden = false;
   const cur = $("arena-list").children[state.arena || 0]; if (cur) cur.focus({ preventScroll: true });
@@ -3168,7 +3282,7 @@ try {
   if (Number.isInteger(saved.boost)) state.boost = Math.max(0, saved.boost);
   if (Number.isInteger(saved.ball)) state.ball = saved.ballv === 2 ? saved.ball : saved.ball === 2 ? 1 : 0;   // older saves had 5 balls
   if (!(state.ball >= 0 && state.ball < BALLS.length)) state.ball = 0;
-  if (Number.isInteger(saved.arena) && saved.arena >= 0 && saved.arena < ARENAS.length) state.arena = saved.arena;
+  if (Number.isInteger(saved.arena) && saved.arena >= 0 && saved.arena < (PICK_SPECIALS ? ARENAS.length : NORMAL_ARENAS)) state.arena = saved.arena;
 } catch (_) {}
 function persist() { try { localStorage.setItem("rocket-temu-3d", JSON.stringify({ skill: state.skill, ballCam: state.ballCam[0], sound: sound.on, nick: state.nick, look: state.look, ball: state.ball || 0, ballv: 2, assist: state.assist, rank: state.rank, nuts: state.nuts, boost: state.boost, owned: state.owned, arena: state.arena || 0, gfx: quality.chosen ? (quality.high ? "high" : "low") : undefined })); } catch (_) {} }
 
@@ -3691,7 +3805,7 @@ function onNet(m) {
   else if (m.t === "rankres") applyRankResult(m.size, m.score, m.won);
   else if (m.t === "roster") { if (net.match) applyRoster(m.roster); }
   else if (m.t === "vote") { if (net.match) showVote(m); }
-  else if (m.t === "arena") { if (net.match) { setArena(m.a); hideVote(); showPop("ARENA: " + ARENAS[m.a].name); } }
+  else if (m.t === "arena") { if (net.match) { setArena(m.a); hideVote(); showPop((m.special ? "SPECIAL MAP: " : "ARENA: ") + ARENAS[m.a].name + (m.special ? "!" : "")); } }
   else if (m.t === "s") { if (net.match) applySnapshot(m); }
   else if (m.t === "pong") { const rtt = (performance.now() - m.c) / 1000; net.rtt = net.rtt * 0.7 + rtt * 0.3; }
   else if (m.t === "error") { if (state.online) { endOnline(); show("online"); } netStatus(m.msg, true); }
@@ -4206,7 +4320,9 @@ function startMatch(kind) {
   state.match = new Match(Object.assign({ mode: kind, skill: state.skill }, preset));
   state.local = preset.humans.slice();
   for (const i of state.local) { state.match.cars[i].look = state.look.slice(); state.match.cars[i].assist = state.assist; }
-  setArena(state.arena || 0);
+  const sp = state.arena >= NORMAL_ARENAS ? -1 : rollSpecial();      // a chosen special map just plays as itself
+  setArena(sp >= 0 ? sp : state.arena || 0);
+  if (sp >= 0) setTimeout(() => showPop("SPECIAL MAP: " + ARENAS[sp].name + "!"), 600);
   state.paused = false; state.online = false;
   bindMatch(state.match);
   $("pboost").firstChild.textContent = "BOOST: UNLIMITED ";
@@ -4395,7 +4511,7 @@ window.addEventListener("keydown", (e) => {
   if (!$("arenapick").hidden || !$("vote").hidden) {
     if (e.repeat) return;
     const d = /^(Digit|Numpad)([1-9])$/.exec(e.code), voting = !$("vote").hidden;
-    if (d && Number(d[2]) <= ARENAS.length) { const i = Number(d[2]) - 1; if (voting) netSend({ t: "vote", i }); else chooseArena(i); }
+    if (d && Number(d[2]) <= (voting || !PICK_SPECIALS ? NORMAL_ARENAS : ARENAS.length)) { const i = Number(d[2]) - 1; if (voting) netSend({ t: "vote", i }); else chooseArena(i); }
     else if (e.code === "Escape") { if (voting) act("menu"); else cancelArena(); }
     return;
   }
@@ -4618,6 +4734,7 @@ function render(dt) {
   updateAimArrow(state.screen === "match" ? state.match : null);
   flushSkids();
   animateBallLook(dt);
+  updateLeaves(dt, state.t);
   for (const o of [parts, glowParts]) if (o.parent !== scene) scene.add(o);
   const m = state.screen === "match" ? state.match : state.attract;
   if (!m) return;

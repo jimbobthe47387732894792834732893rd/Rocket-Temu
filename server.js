@@ -24,6 +24,7 @@ const ROOM_NAMES = ["Bargain Bin", "Clearance Aisle", "Flash Sale Arena", "Free 
   "Lightning Lounge", "Coupon Court", "Final Markdown", "Spin-to-Win Field", "Discount Dome", "Overstock Oval", "Fine Print Park"];
 const STATES = ["countdown", "play", "goal", "over"];
 const VOTE_MS = Number(process.env.VOTE_SECONDS || 12) * 1000, ARENA_COUNT = 4;
+const SPECIAL_CHANCE = Number(process.env.SPECIAL_CHANCE || 0.1);   // special maps: hardwood, fall leaves
 
 // ---- Static files -------------------------------------------------------------
 const PUBLIC = path.join(__dirname, "public");
@@ -119,8 +120,11 @@ class Room {
     const c = this.voteCounts(), max = Math.max(...c);
     const best = max ? c.map((v, i) => (v === max ? i : -1)).filter((i) => i >= 0) : c.map((_, i) => i);
     this.arena = best[(Math.random() * best.length) | 0];
+    // casual games only: 1 in 10 is a special map (hardwood or fall leaves, 50/50)
+    const special = !this.ranked && Math.random() < SPECIAL_CHANCE;
+    if (special) this.arena = ARENA_COUNT + (Math.random() < 0.5 ? 0 : 1);
     this.vote = null;
-    const msg = JSON.stringify({ t: "arena", a: this.arena, counts: c });
+    const msg = JSON.stringify({ t: "arena", a: this.arena, counts: c, special });
     for (const p of this.players) sendRaw(p, msg);
   }
   freeSlot() {
