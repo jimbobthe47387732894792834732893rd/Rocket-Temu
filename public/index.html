@@ -417,6 +417,7 @@
       <button type="button" data-act="pball">BALL TO ME <kbd>R</kbd></button>
       <button type="button" data-act="preset">RESET <kbd>T</kbd></button>
       <button type="button" data-act="pboost" id="pboost">BOOST: UNLIMITED <kbd>U</kbd></button>
+      <button type="button" data-act="pinvade" id="pinvade" hidden>INVADERS: OFF <kbd>I</kbd></button>
     </div>
     <div id="replay" hidden><b>REPLAY</b><span id="replay-skip"></span></div>
     <div id="pop" hidden></div>
@@ -2044,45 +2045,202 @@ function standBlock(axis, sign) {       // axis 'x': stands beside the long wall
   }
 }
 standBlock("x", 1); standBlock("x", -1); standBlock("z", 1); standBlock("z", -1);
-const crowdBody = new THREE.InstancedMesh(new THREE.BoxGeometry(1.3, 1.6, 0.85), lam(0xffffff), seats.length);
-const crowdHead = new THREE.InstancedMesh(new THREE.SphereGeometry(0.46, 8, 6), lam(0xffffff), seats.length);
-const crowdArms = new THREE.InstancedMesh(new THREE.BoxGeometry(0.25, 1.2, 0.25), lam(0xffffff), seats.length * 2);
-const NEUTRAL_SHIRTS = [0xe05050, 0xf0c040, 0x70d070, 0xf0f0f0, 0xb064dc], SKINS = [0xffdcb9, 0xe1b48c, 0xaa7855, 0x785037];
+// Every fan: legs, a shirt, arms, a head with hair or a hat, and some with a scarf or a fan jersey.
+// Fans in the scoring team's colour go wild (jumping, waving, spinning); the other colour holds their heads.
+const NEUTRAL_SHIRTS = [0xe05050, 0xf0c040, 0x70d070, 0xf0f0f0, 0xb064dc], SKINS = [0xffdcb9, 0xf0c8a0, 0xe1b48c, 0xc69468, 0xaa7855, 0x785037, 0x5a3a26];
+const HAIRS = [0x1a1410, 0x3a2414, 0x6a4422, 0xc8a050, 0xd8c8a8, 0x8a2a14, 0x2a2a2e], PANTS = [0x2a3a5a, 0x1c1c22, 0x4a4e58, 0x6a5a40, 0x2c3e2c];
 const _m4 = new THREE.Matrix4(), _c = new THREE.Color(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _p = new THREE.Vector3();
-seats.forEach((s, i) => {
-  crowdBody.setColorAt(i, _c.setHex(Math.random() < 0.75 ? TEAM_HEX[s.team] : NEUTRAL_SHIRTS[(Math.random() * 5) | 0]));
-  const skin = SKINS[(Math.random() * 4) | 0];
-  crowdHead.setColorAt(i, _c.setHex(skin)); crowdArms.setColorAt(2 * i, _c); crowdArms.setColorAt(2 * i + 1, _c);
-});
-standsGroup.add(crowdBody, crowdHead, crowdArms);
-let cheer = null;                       // {team, t}
-let crowdTick = 0;
-function updateCrowd(dt, t) {
-  if (cheer) { cheer.t += dt; if (cheer.t > 5) cheer = null; }
-  if (!crowdBody.visible) return;
-  if (!cheer && (crowdTick++ % 4)) return;                     // idle swaying doesn't need every frame
-  const fade = cheer ? Math.max(0, 1 - cheer.t / 4.5) : 0;
-  seats.forEach((s, i) => {
-    let dy = Math.sin(t * 1.3 + s.phase) * 0.04, arms = false;
-    if (fade > 0) {
-      if (s.team === cheer.team) { dy = Math.abs(Math.sin(cheer.t * 11 + s.phase)) * 1.8 * fade; arms = fade > 0.1; }
-      else dy = -0.25 * fade;
-    }
-    const by = s.y + 0.8 + dy;
-    _m4.makeTranslation(s.x, by, s.z); crowdBody.setMatrixAt(i, _m4);
-    _m4.makeTranslation(s.x, by + 1.23, s.z); crowdHead.setMatrixAt(i, _m4);
-    for (const side of [-1, 1]) {
-      if (arms) {
-        _p.set(s.x, by + 1.33, s.z);
-        if (s.lateral === "x") _p.x += side * 0.7; else _p.z += side * 0.7;
-        _q.setFromAxisAngle(s.lateral === "x" ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0), side * -0.35 * (s.lateral === "x" ? 1 : -1));
-        _s.set(1, 1, 1);
-      } else { _p.set(s.x, s.y, s.z); _s.set(0.001, 0.001, 0.001); }
-      _m4.compose(_p, _q, _s); crowdArms.setMatrixAt(2 * i + (side > 0 ? 1 : 0), _m4);
-    }
+const UPY = new THREE.Vector3(0, 1, 0), RIGHT = new THREE.Vector3(1, 0, 0), FWDZ = new THREE.Vector3(0, 0, 1);
+// Fan jerseys: a name and a number printed on the front (team colours, not any real club's kit)
+function jerseyTex(name, num) {
+  return canvasTex(128, 128, (g, w) => {
+    g.clearRect(0, 0, w, w); g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round";
+    g.font = `900 22px ${FONT}`; g.lineWidth = 5; g.strokeStyle = "rgba(0,0,0,0.75)"; g.strokeText(name, w / 2, 30); g.fillStyle = "#fff"; g.fillText(name, w / 2, 30);
+    g.font = `900 64px ${FONT}`; g.lineWidth = 8; g.strokeText(num, w / 2, 82); g.fillText(num, w / 2, 82);
   });
-  crowdBody.instanceMatrix.needsUpdate = crowdHead.instanceMatrix.needsUpdate = crowdArms.instanceMatrix.needsUpdate = true;
 }
+const JERSEYS = [["RONALDO", "7"], ["MESSI", "10"]];
+seats.forEach((s) => {
+  s.yaw = s.lateral === "z" ? Math.atan2(-Math.sign(s.x), 0) : Math.atan2(0, -Math.sign(s.z));   // facing the pitch
+  const r = Math.random();
+  s.shirtTeam = r < 0.72 ? s.team : -1;                                   // a team shirt, or a neutral one
+  s.hat = Math.random() < 0.22; s.bald = !s.hat && Math.random() < 0.08;
+  s.scarf = s.shirtTeam >= 0 && Math.random() < 0.16;
+  s.jersey = s.shirtTeam >= 0 && Math.random() < 0.09 ? (Math.random() < 0.5 ? 0 : 1) : -1;
+  s.spinner = Math.random() < 0.18; s.jumpK = 0.7 + Math.random() * 0.6; s.waveF = 9 + Math.random() * 7;
+});
+const N = seats.length, cnt = (f) => seats.filter(f).length;
+const crowdParts = {
+  legs: new THREE.InstancedMesh(new THREE.BoxGeometry(0.95, 0.85, 0.6), lam(0xffffff), N),
+  body: new THREE.InstancedMesh(new THREE.BoxGeometry(1.2, 1.25, 0.72), lam(0xffffff), N),
+  head: new THREE.InstancedMesh(new THREE.SphereGeometry(0.44, 10, 8), lam(0xffffff), N),
+  hair: new THREE.InstancedMesh(new THREE.SphereGeometry(0.47, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.55), lam(0xffffff), N),
+  hat: new THREE.InstancedMesh(new THREE.CylinderGeometry(0.42, 0.47, 0.42, 10), lam(0xffffff), cnt((s) => s.hat)),
+  arms: new THREE.InstancedMesh((() => { const g = new THREE.BoxGeometry(0.26, 1.15, 0.26); g.translate(0, -0.5, 0); return g; })(), lam(0xffffff), N * 2),
+  scarf: new THREE.InstancedMesh(new THREE.BoxGeometry(2.1, 0.32, 0.05), lam(0xffffff, { map: canvasTex(128, 16, (g, w, h) => { g.fillStyle = "#fff"; g.fillRect(0, 0, w, h); g.fillStyle = "rgba(255,255,255,0.35)"; for (let x = 0; x < w; x += 16) g.fillRect(x, 0, 8, h); g.fillStyle = "#222"; g.fillRect(0, 0, w, 2); g.fillRect(0, h - 2, w, 2); }) }), cnt((s) => s.scarf)),
+  jersey: JERSEYS.map(([n, k], j) => new THREE.InstancedMesh(new THREE.PlaneGeometry(0.95, 0.95), new THREE.MeshLambertMaterial({ map: jerseyTex(n, k), transparent: true, alphaTest: 0.3 }), cnt((s) => s.jersey === j))),
+};
+const crowdBody = crowdParts.body;                                          // (used elsewhere to tell if the crowd is shown)
+{
+  const idx = { hat: 0, scarf: 0, jersey: [0, 0] };
+  seats.forEach((s, i) => {
+    const shirt = s.shirtTeam >= 0 ? TEAM_HEX[s.shirtTeam] : NEUTRAL_SHIRTS[(Math.random() * NEUTRAL_SHIRTS.length) | 0];
+    crowdParts.body.setColorAt(i, _c.setHex(shirt).multiplyScalar(0.85 + Math.random() * 0.25));
+    crowdParts.legs.setColorAt(i, _c.setHex(PANTS[(Math.random() * PANTS.length) | 0]));
+    const skin = SKINS[(Math.random() * SKINS.length) | 0];
+    crowdParts.head.setColorAt(i, _c.setHex(skin)); crowdParts.arms.setColorAt(2 * i, _c); crowdParts.arms.setColorAt(2 * i + 1, _c);
+    crowdParts.hair.setColorAt(i, _c.setHex(HAIRS[(Math.random() * HAIRS.length) | 0]));
+    if (s.hat) { s.hatI = idx.hat++; crowdParts.hat.setColorAt(s.hatI, _c.setHex(s.shirtTeam >= 0 && Math.random() < 0.8 ? TEAM_HEX[s.shirtTeam] : 0x222228)); }
+    if (s.scarf) { s.scarfI = idx.scarf++; crowdParts.scarf.setColorAt(s.scarfI, _c.setHex(TEAM_HEX[s.shirtTeam])); }
+    if (s.jersey >= 0) s.jerseyI = idx.jersey[s.jersey]++;
+  });
+  for (const k of ["legs", "body", "head", "hair", "hat", "arms", "scarf"]) standsGroup.add(crowdParts[k]);
+  crowdParts.jersey.forEach((m) => standsGroup.add(m));
+}
+let cheer = null;                       // {team, t}
+let crowdTick = 0, crowdPosed = false;
+const _cq = new THREE.Quaternion(), _cq2 = new THREE.Quaternion(), _off = new THREE.Vector3(), _one = new THREE.Vector3(1, 1, 1), _zero = new THREE.Vector3(0.001, 0.001, 0.001);
+function placePart(mesh, i, base, q, ox, oy, oz, scale = _one) {
+  _off.set(ox, oy, oz).applyQuaternion(q).add(base);
+  _m4.compose(_off, q, scale); mesh.setMatrixAt(i, _m4);
+}
+// Pose one fan: mood 0 idle, 1 wild celebration, 2 clapping, 3 gutted (hands on head)
+function poseFan(s, i, t, mood, k) {
+  let dy = 0, yaw = s.yaw, armL = 0.12, armR = 0.12, armFwd = 0, scarfUp = false;
+  if (mood === 1) {
+    dy = Math.abs(Math.sin(t * 9 * s.jumpK + s.phase)) * 1.7 * k;
+    if (s.spinner) yaw += Math.sin(t * 3 + s.phase) * 1.4 * k;
+    const wv = Math.sin(t * s.waveF + s.phase) * 0.45;
+    armL = Math.PI * 0.85 + wv; armR = Math.PI * 0.85 - wv; scarfUp = s.scarf;
+  } else if (mood === 2) {
+    dy = Math.abs(Math.sin(t * 6 + s.phase)) * 0.25 * k;
+    armFwd = 1.2; armL = -0.2 + Math.abs(Math.sin(t * 12 + s.phase)) * 0.35; armR = armL;
+  } else if (mood === 3) {
+    dy = -0.2 * k; armL = Math.PI * 0.78; armR = Math.PI * 0.78; armFwd = 0.5;
+  }
+  _cq.setFromAxisAngle(UPY, yaw);
+  _p.set(s.x, s.y + 0.45 + dy, s.z);
+  placePart(crowdParts.legs, i, _p, _cq, 0, 0, 0);
+  placePart(crowdParts.body, i, _p, _cq, 0, 1.05, 0);
+  placePart(crowdParts.head, i, _p, _cq, 0, 2.02, 0);
+  placePart(crowdParts.hair, i, _p, _cq, 0, 2.06, -0.03, s.hat || s.bald ? _zero : _one);
+  if (s.hat) placePart(crowdParts.hat, s.hatI, _p, _cq, 0, 2.3, 0);
+  for (const side of [-1, 1]) {
+    const a = side < 0 ? armL : armR;
+    _cq2.setFromAxisAngle(RIGHT, -armFwd); _q.setFromAxisAngle(FWDZ, side * a).multiply(_cq2);   // a > 0 raises the arm out to the side
+    _q.premultiply(_cq);
+    _off.set(side * 0.74, 1.6, 0).applyQuaternion(_cq).add(_p);
+    _m4.compose(_off, _q, _one); crowdParts.arms.setMatrixAt(2 * i + (side > 0 ? 1 : 0), _m4);
+  }
+  if (s.scarf) placePart(crowdParts.scarf, s.scarfI, _p, _cq, 0, scarfUp ? 2.85 : 1.55, scarfUp ? 0 : 0.4, scarfUp ? _one : _zero);
+  if (s.jersey >= 0) placePart(crowdParts.jersey[s.jersey], s.jerseyI, _p, _cq, 0, 1.05, 0.37, _one);
+}
+function crowdDirty() {
+  for (const k of ["legs", "body", "head", "hair", "hat", "arms", "scarf"]) crowdParts[k].instanceMatrix.needsUpdate = true;
+  crowdParts.jersey.forEach((m) => { m.instanceMatrix.needsUpdate = true; });
+}
+function updateCrowd(dt, t) {
+  if (cheer) { cheer.t += dt; if (cheer.t > 6.5) { cheer = null; crowdPosed = false; } }
+  if (!crowdBody.visible) return;
+  if (!cheer) {
+    if (crowdPosed) return;                                                 // standing still: nothing to update
+    seats.forEach((s, i) => poseFan(s, i, t, 0, 0)); crowdPosed = true; crowdDirty(); return;
+  }
+  const k = Math.max(0, Math.min(1, (6.5 - cheer.t) / 1.5)), first = !cheer.posed;
+  seats.forEach((s, i) => {
+    const mood = s.shirtTeam === cheer.team ? 1 : s.shirtTeam < 0 ? 2 : 3;
+    if (mood === 3 && !first && (crowdTick + i) % 6) return;               // the sad fans barely move
+    if (mood === 2 && (crowdTick + i) % 2) return;
+    poseFan(s, i, t, mood, k);
+  });
+  cheer.posed = true; crowdTick++; crowdDirty();
+}
+// ---- Pitch invader (the copy of the game shared as a Claude artifact only) -----------------------------
+// After a goal there's a 1 in 100 chance a fan from the celebrating end jumps the wall and runs onto the
+// pitch, with a steward chasing them. In practice mode it's a switch: on means a fan invades every goal.
+function makePerson(shirt, opts = {}) {
+  const g = new THREE.Group(), parts = {};
+  const box = (w, h, d, color, x, y, z, pivotTop = false) => {
+    const geo = new THREE.BoxGeometry(w, h, d); if (pivotTop) geo.translate(0, -h / 2, 0);
+    const m = new THREE.Mesh(geo, lam(color)); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m;
+  };
+  parts.legL = box(0.32, 0.95, 0.32, opts.pants || 0x22304a, -0.2, 0.95, 0, true);
+  parts.legR = box(0.32, 0.95, 0.32, opts.pants || 0x22304a, 0.2, 0.95, 0, true);
+  parts.body = box(0.85, 1.0, 0.5, shirt, 0, 1.45, 0);
+  parts.armL = box(0.22, 0.9, 0.22, opts.skin || 0xe1b48c, -0.55, 1.9, 0, true);
+  parts.armR = box(0.22, 0.9, 0.22, opts.skin || 0xe1b48c, 0.55, 1.9, 0, true);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 10), lam(opts.skin || 0xe1b48c)); head.position.y = 2.25; head.castShadow = true; g.add(head);
+  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 6, 0, Math.PI * 2, 0, Math.PI * 0.5), lam(opts.hat || 0x2a1a10)); hair.position.set(0, 2.28, -0.02); g.add(hair);
+  if (opts.jersey) for (const side of [1, -1]) {                         // name and number front and back
+    const pl = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.7), new THREE.MeshLambertMaterial({ map: jerseyTex(...opts.jersey), transparent: true, alphaTest: 0.3 }));
+    pl.position.set(0, 1.5, side * 0.26); if (side < 0) pl.rotation.y = Math.PI; g.add(pl);
+  }
+  if (opts.vest) { const v = box(0.9, 0.7, 0.54, 0xd8ff20, 0, 1.55, 0); v.material = glowMat(0xd8ff20, 1.1); }
+  g.userData.parts = parts;
+  return g;
+}
+const invasion = { on: false, t: 0, fan: null, steward: null, path: [], leg: 0 };
+function startInvasion(team) {
+  endInvasion();
+  const fans = seats.filter((s) => s.shirtTeam === team && s.lateral === "z" && Math.abs(s.z) < HL - 10);
+  const s = fans.length ? fans[(Math.random() * fans.length) | 0] : { x: HW + 8, y: 3, z: 0 };
+  const jersey = Math.random() < 0.6 ? JERSEYS[(Math.random() * JERSEYS.length) | 0] : null;
+  const fan = makePerson(TEAM_HEX[team], { jersey, skin: SKINS[(Math.random() * SKINS.length) | 0] });
+  const steward = makePerson(0x1a1a1a, { vest: true, pants: 0x111114, hat: 0x111114 });
+  const side = Math.sign(s.x) || 1;
+  fan.position.set(s.x, s.y + 0.5, s.z); scene.add(fan);
+  steward.position.set(side * (HW + 6), 0, s.z + (Math.random() < 0.5 ? -30 : 30)); steward.visible = false; scene.add(steward);
+  // over the wall, then a zig-zag run across the pitch with arms up
+  const land = new THREE.Vector3(side * (HW - RE - 2), 0, Math.max(-HL + 20, Math.min(HL - 20, s.z)));
+  const path = [];
+  for (let k = 0; k < 6; k++) path.push(new THREE.Vector3((Math.random() * 2 - 1) * (HW - 24), 0, (Math.random() * 2 - 1) * (HL - 30) * 0.7));
+  Object.assign(invasion, { on: true, t: 0, fan, steward, from: fan.position.clone(), land, path, leg: 0, celebrate: -1 });
+  replay.startAt = -1; if (replay.active) stopReplay();               // watch the invader instead of the replay
+  showPop("A FAN HAS INVADED THE PITCH!");
+  if (state.match && state.match.state === "goal") state.match.goalTimer = Math.max(state.match.goalTimer, state.match.practice ? 7 : 0);
+}
+function endInvasion() {
+  if (invasion.fan) scene.remove(invasion.fan);
+  if (invasion.steward) scene.remove(invasion.steward);
+  invasion.on = false; invasion.fan = invasion.steward = null;
+}
+function animatePerson(p, t, speed, armsUp) {
+  const P = p.userData.parts, sw = Math.sin(t * 13) * Math.min(1, speed / 4) * 0.8;
+  P.legL.rotation.x = sw; P.legR.rotation.x = -sw;
+  if (armsUp) { const wv = Math.sin(t * 15) * 0.4; P.armL.rotation.set(0, 0, -(2.6 + wv)); P.armR.rotation.set(0, 0, 2.6 - wv); }
+  else { P.armL.rotation.set(-sw, 0, -0.1); P.armR.rotation.set(sw, 0, 0.1); }
+}
+function updateInvasion(dt) {
+  if (!invasion.on) return;
+  const I = invasion, fan = I.fan; I.t += dt;
+  if (I.t < 1.1) {                                                        // the leap from the stands
+    const k = I.t / 1.1;
+    fan.position.lerpVectors(I.from, I.land, k); fan.position.y = I.from.y * (1 - k) + Math.sin(k * Math.PI) * 4;
+    fan.lookAt(I.land.x, fan.position.y, I.land.z); animatePerson(fan, I.t, 2, true);
+    return;
+  }
+  let speed = 0;
+  if (I.celebrate >= 0) {                                                 // a big jump-and-spin celebration
+    const k = (I.t - I.celebrate) / 1.2;
+    fan.position.y = Math.sin(Math.min(1, k) * Math.PI) * 1.6; fan.rotation.y += dt * 10;
+    const P = fan.userData.parts; P.armL.rotation.set(0, 0, -1.4); P.armR.rotation.set(0, 0, 1.4);
+    if (k >= 1) { I.celebrate = -1; fan.position.y = 0; }
+  } else {
+    const target = I.path[I.leg % I.path.length], d = new THREE.Vector3().subVectors(target, fan.position); d.y = 0;
+    if (d.length() < 1.5) { I.leg++; if (I.leg === 2) I.celebrate = I.t; }
+    speed = 8.5; d.setLength(speed * dt); fan.position.add(d); fan.position.y = Math.abs(Math.sin(I.t * 13)) * 0.12;
+    fan.lookAt(target.x, fan.position.y, target.z);
+    animatePerson(fan, I.t, speed, true);
+  }
+  if (I.t > 2.2) {                                                        // the steward gives chase
+    const st = I.steward; st.visible = true;
+    const d = new THREE.Vector3().subVectors(fan.position, st.position); d.y = 0;
+    if (d.length() > 1.3) { d.setLength(9.5 * dt); st.position.add(d); st.position.y = Math.abs(Math.sin(I.t * 14)) * 0.12; animatePerson(st, I.t, 9, false); }
+    else { st.position.y = 0; animatePerson(st, I.t, 0, false); }
+    st.lookAt(fan.position.x, st.position.y, fan.position.z);
+  }
+}
+
 // Floodlight towers (just glowing panels) for atmosphere
 for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
   const panel = new THREE.Mesh(new THREE.BoxGeometry(6, 3, 0.6), glowMat(0xfff3d6, GLOW * 1.2));
@@ -2474,6 +2632,152 @@ function updateLeaves(dt, t) {
   }
   leaves.instanceMatrix.needsUpdate = true;
 }
+// Fallen leaves (fall map): thousands of real little leaves lying on the grass, four shapes, many colours,
+// piled up along the walls. Cars and the ball kick them up as they drive through; they flutter back down.
+const FL_N = quality.high ? 9000 : 3600, FL_SHAPES = 4;
+function leafShapeTex(kind) {
+  return canvasTex(128, 128, (g, w) => {
+    g.translate(w / 2, w / 2);
+    const path = new Path2D();
+    if (kind === 0) {                                                       // maple: five pointed lobes
+      const pts = [];
+      for (let k = 0; k < 5; k++) {
+        const a = -Math.PI / 2 + (k - 2) * 0.68, r = k === 2 ? 56 : k === 1 || k === 3 ? 50 : 38;
+        pts.push([Math.cos(a) * r, Math.sin(a) * r], [Math.cos(a + 0.34) * r * 0.45, Math.sin(a + 0.34) * r * 0.45]);
+      }
+      path.moveTo(0, 44); pts.forEach(([x, y]) => path.lineTo(x, y)); path.lineTo(6, 30); path.closePath();
+    } else if (kind === 1) {                                                // oak: wavy rounded lobes
+      path.moveTo(0, -56);
+      for (let k = 0; k <= 8; k++) { const y = -56 + k * 13, r = 18 + Math.sin(k * 1.4) * 9 + (k > 5 ? -4 : 0); path.quadraticCurveTo(r + 14, y + 6, r * 0.7, y + 13); }
+      for (let k = 8; k >= 0; k--) { const y = -56 + k * 13, r = 18 + Math.sin(k * 1.4) * 9 + (k > 5 ? -4 : 0); path.quadraticCurveTo(-r - 14, y + 6, -r * 0.7, y); }
+      path.closePath();
+    } else if (kind === 2) {                                                // oval
+      path.moveTo(0, -58); path.bezierCurveTo(40, -36, 36, 34, 0, 56); path.bezierCurveTo(-36, 34, -40, -36, 0, -58);
+    } else {                                                                // birch: small, toothed
+      for (let k = 0; k <= 24; k++) { const t = k / 24 * Math.PI * 2, r = (k % 2 ? 36 : 40) * (1 - 0.25 * Math.cos(t)); const x = Math.sin(t) * r * 0.75, y = -Math.cos(t) * r * 1.15; k ? path.lineTo(x, y) : path.moveTo(x, y); }
+      path.closePath();
+    }
+    const gr = g.createLinearGradient(-40, -50, 40, 50); gr.addColorStop(0, "#ffffff"); gr.addColorStop(1, "#c8c8c8");
+    g.fillStyle = gr; g.fill(path);
+    g.save(); g.clip(path);                                                 // veins and a darker rim
+    g.strokeStyle = "rgba(70,40,20,0.55)"; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(0, 60); g.lineTo(0, -54); g.stroke();
+    g.lineWidth = 1.6;
+    for (let k = -3; k <= 3; k++) { if (!k) continue; const y = k * 13; g.beginPath(); g.moveTo(0, y + 10); g.lineTo(Math.sign(k) * 40, y - 10); g.moveTo(0, -y + 10); g.lineTo(-Math.sign(k) * 40, -y - 10); g.stroke(); }
+    g.lineWidth = 6; g.strokeStyle = "rgba(60,30,10,0.25)"; g.stroke(path);
+    g.restore();
+    g.strokeStyle = "#5a3a1c"; g.lineWidth = 3; g.beginPath(); g.moveTo(0, 44); g.lineTo(2, 62); g.stroke();   // stem
+  });
+}
+// A slightly curled leaf: a small grid bent upwards at the edges
+const FL_GEO = (() => {
+  const geo = new THREE.PlaneGeometry(1, 1, 4, 4); geo.rotateX(-Math.PI / 2);
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i); p.setY(i, (x * x * 0.55 + z * z * 0.15)); }
+  geo.computeVertexNormals();
+  return geo;
+})();
+const _fq = new THREE.Quaternion(), _fe = new THREE.Euler(), _fp = new THREE.Vector3(), _fs = new THREE.Vector3(), _fm = new THREE.Matrix4();
+const floorLeaves = new THREE.Group(); floorLeaves.visible = false; scene.add(floorLeaves);
+const flMeshes = [], fl = { x: new Float32Array(FL_N), y: new Float32Array(FL_N), z: new Float32Array(FL_N), vx: new Float32Array(FL_N), vy: new Float32Array(FL_N),
+  vz: new Float32Array(FL_N), rot: new Float32Array(FL_N), tilt: new Float32Array(FL_N), spin: new Float32Array(FL_N), size: new Float32Array(FL_N), rest: new Float32Array(FL_N),
+  shape: new Uint8Array(FL_N), slot: new Uint32Array(FL_N), isFlying: new Uint8Array(FL_N), flying: [], cells: new Map() };
+const FL_CELL = 4;
+const flCellKey = (x, z) => ((Math.floor(x / FL_CELL) + 64) * 256 + (Math.floor(z / FL_CELL) + 64));
+{
+  const cols = [0xc23a16, 0xd9541e, 0xe8892a, 0xf2b632, 0xe0a030, 0x9a4418, 0x7a3c1a, 0xb8321c, 0xd96d1c, 0xc8a038];
+  const counts = new Array(FL_SHAPES).fill(0), shapeOf = [];
+  let seed = 2024; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const lx = HW - RE - 0.6, lz = HL - RE - 0.6;
+  for (let i = 0; i < FL_N; i++) {
+    let x, z;
+    for (let tries = 0; ; tries++) {                                        // more leaves near the walls and in drifts
+      x = (rnd() * 2 - 1) * lx; z = (rnd() * 2 - 1) * lz;
+      const edge = Math.min(lx - Math.abs(x), lz - Math.abs(z));
+      const drift = 0.5 + 0.5 * Math.sin(x * 0.11 + Math.sin(z * 0.07) * 2) * Math.sin(z * 0.09);
+      const keep = edge < 10 ? 1 : 0.18 + 0.55 * drift;
+      // the corners of the arena are rounded: stay inside the floor
+      const cx = Math.max(0, Math.abs(x) - (HW - RC)), cz = Math.max(0, Math.abs(z) - (HL - RC));
+      if (Math.hypot(cx, cz) > RC - RE - 0.6) continue;
+      if (rnd() < keep || tries > 20) break;
+    }
+    const sh = (rnd() * FL_SHAPES) | 0; shapeOf.push(sh); fl.slot[i] = counts[sh]++;
+    fl.shape[i] = sh; fl.x[i] = x; fl.z[i] = z; fl.size[i] = 0.45 + rnd() * 0.5 * (sh === 3 ? 0.6 : 1);
+    fl.rest[i] = 0.025 + rnd() * 0.06; fl.y[i] = fl.rest[i]; fl.rot[i] = rnd() * 6.283; fl.tilt[i] = (rnd() - 0.5) * 0.5;
+    const k = flCellKey(x, z); if (!fl.cells.has(k)) fl.cells.set(k, []); fl.cells.get(k).push(i);
+  }
+  for (let s = 0; s < FL_SHAPES; s++) {
+    const m = new THREE.InstancedMesh(FL_GEO, lam(0xffffff, { map: leafShapeTex(s), alphaTest: 0.45, side: THREE.DoubleSide }), counts[s]);
+    m.receiveShadow = quality.high; m.frustumCulled = false; floorLeaves.add(m); flMeshes.push(m);
+  }
+  for (let i = 0; i < FL_N; i++) {
+    const c = new THREE.Color(cols[(rnd() * cols.length) | 0]).multiplyScalar(0.8 + rnd() * 0.35);
+    flMeshes[fl.shape[i]].setColorAt(fl.slot[i], c);
+    flSet(i);
+  }
+}
+function flSet(i) {
+  _fe.set(fl.tilt[i], fl.rot[i], fl.tilt[i] * 0.6); _fq.setFromEuler(_fe);
+  _fp.set(fl.x[i], fl.y[i], fl.z[i]); _fs.setScalar(fl.size[i]);
+  _fm.compose(_fp, _fq, _fs); flMeshes[fl.shape[i]].setMatrixAt(fl.slot[i], _fm);
+}
+function flKick(i, vx, vy, vz) {
+  if (fl.y[i] > fl.rest[i] + 0.01 && fl.vy[i] > 0) return;                // already flying up
+  if (!fl.isFlying[i]) { const arr = fl.cells.get(flCellKey(fl.x[i], fl.z[i])); if (arr) { const j = arr.indexOf(i); if (j >= 0) arr.splice(j, 1); } }
+  fl.vx[i] = vx; fl.vy[i] = vy; fl.vz[i] = vz; fl.spin[i] = (Math.random() - 0.5) * 14;
+  if (!fl.isFlying[i]) { fl.isFlying[i] = 1; fl.flying.push(i); }
+}
+// Anything moving fast along the ground pushes the leaves in front of and under it
+function flDisturb(px, pz, vx, vz, radius, power) {
+  const sp = Math.hypot(vx, vz); if (sp < 4) return;
+  for (let gx = Math.floor((px - radius) / FL_CELL); gx <= Math.floor((px + radius) / FL_CELL); gx++)
+    for (let gz = Math.floor((pz - radius) / FL_CELL); gz <= Math.floor((pz + radius) / FL_CELL); gz++) {
+      const arr = fl.cells.get((gx + 64) * 256 + (gz + 64)); if (!arr) continue;
+      for (let n = arr.length - 1; n >= 0; n--) {
+        const i = arr[n], dx = fl.x[i] - px, dz = fl.z[i] - pz, d = Math.hypot(dx, dz);
+        if (d > radius) continue;
+        const out = (radius - d) / radius, k = Math.min(1, sp / 30) * power;
+        flKick(i, vx * 0.35 * k + (dx / (d || 1)) * 3 * out + (Math.random() - 0.5) * 2, (2 + Math.random() * 4) * k + 1, vz * 0.35 * k + (dz / (d || 1)) * 3 * out + (Math.random() - 0.5) * 2);
+      }
+    }
+}
+function flBlast(pos, radius, power) {                                      // goal explosions blow leaves everywhere nearby
+  for (let i = 0; i < FL_N; i++) {
+    const dx = fl.x[i] - pos.x, dz = fl.z[i] - pos.z, d = Math.hypot(dx, dz);
+    if (d > radius) continue;
+    const k = (1 - d / radius) * power;
+    flKick(i, (dx / (d || 1)) * k * (0.6 + Math.random() * 0.6), 3 + k * 0.35 * Math.random(), (dz / (d || 1)) * k * (0.6 + Math.random() * 0.6));
+  }
+}
+const lx_ = HW - RE - 0.6, lz_ = HL - RE - 0.6;
+function updateFloorLeaves(dt, m, t) {
+  if (!floorLeaves.visible || !m) return;
+  for (const car of m.cars) {
+    if (car.demolished || car.pos.y > 2.2) continue;
+    flDisturb(car.pos.x, car.pos.z, car.vel.x, car.vel.z, car.boosting ? 2.4 : 1.8, car.boosting ? 1.4 : 1);
+  }
+  const b = m.ball; if (b.pos.y < b.r + 0.8) flDisturb(b.pos.x, b.pos.z, b.vel.x, b.vel.z, b.r + 0.4, 0.8);
+  if (!fl.flying.length) return;
+  const drag = Math.exp(-2.2 * dt);
+  for (let n = fl.flying.length - 1; n >= 0; n--) {
+    const i = fl.flying[n];
+    fl.vy[i] -= 4.5 * dt;                                                   // light: falls slowly
+    if (fl.vy[i] < -2.2) fl.vy[i] = -2.2;
+    fl.vx[i] *= drag; fl.vz[i] *= drag;
+    const flutter = Math.sin(t * 6 + i) * 1.2;
+    fl.x[i] += (fl.vx[i] + flutter * 0.3) * dt; fl.z[i] += (fl.vz[i] + Math.cos(t * 5 + i) * 0.35) * dt; fl.y[i] += fl.vy[i] * dt;
+    fl.x[i] = Math.max(-lx_, Math.min(lx_, fl.x[i])); fl.z[i] = Math.max(-lz_, Math.min(lz_, fl.z[i]));
+    fl.rot[i] += fl.spin[i] * dt; fl.tilt[i] = Math.sin(t * 7 + i) * 0.9;
+    if (fl.y[i] <= fl.rest[i] && fl.vy[i] <= 0) {                           // landed: lie flat again
+      fl.y[i] = fl.rest[i]; fl.tilt[i] = (Math.random() - 0.5) * 0.5; fl.spin[i] = 0;
+      fl.flying.splice(n, 1); fl.isFlying[i] = 0;
+      const k = flCellKey(fl.x[i], fl.z[i]); if (!fl.cells.has(k)) fl.cells.set(k, []); fl.cells.get(k).push(i);
+    }
+    flSet(i);
+  }
+  for (const msh of flMeshes) msh.instanceMatrix.needsUpdate = true;
+}
+
 const arenaCache = {};
 let arenaNow = -1;
 glassWall.userData.base = glassWall.material; ceil.userData.base = ceil.material; wallCurve.userData.base = wallCurve.material;
@@ -2491,7 +2795,7 @@ function setArena(i) {
   ceil.material = T.ceil[1] >= 0.95 ? (A.ceilMat || (A.ceilMat = lam(T.ceil[0], { side: THREE.DoubleSide }))) : ceil.userData.base;
   standsGroup.visible = T.stands; crowdBody.visible = T.stands;
   for (const a of adBoards) a.visible = T.ads;
-  indoorRoof.visible = T.roof; kartProps.visible = key === "kart"; garageProps.visible = key === "garage"; leaves.visible = key === "fall";
+  indoorRoof.visible = T.roof; kartProps.visible = key === "kart"; garageProps.visible = key === "garage"; leaves.visible = key === "fall"; floorLeaves.visible = key === "fall";
   const shells = key === "field" && quality.high;
   if (shells) grassShells(A.floor).visible = true; else if (shellGroup) shellGroup.visible = false;
   scene.background.setHex(T.bg); scene.fog.color.setHex(T.bg);
@@ -3215,7 +3519,7 @@ const flashes = new THREE.Points(flashGeo, new THREE.PointsMaterial({ size: 1.1,
 flashes.frustumCulled = false; scene.add(flashes);
 function updateFlashes() {
   const on = cheer && cheer.t < 3.2 && crowdBody.visible;
-  const pool = on ? seats.filter((s) => s.team === cheer.team) : [];
+  const pool = on ? seats.filter((s) => s.shirtTeam === cheer.team) : [];
   for (let i = 0; i < 60; i++) {
     if (on && Math.random() < 0.5) { const s = pool[(Math.random() * pool.length) | 0]; flashPos.set([s.x, s.y + 2.2, s.z], i * 3); }
     else flashPos.set([0, -50, 0], i * 3);
@@ -3276,6 +3580,7 @@ try {
   if (typeof saved.nick === "string") state.nick = saved.nick;
   if (saved.look) state.look = cleanLook(saved.look);
   if (typeof saved.assist === "boolean") state.assist = saved.assist;
+  if (typeof saved.invaders === "boolean") state.invaders = saved.invaders;
   for (const k of [1, 3]) { const r = saved.rank && saved.rank[k]; if (r && Number.isFinite(r.pts) && Number.isInteger(r.games)) state.rank[k] = { pts: Math.max(0, r.pts), games: Math.max(0, r.games) }; }
   if (Number.isFinite(saved.nuts)) state.nuts = Math.max(0, saved.nuts | 0);
   if (Array.isArray(saved.owned)) state.owned = saved.owned.filter((k) => typeof k === "string").slice(0, 100);
@@ -3284,7 +3589,7 @@ try {
   if (!(state.ball >= 0 && state.ball < BALLS.length)) state.ball = 0;
   if (Number.isInteger(saved.arena) && saved.arena >= 0 && saved.arena < (PICK_SPECIALS ? ARENAS.length : NORMAL_ARENAS)) state.arena = saved.arena;
 } catch (_) {}
-function persist() { try { localStorage.setItem("rocket-temu-3d", JSON.stringify({ skill: state.skill, ballCam: state.ballCam[0], sound: sound.on, nick: state.nick, look: state.look, ball: state.ball || 0, ballv: 2, assist: state.assist, rank: state.rank, nuts: state.nuts, boost: state.boost, owned: state.owned, arena: state.arena || 0, gfx: quality.chosen ? (quality.high ? "high" : "low") : undefined })); } catch (_) {} }
+function persist() { try { localStorage.setItem("rocket-temu-3d", JSON.stringify({ skill: state.skill, ballCam: state.ballCam[0], sound: sound.on, nick: state.nick, look: state.look, ball: state.ball || 0, ballv: 2, assist: state.assist, invaders: !!state.invaders, rank: state.rank, nuts: state.nuts, boost: state.boost, owned: state.owned, arena: state.arena || 0, gfx: quality.chosen ? (quality.high ? "high" : "low") : undefined })); } catch (_) {} }
 
 const K = (...codes) => codes.some((c) => state.keys.has(c));
 const dead = (v) => (Math.abs(v) < 0.14 ? 0 : clamp((v - Math.sign(v) * 0.14) / 0.76, -1, 1));
@@ -3480,6 +3785,7 @@ function warmUp() {
 }
 function baseRatio() { return Math.min(window.devicePixelRatio || 1, quality.high ? 2 : quality.auto ? 1.25 : 1.5); }
 function unbindMatch() {
+  endInvasion();
   if (!views) return;
   for (const cv of views.cars) disposeCarView(cv);
   for (const pv of views.pads) scene.remove(pv.glow.parent);
@@ -3725,6 +4031,8 @@ function handleEvents(m, celebrate) {
   for (const e of m.events) {
     if (e.type === "goal") {
       burst(e.pos, [TEAM_HEX[e.team], 0xffc428, 0xffffff], 500, 34, 2.2, 6, true);
+      if (floorLeaves.visible) flBlast(e.pos, 34, 26);
+      if (PICK_SPECIALS && celebrate && !state.online && m.mode !== "watch" && (m.practice ? state.invaders : Math.random() < 0.01)) startInvasion(e.team);
       startShock(e.pos, e.team);
       replay.goalT = state.t; replay.startAt = m.practice ? -1 : state.t + 2.4; replay.side = Math.sign(e.pos.z) || 1;
       if (e.scorer >= 0) addFeed(m.cars[e.scorer], e.assist >= 0 ? `scored (assist: ${m.cars[e.assist].name})` : "scored");
@@ -3744,6 +4052,7 @@ function handleEvents(m, celebrate) {
       const who = state.local.indexOf(e.car); if (who >= 0) rumble(who, Math.min(1, e.power / 40), Math.min(1, e.power / 25), 90);
       if (who >= 0) { const kmh = Math.round(m.ball.vel.length() * 3.6); if (kmh > 180) { showShot(kmh); state.shake = Math.max(state.shake, 0.12); } }
     }
+    else if (e.type === "kickoff") endInvasion();
     else if (e.type === "flipreset") {                  // wheels on the ball: flip back, with a sparkle
       burst(e.pos, [0x7dffb0, 0xffffff, 0xffd23c], 60, 9, 0.6, 2, true);
       if (state.local.includes(e.car)) { showPop("FLIP RESET!"); tone(1320, 0.18, "triangle", 0.06, 1.4); }
@@ -4190,6 +4499,14 @@ function chaseCam(i, car, ball, dt, ballCam) {
 // After a goal: swing round to the net and the stands behind it so you can see the fans lose it
 function goalCam(i, dt) {
   const st = camState[i], s = state.goalSide, tt = state.t - state.goalT;
+  if (invasion.on && invasion.fan && invasion.t > 1.0) {               // a pitch invader steals the show (once on the pitch)
+    const f = invasion.fan.position, toMid = new THREE.Vector3(-f.x, 0, -f.z * 0.3).normalize();
+    const want = new THREE.Vector3(f.x + toMid.x * 9, 3.8, f.z + toMid.z * 9);
+    keepInside(want, 2);
+    st.pos.lerp(want, 1 - Math.exp(-4 * dt)); st.look.lerp(new THREE.Vector3(f.x, 1.6, f.z), 1 - Math.exp(-6 * dt));
+    cams[i].position.copy(st.pos); cams[i].lookAt(st.look);
+    return;
+  }
   const want = new THREE.Vector3(Math.sin(tt * 0.45 + i) * 26, 9 + tt, s * (HL - 38 + tt * 2.4));
   st.pos.lerp(want, 1 - Math.exp(-3 * dt));
   st.look.lerp(new THREE.Vector3(0, 11, s * (HL + GD + 14)), 1 - Math.exp(-4 * dt));
@@ -4234,6 +4551,7 @@ function updateHud(m) {
   const secs = m.overtime ? Math.floor(m.otTime) : Math.ceil(m.timeLeft);
   setText(elClock, "clock", m.practice ? "PRACTICE" : (m.overtime ? "+" : "") + Math.floor(secs / 60) + ":" + String(secs % 60).padStart(2, "0"));
   setShown($("practice-bar"), "pbar", !!m.practice);
+  setShown($("pinvade"), "pinv", !!m.practice && PICK_SPECIALS);
   elClock.classList.toggle("ot", m.overtime);
   let big = "", sub = "", bigColor = "#fff";
   if (m.state === "countdown") big = String(Math.ceil(m.countdown));
@@ -4326,6 +4644,7 @@ function startMatch(kind) {
   state.paused = false; state.online = false;
   bindMatch(state.match);
   $("pboost").firstChild.textContent = "BOOST: UNLIMITED ";
+  $("pinvade").firstChild.textContent = "INVADERS: " + (state.invaders ? "ON " : "OFF ");
   camState[0].pos.set(0, 8, -HL - 2); camState[1].pos.set(0, 8, HL + 2);
   show("match");
   canvas.focus({ preventScroll: true });
@@ -4433,6 +4752,7 @@ function act(name) {
   else if (name === "requeue") { if (net.ranked) { const sz = net.ranked; netSend({ t: "leave" }); endOnline(); startRanked(sz); } }
   else if (name === "quick5" || name === "create5") pickBall(() => netJoin({ t: name.slice(0, -1), size: 5 }));
   else if (name === "pball" || name === "preset") { if (state.match && state.match.practice) { state.match.practiceBall(name === "pball" ? "front" : "reset"); stopReplay(); } }
+  else if (name === "pinvade") { state.invaders = !state.invaders; persist(); $("pinvade").firstChild.textContent = "INVADERS: " + (state.invaders ? "ON " : "OFF "); }
   else if (name === "pboost") { if (state.match && state.match.practice) { state.match.unlimited = !state.match.unlimited; $("pboost").firstChild.textContent = "BOOST: " + (state.match.unlimited ? "UNLIMITED " : "NORMAL "); } }
   else if (name === "cancelball") cancelBall();
   else if (name === "cancelarena") cancelArena();
@@ -4555,6 +4875,7 @@ window.addEventListener("keydown", (e) => {
     else if (state.match && state.match.practice && e.code === "KeyR") act("pball");
     else if (state.match && state.match.practice && e.code === "KeyT") act("preset");
     else if (state.match && state.match.practice && e.code === "KeyU") act("pboost");
+    else if (state.match && state.match.practice && PICK_SPECIALS && e.code === "KeyI") act("pinvade");
     else if (e.code === "Tab") { e.preventDefault(); state.boardHeld = true; }
     else if (e.code === "KeyC") act("cam");
     else if (e.code === "KeyM") act("sound");
@@ -4735,6 +5056,8 @@ function render(dt) {
   flushSkids();
   animateBallLook(dt);
   updateLeaves(dt, state.t);
+  updateInvasion(dt);
+  updateFloorLeaves(dt, state.screen === "match" ? state.match : null, state.t);
   for (const o of [parts, glowParts]) if (o.parent !== scene) scene.add(o);
   const m = state.screen === "match" ? state.match : state.attract;
   if (!m) return;
@@ -4924,7 +5247,7 @@ if (app_.pwa && "serviceWorker" in navigator && (location.protocol === "https:" 
 updateInstall();
 // Installed app (or a phone): use the whole screen, keeping clear of the notch and status bar
 if (app_.standalone || /[?&]app=1/.test(location.search) || matchMedia("(pointer: coarse)").matches) document.documentElement.classList.add("app-mode");
-window.rocketTemu = { state, act, net, replay, setArena, applyRankResult, dbg: () => ({ resizes: resize.n, ratio: renderer.getPixelRatio(), dyn }), views: () => views, skids: () => skidN, addSkid, advance(secs) { for (let i = 0; i < secs * FPS; i++) step(1 / FPS); } };
+window.rocketTemu = { state, act, net, replay, setArena, invasion, applyRankResult, dbg: () => ({ resizes: resize.n, ratio: renderer.getPixelRatio(), dyn }), views: () => views, skids: () => skidN, addSkid, advance(secs) { for (let i = 0; i < secs * FPS; i++) step(1 / FPS); } };
 })();
 </script>
 </body>
