@@ -2180,7 +2180,7 @@ function makePerson(shirt, opts = {}) {
   return g;
 }
 const invasion = { on: false, t: 0, fan: null, steward: null, path: [], leg: 0 };
-function startInvasion(team) {
+function startInvasion(team, why = "") {
   endInvasion();
   const fans = seats.filter((s) => s.shirtTeam === team && s.lateral === "z" && Math.abs(s.z) < HL - 10);
   const s = fans.length ? fans[(Math.random() * fans.length) | 0] : { x: HW + 8, y: 3, z: 0 };
@@ -2196,7 +2196,7 @@ function startInvasion(team) {
   for (let k = 0; k < 6; k++) path.push(new THREE.Vector3((Math.random() * 2 - 1) * (HW - 24), 0, (Math.random() * 2 - 1) * (HL - 30) * 0.7));
   Object.assign(invasion, { on: true, t: 0, fan, steward, from: fan.position.clone(), land, path, leg: 0, celebrate: -1 });
   replay.startAt = -1; if (replay.active) stopReplay();               // watch the invader instead of the replay
-  showPop("A FAN HAS INVADED THE PITCH!");
+  showPop(why + "A FAN HAS INVADED THE PITCH!");
   if (state.match && state.match.state === "goal") state.match.goalTimer = Math.max(state.match.goalTimer, state.match.practice ? 7 : 0);
 }
 function endInvasion() {
@@ -4032,7 +4032,17 @@ function handleEvents(m, celebrate) {
     if (e.type === "goal") {
       burst(e.pos, [TEAM_HEX[e.team], 0xffc428, 0xffffff], 500, 34, 2.2, 6, true);
       if (floorLeaves.visible) flBlast(e.pos, 34, 26);
-      if (PICK_SPECIALS && celebrate && !state.online && m.mode !== "watch" && (m.practice ? state.invaders : Math.random() < 0.01)) startInvasion(e.team);
+      if (PICK_SPECIALS && celebrate && !state.online && m.mode !== "watch") {
+        // Invaders: always after a comeback (a goal that ties it or takes the lead after being behind) or a
+        // late goal (30 seconds or less left, or overtime); otherwise 1 in 100. Practice has its own switch.
+        const before = m.score.slice(); before[e.team]--;
+        const tr = m.trailed || (m.trailed = [false, false]);                // has each team been behind at some point?
+        if (before[0] < before[1]) tr[0] = true; if (before[1] < before[0]) tr[1] = true;
+        const comeback = tr[e.team] && before[e.team] <= before[1 - e.team] && m.score[e.team] >= m.score[1 - e.team];
+        const late = m.overtime || m.timeLeft <= 30;
+        const why = m.practice ? (state.invaders ? "" : null) : comeback ? "COMEBACK! " : late ? "LATE DRAMA! " : Math.random() < 0.01 ? "" : null;
+        if (why !== null) startInvasion(e.team, why);
+      }
       startShock(e.pos, e.team);
       replay.goalT = state.t; replay.startAt = m.practice ? -1 : state.t + 2.4; replay.side = Math.sign(e.pos.z) || 1;
       if (e.scorer >= 0) addFeed(m.cars[e.scorer], e.assist >= 0 ? `scored (assist: ${m.cars[e.assist].name})` : "scored");
