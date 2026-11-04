@@ -129,6 +129,77 @@
     top: env(safe-area-inset-top, 0px); bottom: 0; height: auto; }
   html.app-mode .gauge, html.app-mode .tbtns, html.app-mode #chat-row { margin-bottom: env(safe-area-inset-bottom, 0px); }
   html.app-mode .showroom .fine { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+
+  /* ---- Competitions ---- */
+  .nav-btn.cupbtn { background: linear-gradient(120deg, rgba(255,196,40,.22), rgba(16,13,34,.86) 60%); border-color: rgba(255,196,40,.45); }
+  .cup-screen { position: absolute; inset: 0; overflow: auto; padding: 18px clamp(14px, 3vw, 36px); touch-action: pan-y;
+    background: linear-gradient(90deg, rgba(6,5,14,.94) 0%, rgba(6,5,14,.86) 52%, rgba(6,5,14,.2) 72%, rgba(6,5,14,0) 100%); }
+  .cup-card { width: min(780px, 100%); display: flex; flex-direction: column; gap: 12px; padding-bottom: 24px; }
+  .cup-card h2 { margin: 0; font-weight: 900; font-style: italic; font-size: clamp(30px, 5.4vw, 56px); line-height: 1; text-shadow: 0 4px 0 #000; }
+  .cup-card .cup-h { margin: 6px 0 0; font-weight: 900; font-size: 13px; letter-spacing: .12em; color: var(--muted); }
+  .cup-sub { margin: 0; color: #d9d5ea; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .cup-comps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cup-comp { display: flex; flex-direction: column; gap: 3px; text-align: left; padding: 12px 14px; border: 2px solid var(--line); border-radius: 14px; background: var(--panel); }
+  .cup-comp b { font-weight: 900; font-style: italic; font-size: clamp(15px, 1.8vw, 19px); }
+  .cup-comp small { color: var(--muted); font-weight: 700; font-size: 12px; }
+  .cup-comp .cab { color: var(--gold); }
+  .cup-comp[aria-pressed="true"] { border-color: var(--gold); box-shadow: 0 0 18px rgba(255,196,40,.25); }
+  .cup-opts { display: flex; gap: 10px 18px; flex-wrap: wrap; align-items: center; }
+  .cup-opts label { font-weight: 900; font-size: 11px; letter-spacing: .1em; color: var(--muted); margin-right: 8px; }
+  .seg { display: inline-flex; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+  .seg button { border: 0; background: none; padding: 7px 13px; border-radius: 999px; font-weight: 900; font-size: 13px; }
+  .seg button[aria-pressed="true"] { background: var(--temu); color: #fff; }
+  .cup-teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; }
+  .cup-team { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); text-align: left; font-weight: 800; font-size: 12px; min-width: 0; }
+  .cup-team .tn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cup-team[aria-pressed="true"] { border-color: var(--temu); background: rgba(251,119,1,.2); box-shadow: 0 0 0 1px var(--temu) inset; }
+  .flag { flex: none; display: inline-block; width: 20px; height: 14px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(255,255,255,.3) inset, 0 1px 2px rgba(0,0,0,.5); vertical-align: middle; }
+  .stars { margin-left: auto; color: var(--gold); font-size: 10px; letter-spacing: -1px; white-space: nowrap; }
+  .stars i { font-style: normal; color: rgba(255,255,255,.18); }
+  .row.cup-btns { justify-content: flex-start; }
+  .cup-next { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-radius: 14px; flex-wrap: wrap;
+    background: linear-gradient(120deg, rgba(251,119,1,.28), rgba(60,130,255,.16)); border: 1px solid rgba(251,119,1,.5); }
+  .cup-next small { font-weight: 900; font-size: 11px; letter-spacing: .12em; color: var(--gold); }
+  .cup-vs { font-weight: 900; font-style: italic; font-size: clamp(17px, 2.4vw, 26px); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .cup-vs em { color: var(--muted); font-size: .7em; }
+  .cup-vs .flag { width: 28px; height: 20px; } .cup-vs .stars { margin-left: 4px; font-size: 13px; }
+  .cup-banner { padding: 12px 14px; border-radius: 12px; font-weight: 900; font-size: clamp(14px, 1.8vw, 18px); background: var(--panel); border: 1px solid var(--line); }
+  .cup-banner.out { background: rgba(224,44,44,.18); border-color: rgba(224,44,44,.5); }
+  .cup-banner.gold { background: rgba(255,196,40,.16); border-color: rgba(255,196,40,.6); color: var(--gold); }
+  .cup-groups { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cup-tbl { width: 100%; border-collapse: collapse; background: var(--panel); border-radius: 10px; overflow: hidden; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .cup-tbl caption { text-align: left; font-weight: 900; padding: 2px 2px 4px; letter-spacing: .08em; font-size: 11px; color: var(--muted); }
+  .cup-tbl th { color: var(--muted); font-size: 10px; font-weight: 900; padding: 5px 4px; text-align: right; }
+  .cup-tbl td { padding: 5px 4px; text-align: right; border-top: 1px solid rgba(150,140,210,.12); }
+  .cup-tbl th:first-child, .cup-tbl td:first-child { text-align: left; padding-left: 8px; }
+  .cup-tbl td:first-child { display: flex; align-items: center; gap: 6px; max-width: 150px; overflow: hidden; white-space: nowrap; }
+  .cup-tbl .tn { overflow: hidden; text-overflow: ellipsis; }
+  .cup-tbl tr.q td:first-child { box-shadow: inset 3px 0 0 #3ad07a; }
+  .cup-tbl tr.me td { background: rgba(251,119,1,.22); color: #fff; }
+  .cup-bracket { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: center; }
+  .cup-bracket > div { display: grid; gap: 6px; }
+  .cup-bracket > div > small { font-weight: 900; font-size: 10px; letter-spacing: .1em; color: var(--muted); }
+  .cup-tie { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; font-size: 12px; font-weight: 800; display: grid; gap: 4px; }
+  .cup-tie > div { display: flex; gap: 6px; align-items: center; min-width: 0; white-space: nowrap; }
+  .cup-tie .tn { overflow: hidden; text-overflow: ellipsis; }
+  .cup-tie .ts { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 900; }
+  .cup-tie .lost { color: var(--muted); } .cup-tie .won { color: #fff; } .cup-tie .me .tn { color: var(--temu); }
+  .cup-tie small { color: var(--muted); font-size: 10px; } .cup-tie.tbd { color: var(--muted); }
+  .cup-res { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 12px; font-weight: 700; color: #d9d5ea; }
+  .cup-res > div { display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; padding: 3px 6px; border-radius: 8px; }
+  .cup-res .tn { overflow: hidden; text-overflow: ellipsis; } .cup-res b { color: #fff; font-variant-numeric: tabular-nums; } .cup-res small { color: var(--muted); }
+  .cup-res .me { background: rgba(251,119,1,.2); }
+  @media (max-width: 900px) { .cup-screen { background: rgba(6,5,14,.9); } .cup-card { margin: 0 auto; } }
+  @media (max-width: 640px) { .cup-groups, .cup-comps, .cup-res { grid-template-columns: 1fr; } .cup-bracket { grid-template-columns: 1fr; } }
+  .champ { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 22px 16px; text-align: center; pointer-events: none; }
+  .champ > * { pointer-events: auto; }
+  .champ-kicker { font-weight: 900; letter-spacing: .18em; color: #fff; font-size: clamp(12px, 1.6vw, 18px); text-shadow: 0 2px 0 #000; }
+  .champ-title { margin: 0; font-weight: 900; font-style: italic; font-size: clamp(46px, 10vw, 128px); line-height: .95; color: var(--gold);
+    text-shadow: 0 6px 0 #000, 0 0 40px rgba(255,196,40,.55); animation: champIn .9s cubic-bezier(.2,1.4,.4,1) both; }
+  .champ-sub { margin: 4px 0 0; font-weight: 900; font-size: clamp(16px, 2.4vw, 28px); text-shadow: 0 3px 0 #000; }
+  .champ .tag { text-shadow: 0 2px 0 #000; margin-bottom: 8px; }
+  @keyframes champIn { from { transform: scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .champ-title { animation: none; } }
   /* ---- Overlays ---- */
   .overlay { position: absolute; inset: 0; display: flex; overflow: auto; padding: 18px 14px; background: radial-gradient(ellipse at center, rgba(6,5,14,.55), rgba(6,5,14,.88)); }
   .card { margin: auto; width: min(980px, 100%); display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
@@ -446,6 +517,7 @@
     </header>
     <nav class="nav" id="nav-home" aria-label="Main menu">
       <button class="nav-btn primary" type="button" data-act="play"><span>PLAY</span><small>Online, bots or split screen</small></button>
+      <button class="nav-btn cupbtn" type="button" data-act="cup"><span>COMPETITION</span><small>World Tournament or Champions Cup. 16 teams</small><kbd>C</kbd></button>
       <button class="nav-btn" type="button" data-act="garage"><span>GARAGE</span><small>Change your car</small><kbd>G</kbd></button>
       <button class="nav-btn shop" type="button" data-act="shop"><span>SHOP</span><small><span class="coin-count">300</span> mechanic nuts</small><kbd>S</kbd></button>
       <button class="nav-btn" type="button" data-act="settings"><span>SETTINGS</span><small>Bots, graphics, controls</small></button>
@@ -551,6 +623,13 @@
     </div>
   </div>
 
+  <div id="cup" class="cup-screen" hidden><div class="cup-card" id="cup-body"></div></div>
+
+  <div id="champ" class="champ" hidden>
+    <div><span class="champ-kicker" id="champ-comp">TEMU WORLD TOURNAMENT</span><h2 class="champ-title">CHAMPIONS!</h2><p class="champ-sub" id="champ-sub"></p></div>
+    <div><p class="tag" id="champ-cab"></p><div class="row"><button class="btn primary" type="button" data-act="cupnext">Continue (Enter)</button></div></div>
+  </div>
+
   <div id="arenapick" class="overlay" hidden>
     <div class="card">
       <h2 class="pick-title">PICK AN ARENA</h2>
@@ -605,7 +684,7 @@
       <div id="scoreboard"></div>
       <div id="over-rank" hidden><span id="or-mode">RANKED 3V3</span><b id="or-name">GOLD I</b><span id="or-delta">+16</span><span class="or-track"><span id="or-bar"></span></span></div>
       <p id="over-next" class="tag" hidden></p>
-      <div class="row"><button id="b-requeue" class="btn primary" type="button" data-act="requeue" hidden>Play ranked again</button><button id="b-rematch" class="btn primary" type="button" data-act="rematch">Rematch (Enter)</button><button id="b-overmenu" class="btn" type="button" data-act="menu">Main menu (Esc)</button></div>
+      <div class="row"><button id="b-requeue" class="btn primary" type="button" data-act="requeue" hidden>Play ranked again</button><button id="b-rematch" class="btn primary" type="button" data-act="rematch">Rematch (Enter)</button><button id="b-cupnext" class="btn primary" type="button" data-act="cupnext" hidden>Continue (Enter)</button><button id="b-overmenu" class="btn" type="button" data-act="menu">Main menu (Esc)</button></div>
     </div>
   </div>
 </div>
@@ -2155,38 +2234,93 @@ function updateCrowd(dt, t) {
   });
   cheer.posed = true; crowdTick++; crowdDirty();
 }
-// ---- Pitch invader (the copy of the game shared as a Claude artifact only) -----------------------------
+// ---- Pitch invader --------------------------------------------------------------------------------------
 // After a goal there's a 1 in 100 chance a fan from the celebrating end jumps the wall and runs onto the
 // pitch, with a steward chasing them. In practice mode it's a switch: on means a fan invades every goal.
+// A detailed person: boots, socks, shorts or trousers, a collared shirt with a printed name and number, arms with
+// sleeves and hands, and a face (eyes, eyebrows, nose, ears, mouth) with one of several hair styles.
+// opts: { skin, pants, socks, hair, hairStyle, jersey: [name, number], vest, cap, kit (shorts and socks) }
+const PERSON_GEO = {
+  thigh: (() => { const g = new THREE.BoxGeometry(0.3, 0.5, 0.3); g.translate(0, -0.25, 0); return g; })(),
+  shin: (() => { const g = new THREE.BoxGeometry(0.26, 0.42, 0.26); g.translate(0, -0.71, 0); return g; })(),
+  boot: (() => { const g = new THREE.BoxGeometry(0.28, 0.13, 0.44); g.translate(0, -0.88, 0.07); return g; })(),
+  upper: (() => { const g = new THREE.BoxGeometry(0.24, 0.42, 0.24); g.translate(0, -0.21, 0); return g; })(),
+  fore: (() => { const g = new THREE.BoxGeometry(0.2, 0.42, 0.2); g.translate(0, -0.6, 0); return g; })(),
+  hand: (() => { const g = new THREE.SphereGeometry(0.12, 10, 8); g.translate(0, -0.86, 0); return g; })(),
+  head: new THREE.SphereGeometry(0.29, 18, 14), eye: new THREE.SphereGeometry(0.05, 10, 8), pupil: new THREE.SphereGeometry(0.028, 8, 6),
+  ear: new THREE.SphereGeometry(0.07, 8, 6), nose: new THREE.BoxGeometry(0.07, 0.1, 0.08), brow: new THREE.BoxGeometry(0.11, 0.025, 0.03),
+  mouth: new THREE.BoxGeometry(0.13, 0.035, 0.03), neck: new THREE.CylinderGeometry(0.11, 0.12, 0.16, 10), collar: new THREE.TorusGeometry(0.15, 0.035, 6, 16),
+  cap: new THREE.SphereGeometry(0.31, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), spike: new THREE.ConeGeometry(0.07, 0.2, 6),
+};
+const MAT_WHITE_EYE = lam(0xffffff), MAT_PUPIL = lam(0x15151a), MAT_BOOT = std(0x111114, { roughness: 0.4, metalness: 0.2 });
 function makePerson(shirt, opts = {}) {
-  const g = new THREE.Group(), parts = {};
-  const box = (w, h, d, color, x, y, z, pivotTop = false) => {
-    const geo = new THREE.BoxGeometry(w, h, d); if (pivotTop) geo.translate(0, -h / 2, 0);
-    const m = new THREE.Mesh(geo, lam(color)); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m;
-  };
-  parts.legL = box(0.32, 0.95, 0.32, opts.pants || 0x22304a, -0.2, 0.95, 0, true);
-  parts.legR = box(0.32, 0.95, 0.32, opts.pants || 0x22304a, 0.2, 0.95, 0, true);
-  parts.body = box(0.85, 1.0, 0.5, shirt, 0, 1.45, 0);
-  parts.armL = box(0.22, 0.9, 0.22, opts.skin || 0xe1b48c, -0.55, 1.9, 0, true);
-  parts.armR = box(0.22, 0.9, 0.22, opts.skin || 0xe1b48c, 0.55, 1.9, 0, true);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 10), lam(opts.skin || 0xe1b48c)); head.position.y = 2.25; head.castShadow = true; g.add(head);
-  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 6, 0, Math.PI * 2, 0, Math.PI * 0.5), lam(opts.hat || 0x2a1a10)); hair.position.set(0, 2.28, -0.02); g.add(hair);
-  if (opts.jersey) for (const side of [1, -1]) {                         // name and number front and back
-    const pl = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.7), new THREE.MeshLambertMaterial({ map: jerseyTex(...opts.jersey), transparent: true, alphaTest: 0.3 }));
-    pl.position.set(0, 1.5, side * 0.26); if (side < 0) pl.rotation.y = Math.PI; g.add(pl);
+  const g = new THREE.Group(), P = {}, skin = lam(opts.skin || 0xe1b48c), shirtM = lam(shirt);
+  const mesh = (geo, mat, parent, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m; };
+  const pantsM = lam(opts.pants || 0x22304a), sockM = lam(opts.socks || (opts.kit ? 0xf0f0f0 : opts.pants || 0x22304a));
+  for (const side of [-1, 1]) {                                            // legs: thigh (shorts or trousers), shin (sock), boot
+    const leg = new THREE.Group(); leg.position.set(side * 0.19, 1.02, 0); g.add(leg);
+    mesh(PERSON_GEO.thigh, pantsM, leg); mesh(PERSON_GEO.shin, opts.kit ? sockM : pantsM, leg); mesh(PERSON_GEO.boot, MAT_BOOT, leg);
+    if (opts.kit) mesh(new THREE.BoxGeometry(0.27, 0.06, 0.27), lam(shirt), leg, 0, -0.52, 0);   // sock band
+    P[side < 0 ? "legL" : "legR"] = leg;
   }
-  if (opts.vest) { const v = box(0.9, 0.7, 0.54, 0xd8ff20, 0, 1.55, 0); v.material = glowMat(0xd8ff20, 1.1); }
-  g.userData.parts = parts;
+  const hips = mesh(new THREE.BoxGeometry(0.66, 0.24, 0.4), pantsM, g, 0, 1.06, 0);
+  const torso = mesh(new THREE.BoxGeometry(0.8, 0.9, 0.44), shirtM, g, 0, 1.6, 0);
+  mesh(PERSON_GEO.collar, lam(opts.vest ? 0x1a1a1a : 0xffffff), g, 0, 2.06, 0).rotation.x = Math.PI / 2;
+  if (opts.jersey) for (const side of [1, -1]) {                         // name and number front and back
+    const pl = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.62), new THREE.MeshLambertMaterial({ map: jerseyTex(...opts.jersey), transparent: true, alphaTest: 0.3 }));
+    pl.position.set(0, 1.62, side * 0.225); if (side < 0) pl.rotation.y = Math.PI; g.add(pl);
+  }
+  if (opts.vest) {                                                       // hi-vis vest with reflective bands
+    mesh(new THREE.BoxGeometry(0.84, 0.72, 0.48), glowMat(0xd8ff20, 1.05), g, 0, 1.66, 0);
+    for (const y of [1.52, 1.78]) mesh(new THREE.BoxGeometry(0.86, 0.06, 0.5), glowMat(0xeeeeee, GLOW), g, 0, y, 0);
+  }
+  mesh(PERSON_GEO.neck, skin, g, 0, 2.12, 0);
+  for (const side of [-1, 1]) {                                            // arms: sleeve, forearm, hand
+    const arm = new THREE.Group(); arm.position.set(side * 0.52, 2.0, 0); g.add(arm);
+    mesh(PERSON_GEO.upper, opts.vest ? lam(0x1a1a1a) : shirtM, arm); mesh(PERSON_GEO.fore, skin, arm); mesh(PERSON_GEO.hand, skin, arm);
+    P[side < 0 ? "armL" : "armR"] = arm;
+  }
+  const head = new THREE.Group(); head.position.y = 2.42; g.add(head); P.head = head;
+  mesh(PERSON_GEO.head, skin, head).scale.set(0.95, 1.08, 1);
+  for (const side of [-1, 1]) {
+    mesh(PERSON_GEO.eye, MAT_WHITE_EYE, head, side * 0.1, 0.04, 0.24); mesh(PERSON_GEO.pupil, MAT_PUPIL, head, side * 0.1, 0.04, 0.285);
+    mesh(PERSON_GEO.brow, lam(opts.hair || 0x2a1a10), head, side * 0.1, 0.12, 0.27).rotation.z = side * -0.15;
+    mesh(PERSON_GEO.ear, skin, head, side * 0.28, 0.0, 0);
+  }
+  mesh(PERSON_GEO.nose, skin, head, 0, -0.02, 0.3);
+  P.mouth = mesh(PERSON_GEO.mouth, lam(0x5a1a1a), head, 0, -0.13, 0.26);
+  const hairM = lam(opts.hair || 0x2a1a10), style = opts.cap ? -1 : opts.hairStyle ?? 0;
+  if (opts.cap) {                                                        // steward's cap with a peak
+    mesh(PERSON_GEO.cap, lam(0x111114), head, 0, 0.06, 0);
+    mesh(new THREE.BoxGeometry(0.4, 0.03, 0.22), lam(0x111114), head, 0, 0.08, 0.3);
+  } else if (style === 0) mesh(PERSON_GEO.cap, hairM, head, 0, 0.04, -0.02);          // short
+  else if (style === 1) {                                                  // spiky
+    mesh(PERSON_GEO.cap, hairM, head, 0, 0.03, -0.02);
+    for (let k = 0; k < 9; k++) { const a = (k / 9) * Math.PI * 2, s = mesh(PERSON_GEO.spike, hairM, head, Math.cos(a) * 0.14, 0.27, Math.sin(a) * 0.14 - 0.02); s.rotation.set(Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5); }
+  } else if (style === 2) {                                                // long
+    mesh(PERSON_GEO.cap, hairM, head, 0, 0.04, -0.02); mesh(new THREE.BoxGeometry(0.56, 0.5, 0.2), hairM, head, 0, -0.18, -0.16);
+  } else if (style === 4) {                                                // beanie
+    mesh(PERSON_GEO.cap, lam(shirt), head, 0, 0.07, 0).scale.set(1.04, 1.25, 1.04);
+    mesh(new THREE.SphereGeometry(0.08, 8, 6), lam(0xffffff), head, 0, 0.45, 0);
+  }                                                                        // style 3: bald
+  g.userData.parts = P; void hips; void torso;
   return g;
 }
+function animatePerson(p, t, speed, armsUp) {
+  const P = p.userData.parts, sw = Math.sin(t * 13) * Math.min(1, speed / 4) * 0.8;
+  P.legL.rotation.x = sw; P.legR.rotation.x = -sw;
+  if (armsUp) { const wv = Math.sin(t * 15) * 0.4; P.armL.rotation.set(0, 0, -(2.6 + wv)); P.armR.rotation.set(0, 0, 2.6 - wv); P.mouth.scale.set(1, 3, 1); }
+  else { P.armL.rotation.set(-sw, 0, -0.1); P.armR.rotation.set(sw, 0, 0.1); P.mouth.scale.set(1, 1, 1); }
+}
+const randomLookOf = () => ({ skin: SKINS[(Math.random() * SKINS.length) | 0], hair: HAIRS[(Math.random() * HAIRS.length) | 0], hairStyle: (Math.random() * 5) | 0 });
 const invasion = { on: false, t: 0, fan: null, steward: null, path: [], leg: 0 };
 function startInvasion(team, why = "") {
   endInvasion();
   const fans = seats.filter((s) => s.shirtTeam === team && s.lateral === "z" && Math.abs(s.z) < HL - 10);
   const s = fans.length ? fans[(Math.random() * fans.length) | 0] : { x: HW + 8, y: 3, z: 0 };
   const jersey = Math.random() < 0.6 ? JERSEYS[(Math.random() * JERSEYS.length) | 0] : null;
-  const fan = makePerson(TEAM_HEX[team], { jersey, skin: SKINS[(Math.random() * SKINS.length) | 0] });
-  const steward = makePerson(0x1a1a1a, { vest: true, pants: 0x111114, hat: 0x111114 });
+  const fan = makePerson(TEAM_HEX[team], { jersey, ...randomLookOf() });
+  const steward = makePerson(0x1a1a1a, { vest: true, pants: 0x111114, cap: true, skin: SKINS[(Math.random() * SKINS.length) | 0] });
   const side = Math.sign(s.x) || 1;
   fan.position.set(s.x, s.y + 0.5, s.z); scene.add(fan);
   steward.position.set(side * (HW + 6), 0, s.z + (Math.random() < 0.5 ? -30 : 30)); steward.visible = false; scene.add(steward);
@@ -2203,12 +2337,6 @@ function endInvasion() {
   if (invasion.fan) scene.remove(invasion.fan);
   if (invasion.steward) scene.remove(invasion.steward);
   invasion.on = false; invasion.fan = invasion.steward = null;
-}
-function animatePerson(p, t, speed, armsUp) {
-  const P = p.userData.parts, sw = Math.sin(t * 13) * Math.min(1, speed / 4) * 0.8;
-  P.legL.rotation.x = sw; P.legR.rotation.x = -sw;
-  if (armsUp) { const wv = Math.sin(t * 15) * 0.4; P.armL.rotation.set(0, 0, -(2.6 + wv)); P.armR.rotation.set(0, 0, 2.6 - wv); }
-  else { P.armL.rotation.set(-sw, 0, -0.1); P.armR.rotation.set(sw, 0, 0.1); }
 }
 function updateInvasion(dt) {
   if (!invasion.on) return;
@@ -2239,6 +2367,218 @@ function updateInvasion(dt) {
     else { st.position.y = 0; animatePerson(st, I.t, 0, false); }
     st.lookAt(fan.position.x, st.position.y, fan.position.z);
   }
+}
+
+// ---- Mass pitch invasion -------------------------------------------------------------------------------
+// When a team wins after being 4 or more goals down (say 1-5 to 6-5), 100 of their fans pour onto the pitch at
+// the final whistle and a squad of stewards chases them down. Drawn with instancing (one draw per body part).
+const MOB_FANS = 100, MOB_GUARDS = 14, MOB_N = MOB_FANS + MOB_GUARDS, MOB_SHOW = 10;   // the results screen waits 10 s
+const mobParts = {};
+// Several shapes baked into one geometry, each with its own shade; the per-person colour multiplies it.
+function bakeGeo(list) {
+  const pos = [], nor = [], col = [];
+  for (const [geo, shade, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1] of list) {
+    const g = (geo.index ? geo.toNonIndexed() : geo.clone()); g.scale(sx, sy, sz); g.translate(x, y, z);
+    const p = g.attributes.position.array, n = g.attributes.normal.array;
+    for (let i = 0; i < p.length; i += 3) { pos.push(p[i], p[i + 1], p[i + 2]); nor.push(n[i], n[i + 1], n[i + 2]); col.push(...shade); }
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); out.setAttribute("normal", new THREE.Float32BufferAttribute(nor, 3));
+  out.setAttribute("color", new THREE.Float32BufferAttribute(col, 3)); out.computeBoundingSphere();
+  return out;
+}
+{
+  const W = [1, 1, 1], DARK = [0.09, 0.09, 0.1], B = (w, h, d) => new THREE.BoxGeometry(w, h, d), S = (r, a = 10, b = 8) => new THREE.SphereGeometry(r, a, b);
+  const leg = bakeGeo([[B(0.3, 0.5, 0.3), W, 0, -0.25, 0], [B(0.26, 0.42, 0.26), [0.92, 0.92, 0.92], 0, -0.71, 0], [B(0.29, 0.13, 0.46), DARK, 0, -0.88, 0.07], [B(0.3, 0.03, 0.47), [0.6, 0.6, 0.6], 0, -0.95, 0.07]]);
+  const arm = bakeGeo([[B(0.2, 0.42, 0.2), W, 0, -0.6, 0], [S(0.12, 8, 6), W, 0, -0.86, 0]]);                  // forearm and hand (skin)
+  const sleeve = bakeGeo([[B(0.25, 0.43, 0.25), W, 0, -0.21, 0]]);
+  const body = bakeGeo([[B(0.8, 0.9, 0.44), W, 0, 0, 0], [new THREE.TorusGeometry(0.15, 0.035, 6, 14).rotateX(Math.PI / 2), [1.3, 1.3, 1.3], 0, 0.46, 0], [B(0.82, 0.05, 0.46), [0.75, 0.75, 0.75], 0, -0.36, 0]]);
+  const hips = bakeGeo([[B(0.66, 0.24, 0.4), W, 0, 0, 0], [B(0.68, 0.05, 0.42), DARK, 0, 0.11, 0]]);            // with a belt
+  const head = bakeGeo([[S(0.29, 14, 10), W, 0, 0, 0, 0.95, 1.08, 1], [new THREE.CylinderGeometry(0.11, 0.12, 0.18, 8), W, 0, -0.32, 0], [S(0.07, 6, 5), W, -0.28, 0, 0], [S(0.07, 6, 5), W, 0.28, 0, 0], [B(0.07, 0.1, 0.08), [0.92, 0.92, 0.92], 0, -0.02, 0.3]]);
+  const face = bakeGeo([[S(0.05, 8, 6), W, -0.1, 0.04, 0.24], [S(0.05, 8, 6), W, 0.1, 0.04, 0.24], [S(0.028, 6, 5), DARK, -0.1, 0.04, 0.285], [S(0.028, 6, 5), DARK, 0.1, 0.04, 0.285],
+    [B(0.11, 0.025, 0.03), [0.16, 0.12, 0.1], -0.1, 0.12, 0.27], [B(0.11, 0.025, 0.03), [0.16, 0.12, 0.1], 0.1, 0.12, 0.27], [B(0.13, 0.05, 0.03), [0.4, 0.1, 0.1], 0, -0.13, 0.26]]);
+  const hair = bakeGeo([[S(0.31, 12, 6, 0, Math.PI * 2, 0, Math.PI * 0.5), W, 0, 0.04, -0.02]]);
+  const cap = bakeGeo([[new THREE.SphereGeometry(0.31, 12, 6, 0, Math.PI * 2, 0, Math.PI * 0.5), W, 0, 0.06, 0], [B(0.4, 0.03, 0.22), W, 0, 0.08, 0.3]]);
+  const vest = bakeGeo([[B(0.84, 0.7, 0.48), W, 0, 0.05, 0], [B(0.86, 0.06, 0.5), [1.6, 1.6, 1.6], 0, -0.08, 0], [B(0.86, 0.06, 0.5), [1.6, 1.6, 1.6], 0, 0.18, 0]]);
+  const defs = { legL: leg, legR: leg, armL: arm, armR: arm, sleeveL: sleeve, sleeveR: sleeve, body, hips, head, face, hair, cap, vest };
+  for (const k in defs) {
+    const m = new THREE.InstancedMesh(defs[k], lam(0xffffff, { vertexColors: true }), MOB_N);
+    m.visible = false; m.frustumCulled = false; m.castShadow = quality.high; scene.add(m); mobParts[k] = m;
+  }
+}
+const mob = { on: false, t: 0, people: [] };
+function startMob(team) {
+  const P = [], fans = seats.filter((s) => s.shirtTeam === team && Math.random() < 0.6);
+  for (let i = 0; i < MOB_N; i++) {
+    const guard = i >= MOB_FANS;
+    let from, land;
+    if (guard) {                                                          // stewards run on from both touchlines
+      const sx = i % 2 ? 1 : -1;
+      from = new THREE.Vector3(sx * (HW - 6), 0, (Math.random() * 2 - 1) * 45); land = from.clone();
+    } else {
+      const s = fans.length ? fans[(Math.random() * fans.length) | 0] : seats[(Math.random() * seats.length) | 0];
+      from = new THREE.Vector3(s.x, s.y + 0.5, s.z);
+      land = new THREE.Vector3(s.x, 0, s.z); keepInside(land, RE + 2); land.y = 0;
+      land.x *= 0.9; land.z *= 0.9;
+    }
+    P.push({ guard, from, land, pos: from.clone(), delay: guard ? 1.5 + Math.random() * 1.5 : Math.random() * 3.5, state: "wait", target: null, yaw: 0, caughtT: 0,
+      phase: Math.random() * 6.28, speed: guard ? 11 + Math.random() * 1.5 : 6.5 + Math.random() * 2, chase: -1 });
+    const shirt = guard ? 0x1a1a1e : Math.random() < 0.85 ? TEAM_HEX[team] : NEUTRAL_SHIRTS[(Math.random() * NEUTRAL_SHIRTS.length) | 0];
+    const skin = SKINS[(Math.random() * SKINS.length) | 0], pants = guard ? 0x15151a : PANTS[(Math.random() * PANTS.length) | 0];
+    const tint = guard ? 1 : 0.9 + Math.random() * 0.2;
+    for (const k of ["body", "sleeveL", "sleeveR"]) mobParts[k].setColorAt(i, _c.setHex(shirt).multiplyScalar(tint));
+    for (const k of ["legL", "legR", "hips"]) mobParts[k].setColorAt(i, _c.setHex(pants));
+    for (const k of ["head", "armL", "armR"]) mobParts[k].setColorAt(i, _c.setHex(skin));
+    mobParts.face.setColorAt(i, _c.setHex(0xffffff));
+    mobParts.hair.setColorAt(i, _c.setHex(HAIRS[(Math.random() * HAIRS.length) | 0]));
+    mobParts.cap.setColorAt(i, _c.setHex(0x111114)); mobParts.vest.setColorAt(i, _c.setHex(0xd8ff20).multiplyScalar(1.15));
+    P[i].bald = !guard && Math.random() < 0.1;
+  }
+  for (const k in mobParts) { mobParts[k].visible = true; if (mobParts[k].instanceColor) mobParts[k].instanceColor.needsUpdate = true; }
+  Object.assign(mob, { on: true, t: 0, people: P, team });
+  showPop("FULL-TIME! THE FANS STORM THE PITCH!");
+  cheer = { team, t: 0 };
+}
+function endMob() { mob.on = false; for (const k in mobParts) mobParts[k].visible = false; }
+const _mq = new THREE.Quaternion(), _mq2 = new THREE.Quaternion(), _mo = new THREE.Vector3(), _ms = new THREE.Vector3(1, 1, 1), _mx = new THREE.Vector3(1, 0, 0), _mz = new THREE.Vector3(0, 0, 1);
+function mobPart(k, i, base, q, ox, oy, oz, rx = 0, rz = 0) {
+  _mo.set(ox, oy, oz).applyQuaternion(q).add(base);
+  _mq2.copy(q); if (rx) _mq2.multiply(_mq.setFromAxisAngle(_mx, rx)); if (rz) _mq2.multiply(_mq.setFromAxisAngle(_mz, rz));
+  _m4.compose(_mo, _mq2, _ms); mobParts[k].setMatrixAt(i, _m4);
+}
+function updateMob(dt) {
+  if (!mob.on) return;
+  mob.t += dt;
+  const P = mob.people, free = P.filter((p) => !p.guard && p.state === "run");
+  for (let i = 0; i < P.length; i++) {
+    const p = P[i], t = mob.t + p.phase;
+    let speed = 0, lie = false, armsUp = !p.guard;
+    if (p.state === "wait") { if (mob.t > p.delay) p.state = p.guard ? "run" : "leap"; p.lt = 0; }
+    if (p.state === "leap") {                                             // over the wall
+      p.lt += dt; const k = Math.min(1, p.lt / 1.0);
+      p.pos.lerpVectors(p.from, p.land, k); p.pos.y = p.from.y * (1 - k) + Math.sin(k * Math.PI) * 3.5;
+      p.yaw = Math.atan2(p.land.x - p.from.x, p.land.z - p.from.z);
+      if (k >= 1) { p.state = "run"; p.pos.y = 0; }
+    } else if (p.state === "run" && !p.guard) {                           // fans: zig-zag about, dodging stewards
+      if (!p.target || p.pos.distanceTo(p.target) < 2) p.target = new THREE.Vector3((Math.random() * 2 - 1) * 30, 0, (Math.random() * 2 - 1) * 38);   // they mob the middle
+      const dir = new THREE.Vector3().subVectors(p.target, p.pos);
+      for (const g of P) if (g.guard && g.state === "run") { const away = new THREE.Vector3().subVectors(p.pos, g.pos); const d = away.length(); if (d < 6) dir.addScaledVector(away.normalize(), (6 - d) * 1.2); }
+      dir.y = 0; speed = p.speed; p.pos.addScaledVector(dir.normalize(), speed * dt);
+      p.yaw = Math.atan2(dir.x, dir.z); p.pos.y = Math.abs(Math.sin(t * 13)) * 0.15;
+    } else if (p.state === "run" && p.guard) {                            // stewards: chase the nearest free fan
+      let tgt = P[p.chase];
+      if (!tgt || tgt.state !== "run") { let best = 1e9; p.chase = -1; for (const f of free) { const d = f.pos.distanceTo(p.pos); if (d < best) { best = d; p.chase = P.indexOf(f); } } tgt = P[p.chase]; }
+      if (tgt) {
+        const dir = new THREE.Vector3().subVectors(tgt.pos, p.pos); dir.y = 0; const d = dir.length();
+        if (d < 1.1) { tgt.state = "caught"; tgt.caughtT = 0; tgt.yaw = p.yaw; p.chase = -1; p.pause = 0.8; }
+        else if (!(p.pause > 0)) { speed = p.speed; p.pos.addScaledVector(dir.normalize(), speed * dt); p.yaw = Math.atan2(dir.x, dir.z); }
+        p.pause = (p.pause || 0) - dt;
+      }
+      p.pos.y = speed ? Math.abs(Math.sin(t * 14)) * 0.12 : 0;
+    } else if (p.state === "caught") { p.caughtT += dt; lie = true; armsUp = false; }
+    // pose
+    _q.setFromAxisAngle(UPY, p.yaw);
+    if (lie) { _mq.setFromAxisAngle(_mx, -Math.min(1, p.caughtT * 3) * 1.45); _q.multiply(_mq); }
+    const base = _p.copy(p.pos); if (lie) base.y = 0.25;
+    const sw = Math.sin(t * 13) * Math.min(1, speed / 4) * 0.8, wv = Math.sin(t * 15) * 0.4;
+    mobPart("legL", i, base, _q, -0.19, 1.02, 0, sw); mobPart("legR", i, base, _q, 0.19, 1.02, 0, -sw);
+    mobPart("hips", i, base, _q, 0, 1.06, 0); mobPart("body", i, base, _q, 0, 1.6, 0);
+    mobPart("head", i, base, _q, 0, 2.42, 0); mobPart("face", i, base, _q, 0, 2.42, 0);
+    const hide = (k) => { _m4.makeScale(0, 0, 0); mobParts[k].setMatrixAt(i, _m4); };
+    if (p.guard) { mobPart("cap", i, base, _q, 0, 2.42, 0); mobPart("vest", i, base, _q, 0, 1.6, 0); hide("hair"); }
+    else { if (p.bald) hide("hair"); else mobPart("hair", i, base, _q, 0, 2.42, 0); hide("cap"); hide("vest"); }
+    const [aL, aR, fL, fR] = armsUp ? [-(2.6 + wv), 2.6 - wv, 0, 0] : [-0.1, 0.1, -sw, sw];
+    for (const [k, x, rz, rx] of [["armL", -0.52, aL, fL], ["sleeveL", -0.52, aL, fL], ["armR", 0.52, aR, fR], ["sleeveR", 0.52, aR, fR]]) mobPart(k, i, base, _q, x, 2.0, 0, rx, rz);
+  }
+  for (const k in mobParts) mobParts[k].instanceMatrix.needsUpdate = true;
+}
+function mobCam(dt) {                                                     // a slow sweep high over the chaos
+  const t = mob.t, st = camState[0];
+  const want = new THREE.Vector3(Math.sin(t * 0.2) * 40, 15, Math.cos(t * 0.2) * 52);
+  st.pos.lerp(want, 1 - Math.exp(-2 * dt)); st.look.lerp(new THREE.Vector3(0, 2, 0), 1 - Math.exp(-3 * dt));
+  cams[0].position.copy(st.pos); cams[0].lookAt(st.look);
+}
+
+// ---- The trophies ----------------------------------------------------------------------------------------
+// An original design: a stepped black marble plinth with metal trim and engraved plaques, a turned stem with a
+// knot and collars, a flared bowl with an engraved band and a mechanic-nut emblem, four swept rocket-fin
+// handles, and a ball resting on top. Gold for the World Tournament, silver for the Champions Cup.
+const TROPHY_TEXT = ["TEMU WORLD TOURNAMENT", "TEMU CHAMPIONS CUP"];
+const MARBLE_TEX = canvasTex(256, 256, (g, w) => {
+  g.fillStyle = "#121118"; g.fillRect(0, 0, w, w);
+  for (let k = 0; k < 14; k++) {                                         // soft pale veins
+    g.strokeStyle = `rgba(200,200,220,${0.05 + Math.random() * 0.12})`; g.lineWidth = 0.6 + Math.random() * 1.8;
+    g.beginPath(); let x = Math.random() * w, y = 0; g.moveTo(x, y);
+    while (y < w) { x += (Math.random() - 0.5) * 30; y += 10 + Math.random() * 18; g.lineTo(x, y); }
+    g.stroke();
+  }
+});
+function engraveTex(w, h, base, text, size) {
+  return canvasTex(w, h, (g) => {
+    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, base[0]); gr.addColorStop(0.5, base[1]); gr.addColorStop(1, base[0]);
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    g.font = `900 ${size}px ${FONT}`; g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillStyle = "rgba(255,255,255,0.55)"; g.fillText(text, w / 2 + 1, h / 2 + 1.5);      // the lit edge of the cut
+    g.fillStyle = "rgba(40,24,0,0.8)"; g.fillText(text, w / 2, h / 2);
+    g.fillStyle = "rgba(0,0,0,0.35)"; g.fillRect(0, 0, w, 2); g.fillRect(0, h - 2, w, 2);
+  });
+}
+function makeTrophy(metal) {
+  const g = new THREE.Group();
+  const col = metal ? 0xdde3ec : 0xf2c14e, col2 = metal ? 0xf2c14e : 0xdde3ec;
+  const shade = metal ? ["#9aa3b0", "#eef2f7"] : ["#a4761a", "#ffe08a"];
+  const M = (c, rough = 0.18) => std(c, { metalness: quality.high ? 1 : 0.7, roughness: rough, envMapIntensity: 1.4, emissive: new THREE.Color(c).multiplyScalar(quality.high ? 0.05 : 0.22) });
+  const main = M(col, 0.16), accent = M(col2, 0.2), marble = std(0xffffff, { map: MARBLE_TEX, roughness: 0.15, metalness: 0.1, envMapIntensity: 0.8 });
+  const add = (geo, mat, x = 0, y = 0, z = 0, parent = g) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m; };
+  // plinth
+  add(new THREE.BoxGeometry(0.62, 0.1, 0.62), marble, 0, 0.05, 0);
+  add(new THREE.BoxGeometry(0.64, 0.02, 0.64), main, 0, 0.1, 0);
+  add(new THREE.BoxGeometry(0.5, 0.16, 0.5), marble, 0, 0.19, 0);
+  add(new THREE.BoxGeometry(0.52, 0.02, 0.52), main, 0, 0.27, 0);
+  const plaque = std(0xffffff, { map: engraveTex(256, 64, shade, metal ? "CHAMPIONS CUP" : "WORLD CHAMPIONS", 30), metalness: quality.high ? 0.9 : 0.5, roughness: 0.25, envMapIntensity: 1.2 });
+  for (let k = 0; k < 4; k++) {
+    const a = (k * Math.PI) / 2, p = add(new THREE.PlaneGeometry(0.34, 0.085), plaque, Math.sin(a) * 0.252, 0.19, Math.cos(a) * 0.252); p.rotation.y = a; p.castShadow = false;
+    const f = add(new THREE.BoxGeometry(0.36, 0.1, 0.004), main, Math.sin(a) * 0.2505, 0.19, Math.cos(a) * 0.2505); f.rotation.y = a;   // frame behind it
+  }
+  // the turned body: foot, knot, stem, collars and bowl, in one lathe profile (the inside of the bowl too)
+  const prof = [[0, 0.28], [0.2, 0.28], [0.206, 0.292], [0.19, 0.305], [0.15, 0.33], [0.158, 0.35], [0.15, 0.37], [0.115, 0.4], [0.088, 0.44], [0.074, 0.48],
+    [0.08, 0.5], [0.104, 0.52], [0.108, 0.535], [0.098, 0.55], [0.068, 0.565], [0.05, 0.6], [0.044, 0.66], [0.046, 0.69], [0.068, 0.705], [0.072, 0.72],
+    [0.054, 0.735], [0.058, 0.76], [0.09, 0.79], [0.135, 0.83], [0.18, 0.875], [0.214, 0.93], [0.238, 0.99], [0.252, 1.05], [0.26, 1.1], [0.274, 1.125],
+    [0.278, 1.138], [0.266, 1.146], [0.25, 1.13], [0.24, 1.08], [0.22, 1.01], [0.17, 0.94], [0.08, 0.9], [0, 0.89]].map(([x, y]) => new THREE.Vector2(x, y));
+  const body = add(new THREE.LatheGeometry(prof, quality.high ? 96 : 56), main); body.material = M(col, 0.16); body.material.side = THREE.DoubleSide;
+  add(new THREE.TorusGeometry(0.104, 0.012, 10, 48), accent, 0, 0.535, 0).rotation.x = Math.PI / 2;           // the knot
+  add(new THREE.TorusGeometry(0.07, 0.01, 10, 40), accent, 0, 0.72, 0).rotation.x = Math.PI / 2;              // the collar
+  add(new THREE.TorusGeometry(0.276, 0.009, 10, 72), accent, 0, 1.132, 0).rotation.x = Math.PI / 2;          // the lip
+  for (let k = 0; k < 24; k++) {                                                                              // beading round the foot
+    const a = (k / 24) * Math.PI * 2; add(new THREE.SphereGeometry(0.012, 8, 6), accent, Math.cos(a) * 0.2, 0.3, Math.sin(a) * 0.2);
+  }
+  // engraved band round the bowl
+  const band = add(new THREE.CylinderGeometry(0.2545, 0.2405, 0.07, quality.high ? 96 : 56, 1, true), std(0xffffff, {
+    map: engraveTex(1024, 64, shade, `★ ${TROPHY_TEXT[metal]} ★ CHAMPIONS ★ ${TROPHY_TEXT[metal]} ★ CHAMPIONS`, 34), metalness: quality.high ? 1 : 0.6, roughness: 0.2, envMapIntensity: 1.4 }), 0, 1.02, 0);
+  band.castShadow = false;
+  // the mechanic-nut emblem on the front and back of the bowl
+  for (const s of [1, -1]) {
+    const nut = add(new THREE.CylinderGeometry(0.058, 0.058, 0.024, 6), accent, 0, 0.9, s * 0.168); nut.rotation.x = Math.PI / 2; nut.rotation.y = Math.PI / 6;
+    add(new THREE.CylinderGeometry(0.026, 0.026, 0.026, 24), M(0x1a1a1e, 0.4), 0, 0.9, s * 0.172).rotation.x = Math.PI / 2;
+    add(new THREE.TorusGeometry(0.044, 0.006, 6, 6), main, 0, 0.9, s * 0.181).rotation.z = Math.PI / 6;
+  }
+  // four swept rocket fins: two big ones are the handles
+  const fin = new THREE.Shape();
+  fin.moveTo(0, 0); fin.bezierCurveTo(0.13, 0.01, 0.21, 0.12, 0.24, 0.36); fin.lineTo(0.205, 0.33); fin.bezierCurveTo(0.17, 0.2, 0.1, 0.13, 0, 0.13); fin.lineTo(0, 0);
+  const finGeo = new THREE.ExtrudeGeometry(fin, { depth: 0.022, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 3, curveSegments: 16 });
+  finGeo.translate(0, 0, -0.011);
+  for (let k = 0; k < 4; k++) {
+    const big = k % 2 === 0, holder = new THREE.Group(); holder.rotation.y = (k * Math.PI) / 2; g.add(holder);
+    const f = add(finGeo, big ? main : accent, big ? 0.16 : 0.17, big ? 0.79 : 0.84, 0, holder); if (!big) f.scale.setScalar(0.6);
+    add(new THREE.SphereGeometry(big ? 0.022 : 0.015, 12, 10), accent, big ? 0.16 + 0.225 : 0.17 + 0.135, big ? 0.79 + 0.35 : 0.84 + 0.21, 0, holder);   // the tip
+    add(new THREE.ConeGeometry(big ? 0.03 : 0.02, big ? 0.06 : 0.04, 12), accent, big ? 0.17 : 0.175, big ? 0.77 : 0.825, 0, holder).rotation.z = Math.PI;   // an exhaust
+  }
+  // the ball on top, resting on four little prongs
+  for (let k = 0; k < 4; k++) { const a = (k / 4) * Math.PI * 2 + Math.PI / 4; const pr = add(new THREE.CylinderGeometry(0.008, 0.008, 0.12, 6), accent, Math.cos(a) * 0.12, 1.15, Math.sin(a) * 0.12); pr.rotation.set(Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5); }
+  add(new THREE.SphereGeometry(0.15, 40, 28), std(metal ? 0xffe08a : 0xf2f4f8, { map: STANDARD_BALL.map, metalness: quality.high ? 0.85 : 0.5, roughness: 0.22, envMapIntensity: 1.4,
+    emissive: new THREE.Color(metal ? 0xffe08a : 0xf2f4f8).multiplyScalar(quality.high ? 0.03 : 0.12) }), 0, 1.27, 0);
+  g.userData.height = 1.42;
+  return g;
 }
 
 // Floodlight towers (just glowing panels) for atmosphere
@@ -3785,7 +4125,7 @@ function warmUp() {
 }
 function baseRatio() { return Math.min(window.devicePixelRatio || 1, quality.high ? 2 : quality.auto ? 1.25 : 1.5); }
 function unbindMatch() {
-  endInvasion();
+  endInvasion(); endMob(); endTrophy(); ballMesh.visible = ballShadow.visible = true;
   if (!views) return;
   for (const cv of views.cars) disposeCarView(cv);
   for (const pv of views.pads) scene.remove(pv.glow.parent);
@@ -3800,6 +4140,7 @@ function bindMatch(m) {
   clearSkids();
   warmUp();
   plist.length = 0; cheer = null; feed.length = 0;
+  setTeamNames(m.teamNames || ["BLU", "ORANG"]);
 }
 
 // ---- Skid marks, drift smoke and supersonic trails ------------------------------------------------
@@ -4032,12 +4373,14 @@ function handleEvents(m, celebrate) {
     if (e.type === "goal") {
       burst(e.pos, [TEAM_HEX[e.team], 0xffc428, 0xffffff], 500, 34, 2.2, 6, true);
       if (floorLeaves.visible) flBlast(e.pos, 34, 26);
-      if (PICK_SPECIALS && celebrate && !state.online && m.mode !== "watch") {
+      if (celebrate && m.mode !== "watch") {
         // Invaders: always after a comeback (a goal that ties it or takes the lead after being behind) or a
         // late goal (30 seconds or less left, or overtime); otherwise 1 in 100. Practice has its own switch.
         const before = m.score.slice(); before[e.team]--;
         const tr = m.trailed || (m.trailed = [false, false]);                // has each team been behind at some point?
         if (before[0] < before[1]) tr[0] = true; if (before[1] < before[0]) tr[1] = true;
+        const md = m.maxDown || (m.maxDown = [0, 0]);                      // the furthest behind each team has been
+        for (const t of [0, 1]) md[t] = Math.max(md[t], before[1 - t] - before[t], m.score[1 - t] - m.score[t]);
         const comeback = tr[e.team] && before[e.team] <= before[1 - e.team] && m.score[e.team] >= m.score[1 - e.team];
         const late = m.overtime || m.timeLeft <= 30;
         const why = m.practice ? (state.invaders ? "" : null) : comeback ? "COMEBACK! " : late ? "LATE DRAMA! " : Math.random() < 0.01 ? "" : null;
@@ -4062,7 +4405,7 @@ function handleEvents(m, celebrate) {
       const who = state.local.indexOf(e.car); if (who >= 0) rumble(who, Math.min(1, e.power / 40), Math.min(1, e.power / 25), 90);
       if (who >= 0) { const kmh = Math.round(m.ball.vel.length() * 3.6); if (kmh > 180) { showShot(kmh); state.shake = Math.max(state.shake, 0.12); } }
     }
-    else if (e.type === "kickoff") endInvasion();
+    else if (e.type === "kickoff") { endInvasion(); endMob(); }
     else if (e.type === "flipreset") {                  // wheels on the ball: flip back, with a sparkle
       burst(e.pos, [0x7dffb0, 0xffffff, 0xffd23c], 60, 9, 0.6, 2, true);
       if (state.local.includes(e.car)) { showPop("FLIP RESET!"); tone(1320, 0.18, "triangle", 0.06, 1.4); }
@@ -4078,7 +4421,12 @@ function handleEvents(m, celebrate) {
       if (state.local.includes(e.car)) showPop(STAT_NAMES[e.kind] + "  +" + e.pts);
     }
     else if (e.type === "pad" && celebrate && state.local.includes(e.car)) sfx.pad(e.big);
-    else if (e.type === "over" && celebrate) sfx.whistle();
+    else if (e.type === "over" && celebrate) {
+      sfx.whistle();
+      // A huge comeback (won after being 4 or more goals down, like 1-5 to 6-5): 100 fans storm the pitch
+      if (m.mode === "cup") { cupRecord(m); if (m.cupChampion) startTrophy(cup.team); }
+      if (!lift.on && m.mode !== "watch" && !m.practice && m.maxDown && m.winner >= 0 && (m.maxDown[m.winner] >= 4 || state.forceMob)) { endInvasion(); startMob(m.winner); }
+    }
     else if (e.type === "chat") addFeed(m.cars[e.car], CHATS[e.i] || "", true);
   }
   m.events.length = 0;
@@ -4286,7 +4634,7 @@ function applySnapshot(s) {
   m.pads.forEach((p, i) => { p.timer = s.p[i] === "1" ? 0 : 1; });
   for (const e of s.ev) {
     if (e.pos) e.pos = new THREE.Vector3(e.pos[0], e.pos[1], e.pos[2]);
-    if (e.type === "newmatch") { $("over").hidden = true; hudCache = {}; }
+    if (e.type === "newmatch") { $("over").hidden = true; hudCache = {}; m.trailed = null; m.maxDown = null; endInvasion(); endMob(); }
     m.events.push(e);
   }
   const now = performance.now();
@@ -4561,7 +4909,7 @@ function updateHud(m) {
   const secs = m.overtime ? Math.floor(m.otTime) : Math.ceil(m.timeLeft);
   setText(elClock, "clock", m.practice ? "PRACTICE" : (m.overtime ? "+" : "") + Math.floor(secs / 60) + ":" + String(secs % 60).padStart(2, "0"));
   setShown($("practice-bar"), "pbar", !!m.practice);
-  setShown($("pinvade"), "pinv", !!m.practice && PICK_SPECIALS);
+  setShown($("pinvade"), "pinv", !!m.practice);
   elClock.classList.toggle("ot", m.overtime);
   let big = "", sub = "", bigColor = "#fff";
   if (m.state === "countdown") big = String(Math.ceil(m.countdown));
@@ -4635,6 +4983,7 @@ function show(screen) {
   if (screen === "menu") setPanel(state.panel || "home");
   updatePlate();
   $("online").hidden = screen !== "online";
+  $("cup").hidden = screen !== "cup";
   hud.hidden = screen !== "match";
   $("pause").hidden = !(screen === "match" && state.paused);
   $("over").hidden = true; $("vote").hidden = true; $("queue").hidden = true; $("over-rank").hidden = true;
@@ -4642,14 +4991,16 @@ function show(screen) {
   state.stick.active = false;
   hudCache = {};
 }
-function startMatch(kind) {
-  stopReplay();
-  const preset = PRESETS[kind];
+function startMatch(kind, extra) {
+  stopReplay(); endTrophy(); endMob();
+  const preset = Object.assign({}, PRESETS[kind], extra || {});
   state.match = new Match(Object.assign({ mode: kind, skill: state.skill }, preset));
+  if (preset.time) state.match.timeLeft = preset.time;
+  for (const k of ["teamNames", "cupOpp", "cupKey", "cupStage"]) if (preset[k] != null) state.match[k] = preset[k];
   state.local = preset.humans.slice();
   for (const i of state.local) { state.match.cars[i].look = state.look.slice(); state.match.cars[i].assist = state.assist; }
-  const sp = state.arena >= NORMAL_ARENAS ? -1 : rollSpecial();      // a chosen special map just plays as itself
-  setArena(sp >= 0 ? sp : state.arena || 0);
+  const sp = preset.arena != null || state.arena >= NORMAL_ARENAS ? -1 : rollSpecial();      // a chosen special map just plays as itself
+  setArena(preset.arena != null ? preset.arena : sp >= 0 ? sp : state.arena || 0);
   if (sp >= 0) setTimeout(() => showPop("SPECIAL MAP: " + ARENAS[sp].name + "!"), 600);
   state.paused = false; state.online = false;
   bindMatch(state.match);
@@ -4666,6 +5017,272 @@ function toMenu() {
   show("menu");
   updateSettings();
 }
+// ---- Competitions --------------------------------------------------------------------------------------
+// Two tournaments of 16 teams: four groups of four (everyone plays the other three; the top two go through),
+// then quarter-finals, semi-finals and a final. Win 3 points, overtime win 2, overtime loss 1.
+// You play your team's matches against TemuBots; every other match is played out from the teams' ratings.
+const CUP_COMPS = [
+  { name: "TEMU WORLD TOURNAMENT", blurb: "16 nations. Groups, then knockouts. A gold trophy.", teams: [
+    ["BRAZIL", "BRA", 4.8, "#ffdf00", "#009c3b"], ["ARGENTINA", "ARG", 4.9, "#75aadb", "#ffffff"], ["FRANCE", "FRA", 4.8, "#002395", "#ed2939"],
+    ["ENGLAND", "ENG", 4.6, "#ffffff", "#cf142b"], ["SPAIN", "ESP", 4.7, "#c60b1e", "#ffc400"], ["GERMANY", "GER", 4.4, "#1a1a1a", "#dd0000"],
+    ["PORTUGAL", "POR", 4.5, "#006600", "#ff0000"], ["NETHERLANDS", "NED", 4.3, "#ff6c00", "#21468b"], ["ITALY", "ITA", 4.1, "#0066cc", "#ffffff"],
+    ["BELGIUM", "BEL", 4.0, "#e30613", "#fdda24"], ["CROATIA", "CRO", 3.9, "#ff0000", "#ffffff"], ["MOROCCO", "MAR", 3.8, "#c1272d", "#006233"],
+    ["URUGUAY", "URU", 3.7, "#5cbfeb", "#ffffff"], ["JAPAN", "JPN", 3.6, "#000080", "#ffffff"], ["USA", "USA", 3.5, "#0a3161", "#b31942"],
+    ["MEXICO", "MEX", 3.4, "#006847", "#ce1126"]] },
+  { name: "TEMU CHAMPIONS CUP", blurb: "16 clubs, all heavily discounted. A silver trophy.", teams: [
+    ["REAL DISCOUNT", "RDC", 4.9, "#ffffff", "#febe10"], ["BAYERN BARGAIN", "BAY", 4.7, "#dc052d", "#ffffff"], ["FC BARCODELONA", "BAR", 4.6, "#a50044", "#004d98"],
+    ["LIGHTNING DEALS FC", "LDF", 4.7, "#c8102e", "#00b2a9"], ["PARIS SAINT-COUPON", "PSC", 4.6, "#004170", "#da291c"], ["INTER SHIPPING", "INS", 4.4, "#0068a8", "#1a1a1a"],
+    ["MANCHESTER UNBOXED", "MUN", 4.3, "#da291c", "#1a1a1a"], ["ARSENAL ADD-TO-CART", "ATC", 4.3, "#ef0107", "#ffffff"], ["ATLETICO REFUND", "ATR", 4.2, "#cb3524", "#272e61"],
+    ["JUVENTUS WHOLESALE", "JUV", 4.1, "#1a1a1a", "#ffffff"], ["BORUSSIA DEALMUND", "BVD", 4.1, "#fde100", "#1a1a1a"], ["AC CHECKOUT", "ACC", 4.0, "#fb090b", "#1a1a1a"],
+    ["CLEARANCE CITY", "CLC", 3.9, "#6cabdd", "#ffffff"], ["AJAX EXPRESS", "AJX", 3.6, "#d2122e", "#ffffff"], ["BENFICA BULK BUY", "BBB", 3.6, "#e83030", "#ffffff"],
+    ["PORTO FREE POSTAGE", "PFP", 3.5, "#00428c", "#ffffff"]] },
+];
+const CUP_STAGE_NAMES = { group: "GROUP STAGE", qf: "QUARTER-FINALS", sf: "SEMI-FINALS", final: "FINAL", done: "FINISHED" };
+const CUP_ROUND_NAMES = { qf: "QUARTER-FINAL", sf: "SEMI-FINAL", final: "THE FINAL" };
+const MD_PAIRS = [[[0, 1], [2, 3]], [[0, 2], [1, 3]], [[0, 3], [1, 2]]];
+let cup = null, trophies = [0, 0];
+const cupSetup = { comp: 0, team: 0, size: 3, len: 180 };
+try { cup = JSON.parse(localStorage.getItem("rocket-temu-cup") || "null"); const t = JSON.parse(localStorage.getItem("rocket-temu-trophies") || "null"); if (Array.isArray(t)) trophies = t; } catch (_) {}
+if (cup && !(cup.groups && CUP_COMPS[cup.comp])) cup = null;
+function cupSave() { try { localStorage.setItem("rocket-temu-cup", JSON.stringify(cup)); localStorage.setItem("rocket-temu-trophies", JSON.stringify(trophies)); } catch (_) {} }
+const cupTeam = (i) => CUP_COMPS[cup ? cup.comp : cupSetup.comp].teams[i];
+const tName = (i) => cupTeam(i)[0], tCode = (i) => cupTeam(i)[1], tRate = (i) => cupTeam(i)[2];
+const shuffled = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+function newCup() {
+  const teams = CUP_COMPS[cupSetup.comp].teams, order = teams.map((_, i) => i).sort((a, b) => teams[b][2] - teams[a][2]);
+  const groups = [[], [], [], []];
+  for (let pot = 0; pot < 4; pot++) shuffled(order.slice(pot * 4, pot * 4 + 4)).forEach((t, gi) => groups[gi].push(t));   // seeded pots
+  cup = { comp: cupSetup.comp, team: cupSetup.team, size: cupSetup.size, len: cupSetup.len, groups, stage: "group", md: 0, res: {}, ko: {}, out: "", champ: -1, last: [] };
+  cupSave();
+}
+// This round's matches: [home, away, key]
+function roundFixtures() {
+  if (cup.stage === "group") return cup.groups.flatMap((g) => MD_PAIRS[cup.md].map(([x, y]) => [g[x], g[y], `g${cup.md}:${g[x]}-${g[y]}`]));
+  return (cup.ko[cup.stage] || []).map(([a, b], k) => [a, b, cup.stage + k]);
+}
+const myFixture = () => (cup && cup.stage !== "done" ? roundFixtures().find(([a, b, key]) => (a === cup.team || b === cup.team) && !cup.res[key]) || null : null);
+function simScore(a, b) {
+  const d = tRate(a) - tRate(b);
+  const pois = (l) => { let k = 0, p = Math.exp(-l), s = p; const u = Math.random(); while (u > s && k < 9) { k++; p *= l / k; s += p; } return k; };
+  let ga = pois(2.3 * Math.exp(d * 0.5)), gb = pois(2.3 * Math.exp(-d * 0.5)), ot = false;
+  if (ga === gb) { ot = true; if (Math.random() < 1 / (1 + Math.exp(-d * 1.4))) ga++; else gb++; }   // golden goal in overtime
+  return [ga, gb, ot];
+}
+function cupTable(gi) {
+  const rows = cup.groups[gi].map((t) => ({ t, p: 0, w: 0, otw: 0, otl: 0, l: 0, gf: 0, ga: 0, pts: 0 }));
+  const row = (t) => rows.find((r) => r.t === t);
+  for (let md = 0; md < 3; md++) for (const [x, y] of MD_PAIRS[md]) {
+    const a = cup.groups[gi][x], b = cup.groups[gi][y], r = cup.res[`g${md}:${a}-${b}`];
+    if (!r) continue;
+    const [ga, gb, ot] = r, A = row(a), B = row(b);
+    A.p++; B.p++; A.gf += ga; A.ga += gb; B.gf += gb; B.ga += ga;
+    const [W, L] = ga > gb ? [A, B] : [B, A];
+    if (ot) { W.otw++; W.pts += 2; L.otl++; L.pts += 1; } else { W.w++; W.pts += 3; L.l++; }
+  }
+  return rows.sort((p, q) => q.pts - p.pts || q.gf - q.ga - (p.gf - p.ga) || q.gf - p.gf || tRate(q.t) - tRate(p.t));
+}
+const tieWinner = (key, a, b) => { const r = cup.res[key]; return r ? (r[0] > r[1] ? a : b) : -1; };
+// Play out every other match this round, then set up the next round
+function finishRound() {
+  const fx = roundFixtures();
+  for (const [a, b, key] of fx) if (!cup.res[key]) cup.res[key] = simScore(a, b);
+  cup.last = fx.map(([a, b, key]) => [a, b, ...cup.res[key]]); cup.lastStage = cup.stage === "group" ? `MATCHDAY ${cup.md + 1}` : CUP_STAGE_NAMES[cup.stage];
+  if (cup.stage === "group") {
+    if (++cup.md < 3) { cupSave(); return; }
+    const T = [0, 1, 2, 3].map(cupTable), w = (gi, k) => T[gi][k].t;
+    cup.ko.qf = [[w(0, 0), w(1, 1)], [w(2, 0), w(3, 1)], [w(1, 0), w(0, 1)], [w(3, 0), w(2, 1)]];
+    cup.stage = "qf";
+    if (!cup.ko.qf.flat().includes(cup.team)) cup.out = "the group stage";
+  } else {
+    const ties = cup.ko[cup.stage], ws = ties.map(([a, b], k) => tieWinner(cup.stage + k, a, b));
+    if (ties.some(([a, b]) => a === cup.team || b === cup.team) && !ws.includes(cup.team) && !cup.out) cup.out = "the " + CUP_STAGE_NAMES[cup.stage].toLowerCase();
+    if (cup.stage === "final") { cup.stage = "done"; cup.champ = ws[0]; }
+    else { const nx = cup.stage === "qf" ? "sf" : "final"; cup.ko[nx] = []; for (let k = 0; k < ws.length; k += 2) cup.ko[nx].push([ws[k], ws[k + 1]]); cup.stage = nx; }
+  }
+  cupSave();
+}
+// Your match: the opponents' bots get tougher for the stronger teams (around the difficulty in Settings)
+function startCupMatch() {
+  const f = myFixture(); if (!f) return;
+  const opp = f[0] === cup.team ? f[1] : f[0], r = tRate(opp);
+  const skill = Math.max(0, Math.min(BOT_SKILLS.length - 1, state.skill + (r >= 4.5 ? 1 : r < 3.8 ? -1 : 0)));
+  const label = cup.stage === "group" ? `GROUP ${"ABCD"[cup.groups.findIndex((g) => g.includes(cup.team))]} · MATCHDAY ${cup.md + 1}` : CUP_ROUND_NAMES[cup.stage];
+  startMatch("cup", { teamSize: cup.size, humans: [0], skill, arena: cup.stage === "group" ? (Math.random() * NORMAL_ARENAS) | 0 : 0,
+    teamNames: [tCode(cup.team), tCode(opp)], time: cup.len, cupOpp: opp, cupKey: f[2], cupStage: cup.stage });
+  setTimeout(() => showPop(`${label}: ${tName(cup.team)} vs ${tName(opp)}`), 400);
+}
+function cupRecord(m) {
+  if (!cup || m.cupDone || m.cupKey == null) return;
+  m.cupDone = true;
+  const f = myFixture(); if (!f || f[2] !== m.cupKey) return;
+  const [a, , key] = f, you = m.score[0], opp = m.score[1], ot = !!m.overtime, won = you > opp, stage = cup.stage;
+  cup.res[key] = a === cup.team ? [you, opp, ot] : [opp, you, ot];
+  finishRound();
+  if (stage === "group") {
+    const gi = cup.groups.findIndex((g) => g.includes(cup.team)), T = cupTable(gi), pos = T.findIndex((r) => r.t === cup.team) + 1, me = T[pos - 1];
+    m.overLine = cup.stage === "group" ? `${won ? (ot ? "Overtime win, 2 points." : "3 points!") : ot ? "Overtime loss, 1 point." : "No points."} ${tName(cup.team)}: ${me.pts} pts, ${["", "1st", "2nd", "3rd", "4th"][pos]} in the group.`
+      : cup.out ? `Knocked out in the group stage (${["", "1st", "2nd", "3rd", "4th"][pos]}).` : `Through to the quarter-finals! Finished ${["", "1st", "2nd"][pos]} in the group.`;
+  } else if (stage === "final") {
+    m.overLine = won ? "CHAMPIONS!" : `So close. ${tName(m.cupOpp)} win the ${CUP_COMPS[cup.comp].name}.`;
+    if (won) { trophies[cup.comp] = (trophies[cup.comp] || 0) + 1; state.nuts += 500; persist(); updateCoins(); cupSave(); m.cupChampion = true; }
+  } else m.overLine = won ? `Through to the ${CUP_STAGE_NAMES[cup.stage].toLowerCase()}!` : `Knocked out in the ${CUP_STAGE_NAMES[stage].toLowerCase()}.`;
+}
+function setTeamNames(names) {
+  TEAM_NAMES[0] = names[0]; TEAM_NAMES[1] = names[1];
+  document.querySelectorAll("#hud .tname").forEach((el, i) => { el.textContent = names[i]; });
+}
+
+// ---- The competition screen ------------------------------------------------------------------------------
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const flagOf = (t) => `<span class="flag" style="background:linear-gradient(90deg,${t[3]} 0 50%,${t[4]} 50% 100%)"></span>`;
+const starsOf = (r) => { const n = Math.max(1, Math.min(5, Math.round((r - 3) * 2.6))); return `<span class="stars" aria-label="${n} stars">${"★".repeat(n)}<i>${"★".repeat(5 - n)}</i></span>`; };
+const teamTag = (i) => `${flagOf(cupTeam(i))}<span class="tn">${esc(tName(i))}</span>`;
+function cupTieHtml(stage, k) {
+  const tie = cup.ko[stage] && cup.ko[stage][k], r = tie && cup.res[stage + k];
+  if (!tie) return `<div class="cup-tie tbd"><div>TBD</div><div>TBD</div></div>`;
+  const w = r ? (r[0] > r[1] ? 0 : 1) : -1;
+  return `<div class="cup-tie">${tie.map((t, s) => `<div class="${w < 0 ? "" : w === s ? "won" : "lost"}${t === cup.team ? " me" : ""}">${teamTag(t)}<span class="ts">${r ? r[s] : ""}</span></div>`).join("")}${r && r[2] ? `<small>after overtime</small>` : ""}</div>`;
+}
+function renderCup() {
+  const el = $("cup-body");
+  if (!cup) {
+    const comp = CUP_COMPS[cupSetup.comp];
+    el.innerHTML = `<h2>COMPETITION</h2>
+      <p class="cup-sub">Four groups of four, then knockouts. Win it all to lift the trophy and earn 500 mechanic nuts.</p>
+      <div class="cup-comps">${CUP_COMPS.map((c, i) => `<button type="button" class="cup-comp" data-cup="comp:${i}" aria-pressed="${i === cupSetup.comp}"><b>${c.name}</b><small>${c.blurb}</small><small class="cab">Won ${trophies[i] || 0} time${trophies[i] === 1 ? "" : "s"}</small></button>`).join("")}</div>
+      <div class="cup-opts">
+        <span><label>FORMAT</label><span class="seg">${[1, 3].map((n) => `<button type="button" data-cup="size:${n}" aria-pressed="${cupSetup.size === n}">${n}V${n}</button>`).join("")}</span></span>
+        <span><label>MATCHES</label><span class="seg">${[120, 180, 300].map((n) => `<button type="button" data-cup="len:${n}" aria-pressed="${cupSetup.len === n}">${n / 60} MIN</button>`).join("")}</span></span>
+      </div>
+      <h3 class="cup-h">PICK YOUR TEAM</h3>
+      <div class="cup-teams">${comp.teams.map((t, i) => `<button type="button" class="cup-team" data-cup="team:${i}" aria-pressed="${i === cupSetup.team}">${flagOf(t)}<span class="tn">${esc(t[0])}</span>${starsOf(t[2])}</button>`).join("")}</div>
+      <div class="row cup-btns"><button class="btn primary" type="button" data-cup="start">Start the ${comp.name.replace("TEMU ", "").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())} (Enter)</button><button class="btn" type="button" data-cup="home">Back (Esc)</button></div>`;
+    return;
+  }
+  const comp = CUP_COMPS[cup.comp], f = myFixture();
+  let banner = "", next = "";
+  if (cup.stage === "done" && cup.champ === cup.team) banner = `<div class="cup-banner gold">${esc(tName(cup.team))} ARE CHAMPIONS! The trophy is in your cabinet (${trophies[cup.comp]}).</div>`;
+  else if (cup.stage === "done") banner = `<div class="cup-banner">${esc(tName(cup.champ))} won the ${comp.name}.${cup.out ? ` You went out in ${esc(cup.out)}.` : ""}</div>`;
+  else if (cup.out) banner = `<div class="cup-banner out">Knocked out in ${esc(cup.out)}. Watch how the rest of it plays out.</div>`;
+  if (f) {
+    const opp = f[0] === cup.team ? f[1] : f[0];
+    const label = cup.stage === "group" ? `GROUP ${"ABCD"[cup.groups.findIndex((g) => g.includes(cup.team))]} · MATCHDAY ${cup.md + 1} OF 3` : CUP_ROUND_NAMES[cup.stage];
+    next = `<div class="cup-next"><div><small>${label}</small><div class="cup-vs">${teamTag(cup.team)}<em>vs</em>${teamTag(opp)}${starsOf(tRate(opp))}</div></div><button class="btn primary" type="button" data-cup="play">Play (Enter)</button></div>`;
+  } else if (cup.stage !== "done") next = `<div class="cup-next"><div><small>${CUP_STAGE_NAMES[cup.stage]}</small><div class="cup-vs">The other teams play on</div></div><button class="btn primary" type="button" data-cup="sim">Next round (Enter)</button></div>`;
+  else next = `<div class="row cup-btns"><button class="btn primary" type="button" data-cup="new">New competition (Enter)</button></div>`;
+  const last = cup.last && cup.last.length ? `<h3 class="cup-h">${esc(cup.lastStage || "")} RESULTS</h3><div class="cup-res">${cup.last.map(([a, b, ga, gb, ot]) =>
+    `<div class="${a === cup.team || b === cup.team ? "me" : ""}">${teamTag(a)}<b>${ga} - ${gb}</b>${teamTag(b)}${ot ? "<small>OT</small>" : ""}</div>`).join("")}</div>` : "";
+  const ko = cup.stage !== "group" ? `<h3 class="cup-h">KNOCKOUTS</h3><div class="cup-bracket">
+      <div><small>QUARTER-FINALS</small>${[0, 1, 2, 3].map((k) => cupTieHtml("qf", k)).join("")}</div>
+      <div><small>SEMI-FINALS</small>${[0, 1].map((k) => cupTieHtml("sf", k)).join("")}</div>
+      <div><small>FINAL</small>${cupTieHtml("final", 0)}</div></div>` : "";
+  const groups = `<h3 class="cup-h">GROUPS</h3><div class="cup-groups">${[0, 1, 2, 3].map((gi) => `<table class="cup-tbl"><caption>GROUP ${"ABCD"[gi]}</caption>
+      <thead><tr><th>TEAM</th><th>P</th><th>W</th><th>OTW</th><th>OTL</th><th>L</th><th>GD</th><th>PTS</th></tr></thead><tbody>${cupTable(gi).map((r, k) =>
+      `<tr class="${r.t === cup.team ? "me" : ""}${k < 2 ? " q" : ""}"><td>${teamTag(r.t)}</td><td>${r.p}</td><td>${r.w}</td><td>${r.otw}</td><td>${r.otl}</td><td>${r.l}</td><td>${r.gf - r.ga > 0 ? "+" : ""}${r.gf - r.ga}</td><td><b>${r.pts}</b></td></tr>`).join("")}</tbody></table>`).join("")}</div>`;
+  el.innerHTML = `<h2>${comp.name}</h2>
+    <p class="cup-sub">${teamTag(cup.team)} · ${cup.size}V${cup.size} · ${cup.len / 60} minute matches · ${CUP_STAGE_NAMES[cup.stage]}</p>
+    ${banner}${next}${ko}${last}${groups}
+    <div class="row cup-btns"><button class="btn" type="button" data-cup="home">Main menu (Esc)</button><button class="btn" type="button" data-cup="abandon">${state.cupArm ? "Tap again to quit this competition" : "Quit competition"}</button></div>`;
+}
+$("cup-body").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-cup]"); if (!b) return;
+  audio();
+  const [k, v] = b.dataset.cup.split(":"), n = Number(v);
+  if (k !== "abandon") state.cupArm = false;
+  if (k === "comp") { cupSetup.comp = n; } else if (k === "team") cupSetup.team = n; else if (k === "size") cupSetup.size = n; else if (k === "len") cupSetup.len = n;
+  else if (k === "start") newCup();
+  else if (k === "play") { startCupMatch(); return; }
+  else if (k === "sim") finishRound();
+  else if (k === "new") { cup = null; cupSave(); }
+  else if (k === "abandon") { if (state.cupArm) { cup = null; cupSave(); state.cupArm = false; } else state.cupArm = true; }
+  else if (k === "home") { act("home"); return; }
+  renderCup();
+});
+function cupEnter() {                                                    // the Enter key on the competition screen
+  if (!cup) { newCup(); renderCup(); }
+  else if (myFixture()) startCupMatch();
+  else if (cup.stage !== "done") { finishRound(); renderCup(); }
+  else { cup = null; cupSave(); renderCup(); }
+}
+
+// ---- Lifting the trophy ----------------------------------------------------------------------------------
+// After winning a final: a stage in the centre circle, the team in their kit, the captain lifting the trophy,
+// confetti, fireworks and a slow camera orbit.
+const lift = { on: false, t: 0, g: null, people: [], trophy: null, fw: 0 };
+function startTrophy(teamIdx) {
+  endTrophy(); endMob(); endInvasion();
+  const t = cupTeam(teamIdx), c1 = new THREE.Color(t[3]).getHex(), c2 = new THREE.Color(t[4]).getHex();
+  const g = new THREE.Group(); scene.add(g);
+  const deck = std(0x1c1a28, { roughness: 0.75, metalness: 0.1 }), trim = std(0xf2c14e, { metalness: 0.9, roughness: 0.25, emissive: new THREE.Color(0xf2c14e).multiplyScalar(0.15) });
+  const mk = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; g.add(m); return m; };
+  mk(new THREE.BoxGeometry(18, 0.8, 7), deck, 0, 0.4, 0);
+  for (const z of [-3.55, 3.55]) mk(new THREE.BoxGeometry(18.2, 0.1, 0.12), trim, 0, 0.82, z);            // gold edging
+  for (const x of [-9.05, 9.05]) mk(new THREE.BoxGeometry(0.12, 0.1, 7.2), trim, x, 0.82, 0);
+  mk(new THREE.BoxGeometry(12, 0.4, 2), deck, 0, 0.2, 4.4);                                                // a step
+  const banner = canvasTex(1024, 64, (gg, w, h) => {
+    gg.fillStyle = "#0b0a14"; gg.fillRect(0, 0, w, h); gg.font = `italic 900 44px ${FONT}`; gg.textAlign = "center"; gg.textBaseline = "middle";
+    gg.fillStyle = "#ffc428"; gg.fillText(`${CUP_COMPS[cup.comp].name} CHAMPIONS · ${t[0]}`, w / 2, h / 2 + 2);
+  });
+  mk(new THREE.PlaneGeometry(17.6, 0.36), new THREE.MeshBasicMaterial({ map: banner }), 0, 0.6, 3.505).castShadow = false;
+  const P = [];
+  for (let k = 0; k < 5; k++) {
+    const p = makePerson(c1, { kit: true, pants: c2, socks: c1, jersey: [k === 2 ? (state.nick || "YOU").slice(0, 10).toUpperCase() : "TEMUBOT", String([7, 4, 10, 9, 1][k])], ...randomLookOf() });
+    p.position.set((k - 2) * 3.1, 0.88, k === 2 ? 0.6 : -0.3 - Math.abs(k - 2) * 0.4); p.rotation.y = (2 - k) * -0.08;
+    g.add(p); P.push({ p, k, ph: Math.random() * 6 });
+  }
+  const tro = makeTrophy(cup.comp); tro.scale.setScalar(1.25); P[2].p.add(tro); tro.position.set(0, 2.84, 0.05);
+  Object.assign(lift, { on: true, t: 0, g, people: P, trophy: tro, fw: 0, colors: [c1, c2, 0xffc428, 0xffffff] });
+  hud.hidden = true; $("over").hidden = true;
+  $("champ-comp").textContent = CUP_COMPS[cup.comp].name;
+  $("champ-sub").textContent = `${t[0]} are the champions!`;
+  $("champ-cab").innerHTML = `Trophy cabinet: ${trophies[cup.comp]} · +500 ${NUT}`;
+  $("champ").hidden = true;
+  sfx.goal(); cheer = { team: 0, t: -4 };
+  camState[0].pos.set(0, 4.6, 4.6); camState[0].look.set(0, 4.6, 0);                 // start close on the trophy
+}
+function endTrophy() {
+  if (lift.g) scene.remove(lift.g);
+  lift.on = false; lift.g = null; lift.people = []; $("champ").hidden = true;
+}
+function updateTrophy(dt) {
+  if (!lift.on) return;
+  lift.t += dt;
+  const t = lift.t;
+  if (t > 2.2 && $("champ").hidden) $("champ").hidden = false;
+  if (cheer) cheer.t = Math.min(cheer.t, 3);                               // the whole stadium keeps celebrating
+  else cheer = { team: 0, t: 0 };
+  for (const { p, k, ph } of lift.people) {
+    if (k === 2) {                                                         // the captain: trophy up, down, up
+      const pump = Math.max(0, Math.sin(t * 2.6 - 1.5)), Pp = p.userData.parts, a = 3.3 - pump * 0.06;   // hands on the plinth, held high
+      Pp.armL.rotation.set(0, 0, -a); Pp.armR.rotation.set(0, 0, a); Pp.mouth.scale.set(1, 3, 1);
+      Pp.legL.rotation.x = -pump * 0.3; Pp.legR.rotation.x = -pump * 0.3;
+      lift.trophy.rotation.y = Math.sin(t * 0.7) * 0.3; lift.trophy.rotation.z = Math.sin(t * 1.3) * 0.04;
+      p.position.y = 0.88 + pump * 0.55;
+    } else {                                                               // teammates jump and wave
+      animatePerson(p, t + ph, 0, true);
+      p.position.y = 0.88 + Math.abs(Math.sin(t * 5 + ph)) * 0.7;
+    }
+  }
+  // confetti over the stage, fireworks in the sky
+  for (let i = 0; i < 8; i++) emit(new THREE.Vector3((Math.random() - 0.5) * 40, 22 + Math.random() * 6, (Math.random() - 0.5) * 30),
+    new THREE.Vector3((Math.random() - 0.5) * 3, -2 - Math.random() * 2, (Math.random() - 0.5) * 3), 5 + Math.random() * 3, lift.colors[(Math.random() * 4) | 0], 0.6);
+  lift.fw -= dt;
+  if (lift.fw <= 0) {
+    lift.fw = 0.45 + Math.random() * 0.5;
+    const at = new THREE.Vector3((Math.random() - 0.5) * 70, 26 + Math.random() * 10, (Math.random() - 0.5) * 80);
+    burst(at, [lift.colors[(Math.random() * 4) | 0], 0xffffff, 0xffc428], 160, 16, 1.5, 0, true);
+    tone(90 + Math.random() * 60, 0.25, "sawtooth", 0.035, 0.4);
+  }
+}
+function trophyCam(dt) {
+  const t = lift.t, st = camState[0];
+  const close = Math.max(0, 1 - t / 6);                                    // start tight on the trophy, then pull out
+  const a = Math.sin(t * 0.16) * 0.9, r = 4.6 + (1 - close) * 9, h = 4.4 + (1 - close) * 2;
+  const want = new THREE.Vector3(Math.sin(a) * r, h, Math.cos(a) * r + 1);
+  st.pos.lerp(want, 1 - Math.exp(-2.5 * dt)); st.look.lerp(new THREE.Vector3(0, 3.4 + close * 1.4, 0), 1 - Math.exp(-3 * dt));
+  cams[0].position.copy(st.pos); cams[0].lookAt(st.look);
+}
+
 // ---- Lobby menus and the garage ----------------------------------------------------------------
 function setPanel(name) {
   state.panel = name;
@@ -4782,9 +5399,12 @@ function act(name) {
     location.reload();
   }
   else if (name === "skill") { state.skill = (state.skill + 1) % BOT_SKILLS.length; updateSettings(); persist(); }
+  else if (name === "menu" && state.match && state.match.mode === "cup" && !state.online) act("cupnext");
   else if (name === "menu") { if (state.online && net.ranked) { netSend({ t: "leave" }); endOnline(); toMenu(); } else if (state.online) toOnline(); else toMenu(); }
   else if (name === "pause") { if (!state.online && state.match && state.match.state !== "over") { state.paused = !state.paused; $("pause").hidden = !state.paused; } }
-  else if (name === "rematch" && state.match && !state.online) startMatch(state.match.mode);
+  else if (name === "rematch" && state.match && !state.online) { if (state.match.mode === "cup") act("cupnext"); else startMatch(state.match.mode); }
+  else if (name === "cup") { state.cupArm = false; show("cup"); renderCup(); }
+  else if (name === "cupnext") { stopReplay(); endTrophy(); endMob(); state.paused = false; state.match = null; state.local = []; unbindMatch(); show("cup"); renderCup(); }
   else if (name === "cam") { state.ballCam[0] = !state.ballCam[0]; persist(); updateSettings(); }
   else if (name === "sound") { sound.on = !sound.on; if (sound.ctx) sound.ctx[sound.on ? "resume" : "suspend"]().catch(() => {}); persist(); updateSettings(); }
 }
@@ -4795,13 +5415,14 @@ $("nick").addEventListener("change", () => { state.nick = nickValue(); persist()
 function showOver(m) {
   if (state.online) setText($("over-next"), "overnext", net.nextIn > 0 ? `Next match starts in ${net.nextIn} s. Stay in the lobby or leave.` : "Next match starting...");
   if (!$("over").hidden) return;
-  $("over-win").textContent = TEAM_NAMES[m.winner] + " WINS!";
+  const cupM = m.mode === "cup" && cup && m.cupOpp != null;
+  $("over-win").textContent = cupM ? (m.winner === 0 ? tName(cup.team) : tName(m.cupOpp)) + " WIN!" : TEAM_NAMES[m.winner] + " WINS!";
   $("over-win").style.color = TEAM_CSS[m.winner];
   $("over-score").textContent = `${m.score[0]}  -  ${m.score[1]}`;
   $("over-line").textContent = m.overLine;
   renderScoreboard(m);
   $("over-next").hidden = !state.online || !!net.ranked;
-  $("b-rematch").hidden = state.online;
+  $("b-rematch").hidden = state.online || m.mode === "cup"; $("b-cupnext").hidden = m.mode !== "cup";
   $("b-requeue").hidden = !net.ranked;
   if (!net.ranked && !m.coinsGiven && state.local.length && m.mode !== "watch" && !m.practice) {
     m.coinsGiven = true;
@@ -4809,6 +5430,7 @@ function showOver(m) {
     $("over-line").innerHTML = ""; $("over-line").append(m.overLine + `   +${got} `); $("over-line").insertAdjacentHTML("beforeend", NUT);
   }
   $("b-overmenu").textContent = net.ranked ? "Main menu (Esc)" : state.online ? "Leave lobby (Esc)" : "Main menu (Esc)";
+  $("b-overmenu").hidden = m.mode === "cup";
   showRankResult();
   $("over").hidden = false;
 }
@@ -4857,11 +5479,17 @@ window.addEventListener("keydown", (e) => {
   if (replay.active && (e.code === "Space" || e.code === "Enter")) { skipReplay(); return; }
   state.keys.add(e.code);
   audio();
+  if (state.screen === "cup") {
+    if (e.code === "Escape") act("home");
+    else if (e.code === "Enter" || e.code === "NumpadEnter") cupEnter();
+    return;
+  }
+  if (lift.on && state.screen === "match" && (e.code === "Enter" || e.code === "NumpadEnter" || e.code === "Escape")) { if (lift.t > 2) act("cupnext"); return; }
   if (state.screen === "menu") {
     const ranked = state.panel === "ranked";
     const map = ranked ? { Digit1: "ranked1", Digit2: "ranked3", Numpad1: "ranked1", Numpad2: "ranked3" }
       : { Digit1: "online", Digit2: "rankedmenu", Digit3: "bot", Digit4: "bot5", Digit5: "duel", Digit6: "2p", Digit7: "practice", Digit8: "watch",
-        Numpad1: "online", Numpad2: "rankedmenu", Numpad3: "bot", Numpad4: "bot5", Numpad5: "duel", Numpad6: "2p", Numpad7: "practice", Numpad8: "watch", KeyD: "skill", KeyG: "garage" };
+        Numpad1: "online", Numpad2: "rankedmenu", Numpad3: "bot", Numpad4: "bot5", Numpad5: "duel", Numpad6: "2p", Numpad7: "practice", Numpad8: "watch", KeyD: "skill", KeyG: "garage", KeyC: "cup" };
     if (map[e.code]) act(map[e.code]);
     else if (e.code === "Escape") act(state.panel === "ranked" ? "play" : "home");
     else if (e.code === "KeyS" && state.panel === "home") act("shop");
@@ -4885,7 +5513,7 @@ window.addEventListener("keydown", (e) => {
     else if (state.match && state.match.practice && e.code === "KeyR") act("pball");
     else if (state.match && state.match.practice && e.code === "KeyT") act("preset");
     else if (state.match && state.match.practice && e.code === "KeyU") act("pboost");
-    else if (state.match && state.match.practice && PICK_SPECIALS && e.code === "KeyI") act("pinvade");
+    else if (state.match && state.match.practice && e.code === "KeyI") act("pinvade");
     else if (e.code === "Tab") { e.preventDefault(); state.boardHeld = true; }
     else if (e.code === "KeyC") act("cam");
     else if (e.code === "KeyM") act("sound");
@@ -4932,7 +5560,7 @@ for (const btn of document.querySelectorAll(".tbtn[data-key]")) {
 // ---- Main loop ------------------------------------------------------------------------------
 // ---- Lobby showroom -----------------------------------------------------------------------------
 // The main menu, garage and online screens show your car on a turntable in a dark showroom.
-const LOBBY = new Set(["menu", "garage", "online"]);
+const LOBBY = new Set(["menu", "garage", "online", "cup"]);
 const garage = { scene: new THREE.Scene(), cam: new THREE.PerspectiveCamera(34, 1, 0.1, 200), spin: 0.6, spinV: 0, drag: null, team: 0, cv: null, key: "", boostPreview: false };
 (() => {
   const S = garage.scene;
@@ -5002,7 +5630,13 @@ function renderGarage(dt) {
   // turntable: turns slowly by itself; drag to spin it
   if (!garage.drag) { garage.spinV += (0.35 - garage.spinV) * (1 - Math.exp(-1.5 * dt)); garage.spin += garage.spinV * dt; }
   garage.table.rotation.y = garage.spin;
-  cv.car.boosting = garage.boostPreview;
+  const cupView = state.screen === "cup";                                    // the competition screen shows off the trophy
+  cv.g.visible = cv.shadow.visible = !cupView;
+  if (cupView || garage.trophies) {
+    if (!garage.trophies) garage.trophies = [0, 1].map((k) => { const t = makeTrophy(k); t.scale.setScalar(2.3); t.position.y = 0.16; garage.table.add(t); return t; });
+    const k = cup ? cup.comp : cupSetup.comp; garage.trophies.forEach((t, i) => { t.visible = cupView && i === k; });
+  }
+  cv.car.boosting = garage.boostPreview && !cupView;
   animateCar(cv, dt);
   cv.g.updateMatrixWorld(true);
   const wp = new THREE.Vector3(), wq = new THREE.Quaternion(); cv.g.getWorldPosition(wp); cv.g.getWorldQuaternion(wq);
@@ -5011,8 +5645,9 @@ function renderGarage(dt) {
   // frame the car in the space the menus leave free
   const wide = w > h * 1.1, cam = garage.cam;
   cam.aspect = w / h; cam.fov = wide ? 30 : 42;
-  cam.position.set(0, wide ? 2.5 : 3.2, wide ? 11.5 : 12.5); cam.lookAt(0, 0.7, 0);
-  if (wide) cam.setViewOffset(w, h, -(w * (state.screen === "online" ? 0.2 : 0.17)), 0, w, h);
+  if (cupView) { cam.position.set(0, 3.0, 12.5); cam.lookAt(0, 1.8, 0); }
+  else { cam.position.set(0, wide ? 2.5 : 3.2, wide ? 11.5 : 12.5); cam.lookAt(0, 0.7, 0); }
+  if (wide) cam.setViewOffset(w, h, -(w * (cupView ? 0.28 : state.screen === "online" ? 0.2 : 0.17)), 0, w, h);
   else cam.setViewOffset(w, h, 0, h * 0.2, w, h);
   cam.updateProjectionMatrix();
   renderer.setScissorTest(false); renderer.setViewport(0, 0, w, h);
@@ -5067,6 +5702,8 @@ function render(dt) {
   animateBallLook(dt);
   updateLeaves(dt, state.t);
   updateInvasion(dt);
+  updateMob(dt);
+  updateTrophy(dt);
   updateFloorLeaves(dt, state.screen === "match" ? state.match : null, state.t);
   for (const o of [parts, glowParts]) if (o.parent !== scene) scene.add(o);
   const m = state.screen === "match" ? state.match : state.attract;
@@ -5076,6 +5713,10 @@ function render(dt) {
   if (replay.active && m.state !== "goal") stopReplay();
   const inReplay = replay.active && playReplay(m, dt);
   if (!inReplay) { syncWorld(m, dt, state.t); recordFrame(m); }
+  if (lift.on && views) {                                                 // the trophy stage: no cars or ball
+    for (const cv of views.cars) { cv.g.visible = cv.label.visible = cv.shadow.visible = false; cv.flame.visible = false; }
+    ballMesh.visible = ballShadow.visible = false;
+  } else ballMesh.visible = ballShadow.visible = true;
   updateShock(dt);
   const local = state.screen === "match" && state.local.length ? m.cars[state.local[0]] : null;
   if (local && !inReplay) focus.copy(local.pos);
@@ -5107,7 +5748,7 @@ function render(dt) {
   } else if (split) {
     for (let i = 0; i < 2; i++) {
       const car = m.cars[state.local[i]];
-      if (goalView) goalCam(i, dt); else chaseCam(i, car, m.ball, dt, state.ballCam[i]);
+      if (lift.on || (mob.on && m.state === "over")) { if (lift.on) trophyCam(dt); else mobCam(dt); cams[1].position.copy(cams[0].position); cams[1].quaternion.copy(cams[0].quaternion); } else if (goalView) goalCam(i, dt); else chaseCam(i, car, m.ball, dt, state.ballCam[i]);
       cams[i].aspect = (w / 2) / h; cams[i].fov = rlFov((w / 2) / h); cams[i].updateProjectionMatrix(); shake(cams[i]);
       views.cars.forEach((cv) => { cv.label.visible = !cv.car.demolished && cv.car !== car; });
       renderer.setViewport(i * w / 2, 0, w / 2, h); renderer.setScissor(i * w / 2, 0, w / 2, h);
@@ -5115,12 +5756,12 @@ function render(dt) {
     }
   } else {
     const car = m.cars[state.local[0]];
-    if (goalView) goalCam(0, dt); else chaseCam(0, car, m.ball, dt, state.ballCam[0]);
+    if (lift.on) trophyCam(dt); else if (mob.on && m.state === "over") mobCam(dt); else if (goalView) goalCam(0, dt); else chaseCam(0, car, m.ball, dt, state.ballCam[0]);
     cams[0].aspect = w / h; cams[0].fov = rlFov(w / h); cams[0].updateProjectionMatrix(); shake(cams[0]);
     views.cars[state.local[0]].label.visible = false;
     renderer.setViewport(0, 0, w, h); draw(cams[0]);
   }
-  if (inMatch) { updateHud(m); if (m.state === "over") showOver(m); }
+  if (inMatch) { updateHud(m); if (m.state === "over" && !lift.on && !(mob.on && mob.t < MOB_SHOW)) showOver(m); }
   else if (state.screen === "menu") $("focus-hint").hidden = document.hasFocus();
 }
 function frame(now) {
@@ -5257,7 +5898,7 @@ if (app_.pwa && "serviceWorker" in navigator && (location.protocol === "https:" 
 updateInstall();
 // Installed app (or a phone): use the whole screen, keeping clear of the notch and status bar
 if (app_.standalone || /[?&]app=1/.test(location.search) || matchMedia("(pointer: coarse)").matches) document.documentElement.classList.add("app-mode");
-window.rocketTemu = { state, act, net, replay, setArena, invasion, applyRankResult, dbg: () => ({ resizes: resize.n, ratio: renderer.getPixelRatio(), dyn }), views: () => views, skids: () => skidN, addSkid, advance(secs) { for (let i = 0; i < secs * FPS; i++) step(1 / FPS); } };
+window.rocketTemu = { state, act, net, replay, setArena, invasion, mob, startMob, cupApi: { get cup() { return cup; }, setup: cupSetup, newCup, startCupMatch, finishRound, startTrophy, lift, renderCup }, mobStep(s) { for (let i = 0; i < s * 60; i++) updateMob(1 / 60); }, applyRankResult, dbg: () => ({ resizes: resize.n, ratio: renderer.getPixelRatio(), dyn }), views: () => views, skids: () => skidN, addSkid, advance(secs) { for (let i = 0; i < secs * FPS; i++) step(1 / FPS); } };
 })();
 </script>
 </body>
