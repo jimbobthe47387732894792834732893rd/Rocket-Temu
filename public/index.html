@@ -131,6 +131,19 @@
   html.app-mode .showroom .fine { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
 
 
+
+  /* ---- Wrap configurator ---- */
+  #wrapcfg { background: linear-gradient(90deg, rgba(6,5,14,.9) 0%, rgba(6,5,14,.75) 45%, rgba(6,5,14,.1) 75%); }
+  @media (min-width: 900px) { #wrapcfg .cfg-card { margin: auto auto auto clamp(16px, 4vw, 60px); } }
+  .card.cfg-card { width: min(560px, 100%); align-items: stretch; text-align: left; padding: 18px; border-radius: 18px; background: rgba(14,12,30,.96); border: 1px solid var(--line); box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+  .cfg-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin: 6px 0 4px; }
+  .cfg-opt { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 12px; border: 2px solid var(--line); background: var(--panel); text-align: left; }
+  .cfg-opt[aria-pressed="true"] { border-color: var(--temu); background: rgba(251,119,1,.18); }
+  .cfg-opt .sw { flex: none; width: 54px; height: 40px; border-radius: 8px; display: grid; place-items: center; font-weight: 900; font-style: italic; font-size: 18px; }
+  .cfg-opt b { display: block; font-weight: 900; font-size: 14px; } .cfg-opt small { color: var(--muted); font-weight: 800; font-size: 11px; letter-spacing: .04em; }
+  .cfg-chip { margin-top: 4px; padding: 3px 8px; border-radius: 999px; background: var(--temu); color: #fff; font-weight: 900; font-size: 10px; letter-spacing: .06em; align-self: flex-start; cursor: pointer; }
+  .shop-btns { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+  .btn.cfg-btn { padding: 6px 10px; font-size: 11px; }
   /* ---- Controls screen ---- */
   .card.controls-card { width: min(700px, 100%); align-items: stretch; gap: 0; text-align: left; padding: 18px 18px 14px; border-radius: 18px; background: rgba(14,12,30,.96); border: 1px solid var(--line); box-shadow: 0 20px 60px rgba(0,0,0,.6); }
   .controls-card .row { margin-top: 6px; }
@@ -737,6 +750,14 @@
     </div>
   </div>
 
+  <div id="wrapcfg" class="overlay" hidden>
+    <div class="card cfg-card">
+      <h2 class="ctitle" id="cfg-title">WRAP</h2>
+      <p class="rank-note" id="cfg-sub"></p>
+      <div id="cfg-list" class="cfg-list"></div>
+      <div class="row"><button class="btn primary" type="button" data-act="cfgclose">Done (Esc)</button></div>
+    </div>
+  </div>
   <div id="over" class="overlay" hidden>
     <div class="card">
       <h2 id="over-win" class="win">BLU WINS!</h2>
@@ -956,7 +977,7 @@ function predictBall(ball, mods, secs = 3, step = 1 / 30) {
 
 // ---- Car loadouts (looks only; every body has the same hitbox) ----------------------------------
 // [body, decal, wheels, boost trail, topper, accent colour]
-const LOOK_SIZES = [4, 16, 5, 8, 8, 10];                // decals 12-15 are the World Tournament star wraps
+const LOOK_SIZES = [4, 24, 5, 8, 8, 10];                // decals 12-23 are the star wraps and their club versions
 const FREE_LOOK = [4, 6, 5, 6, 6, 10];                // the rest are sold in the shop
 const DEFAULT_LOOK = [0, 0, 0, 0, 0, 0];
 function cleanLook(a) {
@@ -3490,14 +3511,41 @@ const BODIES = [
 // Star fan wraps (decals 12 to 15): won in the World Tournament. Play as the team and each game has a chance to
 // give you that star's wrap for the game; win the game and you keep it. Name, number and national colours only.
 const STAR_WRAPS = [
-  { decal: 12, code: "POR", chance: 1 / 7, name: "RONALDO", num: "7", cols: ["#c8102e", "#046a38", "#ffd23a"] },
-  { decal: 13, code: "ARG", chance: 1 / 5, name: "MESSI", num: "10", cols: ["#75aadb", "#ffffff", "#f6b40e"] },
-  { decal: 14, code: "FRA", chance: 1 / 3, name: "MBAPPÉ", num: "10", cols: ["#002395", "#ed2939", "#ffffff"] },
-  { decal: 15, code: "BRA", chance: 1 / 7, name: "NEYMAR JR", num: "11", cols: ["#ffdf00", "#009c3b", "#1b3fa0"] },
+  { decal: 12, code: "POR", kit: "POR", chance: 1 / 7, name: "RONALDO", num: "7", club: "PORTUGAL" },
+  { decal: 13, code: "ARG", kit: "ARG", chance: 1 / 5, name: "MESSI", num: "10", club: "ARGENTINA" },
+  { decal: 14, code: "FRA", kit: "FRA", chance: 1 / 3, name: "MBAPPÉ", num: "10", club: "FRANCE" },
+  { decal: 15, code: "BRA", kit: "BRA", chance: 1 / 7, name: "NEYMAR JR", num: "10", club: "BRAZIL" },
+  // Club versions (the game's own parody clubs, in their kit colours). Owning a star's wrap gives you all of them.
+  { decal: 16, base: 12, kit: "MUN", name: "RONALDO", num: "7", club: "MANCHESTER UNBOXED" },
+  { decal: 17, base: 12, kit: "RMA", name: "RONALDO", num: "7", club: "REAL DISCOUNT" },
+  { decal: 18, base: 13, kit: "BAR", name: "MESSI", num: "10", club: "FC BARCODELONA" },
+  { decal: 19, base: 14, kit: "PSG", name: "MBAPPÉ", num: "7", club: "PARIS SAINT-COUPON" },
+  { decal: 20, base: 14, kit: "RMA", name: "MBAPPÉ", num: "10", club: "REAL DISCOUNT" },
+  { decal: 21, base: 15, kit: "PSG", name: "NEYMAR JR", num: "10", club: "PARIS SAINT-COUPON" },
+  { decal: 22, base: 15, kit: "BAR", name: "NEYMAR JR", num: "11", club: "FC BARCODELONA" },
+  { decal: 23, base: 15, kit: "SAN", name: "NEYMAR JR", num: "10", club: "SANTOS SAVINGS" },
 ];
+// Each kit: main colour, second colour, trim line, name colour and edge, number colour, gold edging or not
+const KITS = {
+  POR: { main: "#b8102a", second: "#035c30", line: "#e8b84a", text: "#ffffff", edge: "rgba(0,0,0,0.85)", gold: true },
+  ARG: { main: "#2a78c4", second: "#cfdbe8", line: "#e8b84a", text: "#ffffff", edge: "#0f1d4f", numFill: "#ffffff" },
+  FRA: { main: "#0d1f6e", second: "#ed2939", line: "#e8b84a", text: "#ffffff", edge: "rgba(0,0,0,0.85)" },
+  BRA: { main: "#ffd400", second: "#009c3b", line: "#1b3fa0", text: "#ffffff", edge: "rgba(0,0,0,0.85)" },
+  MUN: { main: "#c70101", second: "#111114", line: "#ffffff", text: "#ffffff", edge: "rgba(0,0,0,0.85)" },
+  RMA: { main: "#e4e6ec", second: "#1d2a5c", line: "#e8b84a", text: "#1d2a5c", edge: "#ffffff", gold: true },
+  BAR: { main: "#a50044", second: "#004d98", line: "#edbb00", text: "#ffffff", edge: "rgba(0,0,0,0.85)", gold: true },
+  PSG: { main: "#0b2a5b", second: "#d6001c", line: "#ffffff", text: "#ffffff", edge: "rgba(0,0,0,0.85)" },
+  SAN: { main: "#e6e7ea", second: "#111114", line: "#111114", text: "#111114", edge: "#ffffff" },
+  GOLD: { main: "#c99a2a", second: "#8a6410", line: "#fff0a8", text: "#ffffff", edge: "rgba(0,0,0,0.85)" },
+};
+for (const W of STAR_WRAPS) { const K = KITS[W.kit]; W.cols = [K.main, K.second, K.line]; }
+const GOLD_WRAP = { kit: "GOLD", name: "", num: "" };                    // the gold leaf wrap covers the whole car too
 const starWrapOf = (decal) => STAR_WRAPS.find((w) => w.decal === decal);
+const starBase = (decal) => { const W = starWrapOf(decal); return W ? starWrapOf(W.base ?? W.decal) : null; };
+const starVersions = (decal) => { const b = starBase(decal); return b ? STAR_WRAPS.filter((w) => (w.base ?? w.decal) === b.decal) : []; };
+const fullWrapOf = (decal) => starWrapOf(decal) || (decal === 11 ? GOLD_WRAP : null);
 const DECALS = ["RACING STRIPES", "FLAMES", "CHECKERED", "LIGHTNING", "BARCODE", "CLEAN", "CAMO", "TIGER", "GALAXY", "PIXELS", "HEX GRID", "GOLD LEAF",
-  ...STAR_WRAPS.map((w) => `${w.name} ${w.num}`)];
+  ...STAR_WRAPS.map((w) => `${w.name} ${w.num}` + (w.base != null ? ` · ${w.club}` : ""))];
 const RIMS = ["STOCK 5-SPOKE", "DISH", "TRI-BLADE", "MESH", "OFF-ROAD"];
 const BOOSTS = [
   { name: "STANDARD FIRE", flame: 0xff7a18, core: 0xffd27a, parts: [0xff7a10, 0xffb030, 0xffe08a] },
@@ -3653,31 +3701,6 @@ function drawWrap(g, w, h, decal, accent, top) {
       const cx = col * R * 1.73 + (row % 2) * R * 0.866, cy = row * R * 1.5;
       g.beginPath(); for (let k = 0; k < 6; k++) { const a = Math.PI / 6 + k * Math.PI / 3; g[k ? "lineTo" : "moveTo"](cx + Math.cos(a) * R * 0.9, cy + Math.sin(a) * R * 0.9); } g.closePath(); g.stroke();
     }
-  } else if (starWrapOf(decal)) {                                          // a star's fan wrap
-    const W = starWrapOf(decal), [c1, c2, c3] = W.cols;
-    g.save();
-    if (top) {
-      g.fillStyle = c1; g.fillRect(w * 0.12, 0, w * 0.76, h);
-      if (W.code === "ARG") { g.fillStyle = c2; for (let x = 0.12; x < 0.88; x += 0.152) g.fillRect(w * (x + 0.076), 0, w * 0.076, h); }
-      else { g.fillStyle = c2; g.fillRect(w * 0.12, 0, w * 0.14, h); g.fillRect(w * 0.74, 0, w * 0.14, h); }
-      g.fillStyle = c3; g.fillRect(w * 0.26, 0, w * 0.025, h); g.fillRect(w * 0.715, 0, w * 0.025, h);
-      g.translate(w / 2, h * 0.56); g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round";
-      g.font = `italic 900 ${W.num.length > 1 ? 120 : 150}px ${FONT}`; g.lineWidth = 12; g.strokeStyle = "rgba(0,0,0,0.75)"; g.strokeText(W.num, 0, 0);
-      g.fillStyle = W.code === "ARG" ? "#13235b" : "#ffffff"; g.fillText(W.num, 0, 0);
-      g.rotate(-Math.PI / 2); g.font = `italic 900 ${W.name.length > 7 ? 30 : 38}px ${FONT}`; g.lineWidth = 7;
-      g.strokeText(W.name, h * 0.3, 0); g.fillStyle = "#ffffff"; g.fillText(W.name, h * 0.3, 0);
-    } else {
-      g.fillStyle = c1; g.fillRect(0, 0, w, h * 0.7);
-      if (W.code === "ARG") { g.fillStyle = c2; for (let x = 0; x < w; x += 64) g.fillRect(x + 32, 0, 32, h * 0.7); }
-      else { g.fillStyle = c2; g.beginPath(); g.moveTo(w * 0.62, 0); g.lineTo(w, 0); g.lineTo(w, h * 0.7); g.lineTo(w * 0.5, h * 0.7); g.closePath(); g.fill(); }
-      g.fillStyle = c3; g.fillRect(0, h * 0.64, w, h * 0.04);
-      g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round"; g.strokeStyle = "rgba(0,0,0,0.8)";
-      g.font = `italic 900 ${W.name.length > 7 ? 40 : 52}px ${FONT}`; g.lineWidth = 8;
-      g.strokeText(W.name, w * 0.36, h * 0.34); g.fillStyle = "#ffffff"; g.fillText(W.name, w * 0.36, h * 0.34);
-      g.font = `italic 900 84px ${FONT}`; g.lineWidth = 10;
-      g.strokeText(W.num, w * 0.8, h * 0.36); g.fillStyle = W.code === "ARG" ? "#13235b" : "#ffffff"; g.fillText(W.num, w * 0.8, h * 0.36);
-    }
-    g.restore();
   } else if (decal === 11) {                                               // gold leaf
     const gr = g.createLinearGradient(0, 0, w, h * 0.6);
     gr.addColorStop(0, "#8a6410"); gr.addColorStop(0.3, "#ffd86a"); gr.addColorStop(0.5, "#b8860b"); gr.addColorStop(0.7, "#fff0a8"); gr.addColorStop(1, "#9a7012");
@@ -3688,7 +3711,7 @@ function drawWrap(g, w, h, decal, accent, top) {
   g.restore();
 }
 const carMatCache = new Map();
-// ---- Star wraps: drawn over every panel of the car ----
+// ---- Full wraps (the star wraps and gold leaf): drawn over every panel of the car ----
 function outlined(g, text, x, y, size, fill, edge, gold) {
   g.font = `italic 900 ${size}px ${FONT}`; g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round";
   if (gold) { g.lineWidth = size * 0.26; g.strokeStyle = "rgba(0,0,0,0.85)"; g.strokeText(text, x, y); g.lineWidth = size * 0.13; g.strokeStyle = gold; g.strokeText(text, x, y); }
@@ -3701,69 +3724,111 @@ function wrapSheen(g, w, h) {                                              // gl
   g.fillStyle = "rgba(255,255,255,0.035)"; for (let y = 0; y < h; y += 8) for (let x = (y / 8) % 2 ? 4 : 0; x < w; x += 8) g.fillRect(x, y, 4, 4);
 }
 const GOLD = "#e8b84a";
-function starWrapSide(g, w, h, W) {
-  const [c1, c2, c3] = W.cols;
-  if (W.code === "POR") {
-    // Portugal: deep red body, a green nose section, a gold double chevron between them, gold pinstripes
-    const red = g.createLinearGradient(0, 0, w, 0); red.addColorStop(0, "#8e0b1f"); red.addColorStop(1, "#d3142f"); g.fillStyle = red; g.fillRect(0, 0, w, h);
-    g.fillStyle = "#035c30"; g.beginPath(); g.moveTo(w, 0); g.lineTo(w * 0.7, 0); g.lineTo(w * 0.64, h * 0.5); g.lineTo(w * 0.7, h); g.lineTo(w, h); g.closePath(); g.fill();
-    g.strokeStyle = GOLD; g.lineWidth = 14; g.lineJoin = "miter";
-    for (const dx of [0, 0.04]) { g.beginPath(); g.moveTo(w * (0.68 - dx), -4); g.lineTo(w * (0.62 - dx), h * 0.5); g.lineTo(w * (0.68 - dx), h + 4); g.stroke(); }
-    g.fillStyle = GOLD; g.fillRect(0, h * 0.86, w, 6); g.fillRect(0, h * 0.06, w, 4);
-    g.globalAlpha = 0.12; g.fillStyle = "#ffffff";                           // little stars along the red
-    for (let k = 0; k < 7; k++) star5(g, w * (0.08 + k * 0.07), h * (k % 2 ? 0.2 : 0.78), 10);
-    g.globalAlpha = 1;
-  } else if (W.code === "ARG") {
-    g.fillStyle = "#2a78c4"; g.fillRect(0, 0, w, h);
-    g.fillStyle = "#dfe8f2"; for (let x = 40; x < w; x += 150) g.fillRect(x, 0, 56, h);
-    g.fillStyle = GOLD; g.fillRect(0, h * 0.86, w, 6);
-    g.save(); g.translate(w * 0.13, h * 0.5); g.fillStyle = c3;                 // a golden sun
-    for (let k = 0; k < 16; k++) { g.rotate(Math.PI / 8); g.beginPath(); g.moveTo(-6, 34); g.lineTo(0, 64); g.lineTo(6, 34); g.fill(); }
-    g.beginPath(); g.arc(0, 0, 32, 0, Math.PI * 2); g.fill(); g.restore();
-  } else if (W.code === "FRA") {
-    g.fillStyle = "#0d1f6e"; g.fillRect(0, 0, w, h);
-    for (const [col, off] of [["#ffffff", 0], [c2, 70]]) { g.fillStyle = col; g.beginPath(); g.moveTo(w * 0.05 + off, h); g.lineTo(w * 0.05 + off + 70, h); g.lineTo(w * 0.2 + off + 70, 0); g.lineTo(w * 0.2 + off, 0); g.closePath(); g.fill(); }
-    g.fillStyle = GOLD; g.fillRect(0, h * 0.86, w, 6);
-  } else {                                                                 // Brazil
-    g.fillStyle = "#ffd400"; g.fillRect(0, 0, w, h);
-    g.fillStyle = c2; g.beginPath(); g.moveTo(0, h * 0.55); g.quadraticCurveTo(w * 0.5, h * 0.25, w, h * 0.62); g.lineTo(w, h); g.lineTo(0, h); g.closePath(); g.fill();
-    g.strokeStyle = c3; g.lineWidth = 8; g.beginPath(); g.moveTo(0, h * 0.52); g.quadraticCurveTo(w * 0.5, h * 0.22, w, h * 0.59); g.stroke();
-  }
-  wrapSheen(g, w, h);
-  const dark = W.code === "ARG" ? "#13235b" : "#ffffff";
-  // name and number together on the door, between the wheel arches
-  const ns = W.name.length > 7 ? 48 : 58, nm = "#ffffff", ne = W.code === "ARG" ? "#0f1d4f" : "rgba(0,0,0,0.85)";
-  g.font = `italic 900 ${ns}px ${FONT}`; const nw = g.measureText(W.name).width; g.font = `italic 900 84px ${FONT}`; const mw = g.measureText(W.num).width;
-  const x0 = w / 2 - (nw + 22 + mw) / 2;                                   // centred exactly, so neither wheel arch covers it
-  outlined(g, W.name, x0 + nw / 2, h * 0.42, ns, nm, ne, W.code === "POR" ? GOLD : null);
-  outlined(g, W.num, x0 + nw + 22 + mw / 2, h * 0.42, 84, dark, ne, W.code === "POR" ? GOLD : null);
-  g.fillStyle = "#111218"; g.fillRect(0, h * 0.95, w, h * 0.05);              // a thin black sill
-}
 function star5(g, x, y, r) {
   g.beginPath();
   for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + (k * Math.PI) / 5, rr = k % 2 ? r * 0.45 : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
   g.closePath(); g.fill();
 }
+function goldLeaf(g, w, h, seed) {                                         // brushed gold with flakes of leaf
+  const gr = g.createLinearGradient(0, 0, w, h);
+  gr.addColorStop(0, "#7a560c"); gr.addColorStop(0.25, "#ffd86a"); gr.addColorStop(0.45, "#b8860b"); gr.addColorStop(0.65, "#fff0a8"); gr.addColorStop(0.85, "#c99a2a"); gr.addColorStop(1, "#8a6410");
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  let r = seed; const rnd = () => ((r = (r * 16807) % 2147483647) / 2147483647);
+  for (let k = 0; k < 220; k++) {
+    const x = rnd() * w, y = rnd() * h, s = 6 + rnd() * 26;
+    g.fillStyle = rnd() < 0.5 ? `rgba(255,240,170,${0.25 + rnd() * 0.35})` : `rgba(120,80,10,${0.15 + rnd() * 0.25})`;
+    g.beginPath(); g.moveTo(x, y); for (let q = 0; q < 5; q++) g.lineTo(x + (rnd() - 0.5) * s, y + (rnd() - 0.5) * s); g.closePath(); g.fill();
+  }
+  g.fillStyle = "rgba(255,255,255,0.05)"; for (let y = 0; y < h; y += 3) g.fillRect(0, y, w, 1);   // brushed lines
+}
+function starWrapSide(g, w, h, W) {
+  const K = KITS[W.kit], kit = W.kit;
+  if (kit === "POR") {
+    // deep red, a green nose section, a gold double chevron between them, gold pinstripes
+    const red = g.createLinearGradient(0, 0, w, 0); red.addColorStop(0, "#8e0b1f"); red.addColorStop(1, "#d3142f"); g.fillStyle = red; g.fillRect(0, 0, w, h);
+    g.fillStyle = "#035c30"; g.beginPath(); g.moveTo(w, 0); g.lineTo(w * 0.7, 0); g.lineTo(w * 0.64, h * 0.5); g.lineTo(w * 0.7, h); g.lineTo(w, h); g.closePath(); g.fill();
+    g.strokeStyle = GOLD; g.lineWidth = 14; g.lineJoin = "miter";
+    for (const dx of [0, 0.04]) { g.beginPath(); g.moveTo(w * (0.68 - dx), -4); g.lineTo(w * (0.62 - dx), h * 0.5); g.lineTo(w * (0.68 - dx), h + 4); g.stroke(); }
+    g.fillStyle = GOLD; g.fillRect(0, h * 0.86, w, 6); g.fillRect(0, h * 0.06, w, 4);
+    g.globalAlpha = 0.12; g.fillStyle = "#ffffff"; for (let k = 0; k < 7; k++) star5(g, w * (0.08 + k * 0.07), h * (k % 2 ? 0.2 : 0.78), 10); g.globalAlpha = 1;
+  } else if (kit === "ARG") {
+    g.fillStyle = K.main; g.fillRect(0, 0, w, h);
+    g.fillStyle = K.second; for (let x = 40; x < w; x += 150) g.fillRect(x, 0, 56, h);
+    g.fillStyle = GOLD; g.fillRect(0, h * 0.86, w, 6);
+    g.save(); g.translate(w * 0.13, h * 0.5); g.fillStyle = "#f6b40e";        // a golden sun
+    for (let k = 0; k < 16; k++) { g.rotate(Math.PI / 8); g.beginPath(); g.moveTo(-6, 34); g.lineTo(0, 64); g.lineTo(6, 34); g.fill(); }
+    g.beginPath(); g.arc(0, 0, 32, 0, Math.PI * 2); g.fill(); g.restore();
+  } else if (kit === "FRA") {
+    g.fillStyle = K.main; g.fillRect(0, 0, w, h);
+    for (const [col, off] of [["#ffffff", 0], [K.second, 70]]) { g.fillStyle = col; g.beginPath(); g.moveTo(w * 0.05 + off, h); g.lineTo(w * 0.05 + off + 70, h); g.lineTo(w * 0.2 + off + 70, 0); g.lineTo(w * 0.2 + off, 0); g.closePath(); g.fill(); }
+    g.fillStyle = GOLD; g.fillRect(0, h * 0.86, w, 6);
+  } else if (kit === "BRA") {
+    g.fillStyle = K.main; g.fillRect(0, 0, w, h);
+    g.fillStyle = K.second; g.beginPath(); g.moveTo(0, h * 0.55); g.quadraticCurveTo(w * 0.5, h * 0.25, w, h * 0.62); g.lineTo(w, h); g.lineTo(0, h); g.closePath(); g.fill();
+    g.strokeStyle = K.line; g.lineWidth = 8; g.beginPath(); g.moveTo(0, h * 0.52); g.quadraticCurveTo(w * 0.5, h * 0.22, w, h * 0.59); g.stroke();
+  } else if (kit === "MUN") {                                               // red, with a black lower half and white pinstripes
+    const red = g.createLinearGradient(0, 0, w, 0); red.addColorStop(0, "#9e0000"); red.addColorStop(1, "#e00a0a"); g.fillStyle = red; g.fillRect(0, 0, w, h);
+    g.fillStyle = K.second; g.beginPath(); g.moveTo(0, h * 0.66); g.lineTo(w, h * 0.58); g.lineTo(w, h); g.lineTo(0, h); g.closePath(); g.fill();
+    g.strokeStyle = "#ffffff"; g.lineWidth = 6; g.beginPath(); g.moveTo(0, h * 0.62); g.lineTo(w, h * 0.54); g.stroke();
+    g.fillStyle = "#ffffff"; g.fillRect(0, h * 0.06, w, 4);
+  } else if (kit === "RMA") {                                               // all white, navy sill, gold pinstripes
+    const wt = g.createLinearGradient(0, 0, 0, h); wt.addColorStop(0, "#ffffff"); wt.addColorStop(1, "#dcdde3"); g.fillStyle = wt; g.fillRect(0, 0, w, h);
+    g.fillStyle = K.second; g.fillRect(0, h * 0.74, w, h * 0.2);
+    g.fillStyle = GOLD; g.fillRect(0, h * 0.71, w, 6); g.fillRect(0, h * 0.06, w, 4);
+    g.strokeStyle = GOLD; g.lineWidth = 5; for (const x of [0.2, 0.23]) { g.beginPath(); g.moveTo(w * x, h * 0.7); g.lineTo(w * (x + 0.06), 0); g.stroke(); }
+  } else if (kit === "BAR") {                                               // claret and blue stripes
+    for (let x = 0, k = 0; x < w; x += 96, k++) { g.fillStyle = k % 2 ? K.second : K.main; g.fillRect(x, 0, 96, h); }
+    g.fillStyle = K.line; g.fillRect(0, h * 0.86, w, 6); g.fillRect(0, h * 0.06, w, 4);
+  } else if (kit === "PSG") {                                               // navy with a red band edged in white
+    g.fillStyle = K.main; g.fillRect(0, 0, w, h);
+    g.fillStyle = "#ffffff"; g.fillRect(w * 0.12, 0, 150, h); g.fillStyle = K.second; g.fillRect(w * 0.12 + 14, 0, 122, h);
+    g.fillStyle = K.second; g.fillRect(0, h * 0.86, w, 6);
+  } else if (kit === "SAN") {                                               // white with fine black pinstripes
+    g.fillStyle = K.main; g.fillRect(0, 0, w, h);
+    g.fillStyle = "rgba(17,17,20,0.5)"; for (let x = 24; x < w; x += 48) g.fillRect(x, 0, 3, h * 0.84);
+    g.fillStyle = K.second; g.fillRect(0, h * 0.84, w, h * 0.1);
+  } else if (kit === "GOLD") goldLeaf(g, w, h, 7);
+  wrapSheen(g, w, h);
+  if (W.name) {                                                            // name and number centred on the door
+    const ns = W.name.length > 7 ? 48 : 58, gold = K.gold ? (kit === "BAR" ? K.line : GOLD) : null;
+    g.font = `italic 900 ${ns}px ${FONT}`; const nw = g.measureText(W.name).width; g.font = `italic 900 84px ${FONT}`; const mw = g.measureText(W.num).width;
+    const x0 = w / 2 - (nw + 22 + mw) / 2;
+    outlined(g, W.name, x0 + nw / 2, h * 0.42, ns, K.text, K.edge, gold);
+    outlined(g, W.num, x0 + nw + 22 + mw / 2, h * 0.42, 84, K.numFill || K.text, K.edge, gold);
+  }
+  g.fillStyle = "#111218"; g.fillRect(0, h * 0.95, w, h * 0.05);              // a thin black sill
+}
 function starWrapTop(g, w, h, W) {
-  const [c1, c2, c3] = W.cols;
-  if (W.code === "POR") {
+  const K = KITS[W.kit], kit = W.kit;
+  if (kit === "POR") {
     g.fillStyle = "#b8102a"; g.fillRect(0, 0, w, h); g.fillStyle = "#035c30"; g.fillRect(0, h * 0.62, w, h * 0.38);
     g.fillStyle = GOLD; g.fillRect(0, h * 0.6, w, 10); g.fillRect(w * 0.14, 0, 8, h); g.fillRect(w * 0.84, 0, 8, h);
-  } else if (W.code === "ARG") { g.fillStyle = "#dfe8f2"; g.fillRect(0, 0, w, h); g.fillStyle = "#2a78c4"; g.fillRect(0, 0, w * 0.3, h); g.fillRect(w * 0.7, 0, w * 0.3, h); }
-  else if (W.code === "FRA") { g.fillStyle = "#0d1f6e"; g.fillRect(0, 0, w, h); g.fillStyle = "#ffffff"; g.fillRect(w * 0.4, 0, w * 0.1, h); g.fillStyle = c2; g.fillRect(w * 0.5, 0, w * 0.1, h); }
-  else { g.fillStyle = "#ffd400"; g.fillRect(0, 0, w, h); g.fillStyle = c2; g.fillRect(0, 0, w * 0.18, h); g.fillRect(w * 0.82, 0, w * 0.18, h); g.fillStyle = c3; g.fillRect(w * 0.18, 0, 8, h); g.fillRect(w * 0.82 - 8, 0, 8, h); }
+  } else if (kit === "ARG") { g.fillStyle = K.second; g.fillRect(0, 0, w, h); g.fillStyle = K.main; g.fillRect(0, 0, w * 0.3, h); g.fillRect(w * 0.7, 0, w * 0.3, h); }
+  else if (kit === "FRA") { g.fillStyle = K.main; g.fillRect(0, 0, w, h); g.fillStyle = "#ffffff"; g.fillRect(w * 0.4, 0, w * 0.1, h); g.fillStyle = K.second; g.fillRect(w * 0.5, 0, w * 0.1, h); }
+  else if (kit === "BRA") { g.fillStyle = K.main; g.fillRect(0, 0, w, h); g.fillStyle = K.second; g.fillRect(0, 0, w * 0.18, h); g.fillRect(w * 0.82, 0, w * 0.18, h); g.fillStyle = K.line; g.fillRect(w * 0.18, 0, 8, h); g.fillRect(w * 0.82 - 8, 0, 8, h); }
+  else if (kit === "MUN") { g.fillStyle = K.main; g.fillRect(0, 0, w, h); g.fillStyle = K.second; g.fillRect(0, 0, w * 0.12, h); g.fillRect(w * 0.88, 0, w * 0.12, h); g.fillStyle = "#ffffff"; g.fillRect(w * 0.12, 0, 6, h); g.fillRect(w * 0.88 - 6, 0, 6, h); }
+  else if (kit === "RMA") { g.fillStyle = K.main; g.fillRect(0, 0, w, h); g.fillStyle = K.second; g.fillRect(w * 0.44, 0, w * 0.12, h); g.fillStyle = GOLD; g.fillRect(w * 0.42, 0, 8, h); g.fillRect(w * 0.58 - 8, 0, 8, h); }
+  else if (kit === "BAR") { for (let x = 0, k = 0; x < w; x += w / 7, k++) { g.fillStyle = k % 2 ? K.second : K.main; g.fillRect(x, 0, w / 7 + 1, h); } }
+  else if (kit === "PSG") { g.fillStyle = K.main; g.fillRect(0, 0, w, h); g.fillStyle = "#ffffff"; g.fillRect(w * 0.36, 0, w * 0.28, h); g.fillStyle = K.second; g.fillRect(w * 0.39, 0, w * 0.22, h); }
+  else if (kit === "SAN") { g.fillStyle = K.main; g.fillRect(0, 0, w, h); g.fillStyle = K.second; g.fillRect(w * 0.1, 0, 8, h); g.fillRect(w * 0.9 - 8, 0, 8, h); }
+  else if (kit === "GOLD") goldLeaf(g, w, h, 11);
   wrapSheen(g, w, h);
-  g.save(); g.translate(w / 2, h * 0.42);
-  outlined(g, W.num, 0, 0, W.num.length > 1 ? 230 : 300, W.code === "ARG" ? "#13235b" : "#ffffff", W.code === "ARG" ? "#ffffff" : "rgba(0,0,0,0.85)", W.code === "POR" ? GOLD : null);
-  g.rotate(-Math.PI / 2); outlined(g, W.name, -h * 0.3, 0, W.name.length > 7 ? 64 : 80, "#ffffff", "rgba(0,0,0,0.85)", W.code === "POR" ? GOLD : null);
-  g.restore();
+  if (W.name) {
+    const gold = K.gold ? (kit === "BAR" ? K.line : GOLD) : null;
+    g.save(); g.translate(w / 2, h * 0.42);
+    outlined(g, W.num, 0, 0, W.num.length > 1 ? 230 : 300, K.numFill || K.text, K.edge, gold);
+    g.rotate(-Math.PI / 2); outlined(g, W.name, -h * 0.3, 0, W.name.length > 7 ? 64 : 80, K.text, K.edge, gold);
+    g.restore();
+  }
 }
 function starWrapEnd(g, w, h, W, back) {                                    // nose and tail
-  const [c1, c2] = W.cols;
-  g.fillStyle = W.code === "POR" ? (back ? "#b8102a" : "#035c30") : W.code === "ARG" ? "#2a78c4" : W.code === "FRA" ? "#0d1f6e" : back ? c2 : "#ffd400"; g.fillRect(0, 0, w, h);
-  g.fillStyle = GOLD; g.fillRect(0, h * 0.08, w, 6); g.fillRect(0, h * 0.86, w, 6);
+  const K = KITS[W.kit], kit = W.kit;
+  if (kit === "GOLD") goldLeaf(g, w, h, back ? 5 : 3);
+  else if (kit === "BAR") { for (let x = 0, k = 0; x < w; x += 64, k++) { g.fillStyle = k % 2 ? K.second : K.main; g.fillRect(x, 0, 64, h); } }
+  else { g.fillStyle = kit === "POR" ? (back ? "#b8102a" : "#035c30") : kit === "BRA" && back ? K.second : K.main; g.fillRect(0, 0, w, h); }
+  g.fillStyle = kit === "GOLD" ? "#fff0a8" : K.line; g.fillRect(0, h * 0.08, w, 6); g.fillRect(0, h * 0.86, w, 6);
   wrapSheen(g, w, h);
-  if (back) { g.save(); g.translate(w, 0); g.scale(-1, 1); outlined(g, W.num, w / 2, h * 0.42, 130, W.code === "ARG" ? "#13235b" : "#ffffff", W.code === "ARG" ? "#ffffff" : "rgba(0,0,0,0.85)", W.code === "POR" ? GOLD : null); g.restore(); }
+  if (back && W.name) { g.save(); g.translate(w, 0); g.scale(-1, 1); outlined(g, W.num, w / 2, h * 0.42, 130, K.numFill || K.text, K.edge, K.gold ? GOLD : null); g.restore(); }
 }
 function carMats(team, look) {
   const key = team + ":" + look[1] + ":" + look[5];
@@ -3798,17 +3863,19 @@ function carMats(team, look) {
     g.fillStyle = "#16171d"; g.fillRect(0, h * 0.9, w, h * 0.1);
   }) });
   const topM = paintMat({ map: top }), plain = paintMat({ color: paintHex });
-  const star = starWrapOf(decal);
-  if (star) {                                                              // a star wrap covers the whole car
+  const star = fullWrapOf(decal);
+  if (star) {                                                              // a star wrap (or gold leaf) covers the whole car
     const W = star, sideT = (mirror) => canvasTex(1024, 256, (g, w, h) => {
       if (mirror) { g.translate(w, 0); g.scale(-1, 1); }
       starWrapSide(g, w, h, W, mirror);
     });
+    const metal = W.kit === "GOLD" ? { metalness: 0.8, roughness: 0.26, envMapIntensity: 1.1 } : {};   // gold leaf is properly metallic
+    const pm = (o) => paintMat(Object.assign(o, metal));
     const mats = {
-      body: [paintMat({ map: sideT(true), emissive: glow, emissiveMap: sideGlow }), paintMat({ map: sideT(false), emissive: glow, emissiveMap: sideGlow }),
-        paintMat({ map: canvasTex(512, 1024, (g, w, h) => starWrapTop(g, w, h, W)) }), MAT.dark,
-        paintMat({ map: canvasTex(512, 256, (g, w, h) => starWrapEnd(g, w, h, W, false)) }), paintMat({ map: canvasTex(512, 256, (g, w, h) => starWrapEnd(g, w, h, W, true)) })],
-      trim: paintMat({ color: W.code === "ARG" ? 0x2a78c4 : new THREE.Color(W.cols[1]).getHex() }),
+      body: [pm({ map: sideT(true), emissive: glow, emissiveMap: sideGlow }), pm({ map: sideT(false), emissive: glow, emissiveMap: sideGlow }),
+        pm({ map: canvasTex(512, 1024, (g, w, h) => starWrapTop(g, w, h, W)) }), MAT.dark,
+        pm({ map: canvasTex(512, 256, (g, w, h) => starWrapEnd(g, w, h, W, false)) }), pm({ map: canvasTex(512, 256, (g, w, h) => starWrapEnd(g, w, h, W, true)) })],
+      trim: pm({ color: new THREE.Color(W.kit === "GOLD" ? "#d8a838" : W.kit === "RMA" || W.kit === "SAN" ? KITS[W.kit].second : KITS[W.kit].main).getHex() }),
       accent: glowMat(acc === 0x22232a ? (team ? 0xff9a50 : 0x7ab4ff) : acc, GLOW * 0.85),
       rimAccent: std(acc, { metalness: 0.6, roughness: 0.35 }),
       star: true,
@@ -4271,7 +4338,8 @@ function padUi() {
   const any = (b) => pads.list.some((g) => pressed(g, b));
   const overOpen = !$("over").hidden, pauseOpen = !$("pause").hidden, arenaOpen = !$("arenapick").hidden, voteOpen = !$("vote").hidden;
   const ctrlOpen = !$("controls").hidden;
-  const pickOpen = !$("ballpick").hidden || arenaOpen || voteOpen || ctrlOpen;
+  const cfgOpen = !$("wrapcfg").hidden;
+  const pickOpen = !$("ballpick").hidden || arenaOpen || voteOpen || ctrlOpen || cfgOpen;
   if (state.screen === "match" && !overOpen && !pauseOpen && !pickOpen) {
     if (replay.active && any(PB.A)) { skipReplay(); return; }
     if (any(PB.START)) act("pause");
@@ -4289,7 +4357,7 @@ function padUi() {
     if (any(PB.A) || any(PB.B) || any(PB.START)) act("controls");
     return;
   }
-  const root = arenaOpen ? $("arenapick") : voteOpen ? $("vote") : pickOpen ? $("ballpick") : overOpen ? $("over") : pauseOpen ? $("pause") : $(state.screen === "match" ? "pause" : state.screen);
+  const root = cfgOpen ? $("wrapcfg") : arenaOpen ? $("arenapick") : voteOpen ? $("vote") : pickOpen ? $("ballpick") : overOpen ? $("over") : pauseOpen ? $("pause") : $(state.screen === "match" ? "pause" : state.screen);
   if (!root) return;
   let dir = 0;
   for (const g of pads.list) {
@@ -4803,13 +4871,16 @@ const SHOP = [
 // The copy shared as a Claude artifact also sells the star wraps, free, so you can pick any of them
 let SHOP_SECTIONS = [];
 function shopExtras() {
-  if (PICK_SPECIALS && !SHOP.some((it) => it.star)) for (const W of STAR_WRAPS) SHOP.push({ part: 1, idx: W.decal, cost: 0, star: true });
+  if (PICK_SPECIALS && !SHOP.some((it) => it.star)) for (const W of STAR_WRAPS) if (W.base == null) SHOP.push({ part: 1, idx: W.decal, cost: 0, star: true });
   SHOP_SECTIONS = [["RANK BOOSTS", (it) => it.boost], ...(PICK_SPECIALS ? [["STAR WRAPS", (it) => it.star]] : []), ["WRAPS", (it) => it.part === 1 && !it.star], ["BOOST TRAILS", (it) => it.part === 3], ["TOPPERS", (it) => it.part === 4]];
 }
 shopExtras();
 const itemKey = (part, idx) => part + ":" + idx;
 const priceOf = (part, idx) => { const it = SHOP.find((x) => x.part === part && x.idx === idx); return it ? it.cost : 0; };
-function isOwned(part, idx) { return idx < FREE_LOOK[part] || state.owned.includes(itemKey(part, idx)); }
+function isOwned(part, idx) {
+  if (part === 1 && starWrapOf(idx) && starWrapOf(idx).base != null) idx = starWrapOf(idx).base;   // a club version comes with the star's wrap
+  return idx < FREE_LOOK[part] || state.owned.includes(itemKey(part, idx));
+}
 function matchCoins(score, won, ranked) {
   const c = (ranked ? 25 : 10) + (won ? (ranked ? 25 : 10) : 0) + Math.floor(score / 20);
   state.nuts += c; persist(); updateCoins();
@@ -4829,15 +4900,21 @@ function renderShop() {
       if (it.boost) { sw.className += " boostsw"; sw.textContent = "2X"; } else { sw.setAttribute("style", swatchStyle(it.part, it.idx)); if (it.part === 4) sw.textContent = SWATCH_GLYPH[4][it.idx]; }
       const txt = document.createElement("div");
       const b = document.createElement("b"); b.textContent = it.boost ? it.name : LOOK_PARTS[it.part].names[it.idx];
-      const sm = document.createElement("small"); sm.textContent = it.boost ? it.desc : it.star ? `${CUP_COMPS[0].teams.find((t) => t[1] === starWrapOf(it.idx).code)[0]} star wrap · tap to preview on your car` : ["", "Wrap", "", "Boost trail", "Topper"][it.part] + " · tap to preview on your car";
+      const sm = document.createElement("small"); sm.textContent = it.boost ? it.desc : it.star ? `Star wrap · ${starVersions(it.idx).length} versions · tap to preview` : ["", "Wrap", "", "Boost trail", "Topper"][it.part] + " · tap to preview on your car";
       txt.append(b, sm);
       const btn = document.createElement("button"); btn.type = "button"; btn.className = "btn primary";
-      const owned = !it.boost && isOwned(it.part, it.idx), equipped = owned && state.look[it.part] === it.idx;
+      const owned = !it.boost && isOwned(it.part, it.idx), equipped = owned && (state.look[it.part] === it.idx || (it.star && starBase(state.look[1]) === starWrapOf(it.idx)));
       if (equipped) { btn.textContent = "EQUIPPED"; btn.disabled = true; }
       else if (owned) { btn.textContent = "EQUIP"; btn.addEventListener("click", (e) => { e.stopPropagation(); garage.preview = null; equip(it.part, it.idx); renderShop(); }); }
       else if (it.star) { btn.textContent = "GET FREE"; btn.addEventListener("click", (e) => { e.stopPropagation(); buy(it); }); }
       else { btn.innerHTML = NUT + " " + it.cost; btn.disabled = state.nuts < it.cost; btn.addEventListener("click", (e) => { e.stopPropagation(); buy(it); }); }
       if (!it.boost) row.addEventListener("click", () => { garage.preview = state.look.slice(); garage.preview[it.part] = it.idx; garage.boostPreview = it.part === 3; });
+      if (it.star) {                                       // the star wraps can be configured: country or club versions
+        const cfg = document.createElement("button"); cfg.type = "button"; cfg.className = "btn cfg-btn"; cfg.textContent = "CONFIGURE";
+        cfg.addEventListener("click", (e) => { e.stopPropagation(); openWrapCfg(it.idx); });
+        const bx = document.createElement("div"); bx.className = "shop-btns"; bx.append(cfg, btn);
+        row.append(sw, txt, bx); box.appendChild(row); continue;
+      }
       row.append(sw, txt, btn); box.appendChild(row);
     }
   }
@@ -5250,6 +5327,7 @@ function show(screen) {
   $("online").hidden = screen !== "online";
   $("cup").hidden = screen !== "cup";
   $("controls").hidden = true;
+  $("wrapcfg").hidden = true;
   hud.hidden = screen !== "match";
   $("pause").hidden = !(screen === "match" && state.paused);
   $("over").hidden = true; $("vote").hidden = true; $("queue").hidden = true; $("over-rank").hidden = true;
@@ -5596,7 +5674,7 @@ function swatchStyle(part, i) {
       `repeating-linear-gradient(100deg, ${team} 0 9px, #111 9px 13px)`, `radial-gradient(circle at 70% 40%, ${acc}, #1e0a46 60%)`,
       `repeating-conic-gradient(${acc} 0 25%, #1a1733 0 50%, ${team} 0 75%, ${team} 0) 0 0 / 10px 10px`, `repeating-linear-gradient(60deg, ${team} 0 7px, ${acc} 7px 9px)`,
       `linear-gradient(135deg, #8a6410, #ffd86a 40%, #b8860b 60%, #fff0a8)`,
-      ...STAR_WRAPS.map((W) => `linear-gradient(120deg, ${W.cols[0]} 55%, ${W.cols[1]} 55%)`)][i];
+      ...STAR_WRAPS.map((W) => W.kit === "BAR" ? `repeating-linear-gradient(90deg, ${W.cols[0]} 0 8px, ${W.cols[1]} 8px 16px)` : W.kit === "PSG" ? `linear-gradient(90deg, ${W.cols[0]} 38%, #fff 38% 42%, ${W.cols[1]} 42% 58%, #fff 58% 62%, ${W.cols[0]} 62%)` : `linear-gradient(120deg, ${W.cols[0]} 55%, ${W.cols[1]} 55%)`)][i];
     return `background:${pat}`;
   }
   return `background:linear-gradient(135deg, ${team}, #1a1733)`;
@@ -5612,19 +5690,52 @@ function renderGarageUI() {
   });
   items.textContent = "";
   LOOK_PARTS[tab].names.forEach((nm, i) => {
+    if (tab === 1 && starWrapOf(i) && starWrapOf(i).base != null) return;    // club versions live under Configure
     const b = document.createElement("button"); b.type = "button"; b.className = "item"; b.role = "option";
-    b.setAttribute("aria-selected", String(state.look[tab] === i));
+    const worn = tab === 1 && starWrapOf(i) ? starBase(state.look[1]) === starWrapOf(i) : state.look[tab] === i;
+    b.setAttribute("aria-selected", String(worn));
+    if (worn && tab === 1 && starWrapOf(state.look[1])) nm = DECALS[state.look[1]];
     const sw = document.createElement("span"); sw.className = "sw"; sw.setAttribute("style", swatchStyle(tab, i));
     const g = SWATCH_GLYPH[tab], star = tab === 1 && starWrapOf(i); sw.textContent = star ? star.num : Array.isArray(g) ? g[i] : tab === 0 ? String(i + 1) : tab === 2 ? "◎" : "";
     if (star) sw.classList.add("starsw");
     const label = document.createElement("span"); label.textContent = nm;
     b.append(sw, label);
-    if (!isOwned(tab, i)) { b.classList.add("locked"); const pr = document.createElement("span"); pr.className = "price"; if (star) pr.textContent = "CUP PRIZE"; else pr.innerHTML = NUT + " " + priceOf(tab, i); b.appendChild(pr); }
+    if (!isOwned(tab, i)) { b.classList.add("locked"); const pr = document.createElement("span"); pr.className = "price"; if (star) pr.textContent = PICK_SPECIALS ? "FREE IN SHOP" : "CUP PRIZE"; else pr.innerHTML = NUT + " " + priceOf(tab, i); b.appendChild(pr); }
     b.addEventListener("click", () => equip(tab, i));
+    if (star) {
+      const cfg = document.createElement("span"); cfg.className = "cfg-chip"; cfg.textContent = "CONFIGURE"; cfg.setAttribute("role", "button"); cfg.tabIndex = -1;
+      cfg.addEventListener("click", (e) => { e.stopPropagation(); openWrapCfg(i); });
+      b.appendChild(cfg);
+    }
     items.appendChild(b);
   });
   $("team-btn").textContent = "PREVIEW: " + (garage.team ? "ORANGE" : "BLUE");
 }
+// The wrap configurator: every version of a star's wrap (country and clubs)
+function openWrapCfg(decal) {
+  const base = starBase(decal); if (!base) return;
+  state.cfgFor = base.decal;
+  $("cfg-title").textContent = `${base.name} WRAP`;
+  const list = $("cfg-list"); list.textContent = "";
+  const owned = isOwned(1, base.decal);
+  $("cfg-sub").textContent = owned ? "Pick a version. Tap one to put it on." : "Tap a version to preview it. You need the wrap to keep it.";
+  for (const W of starVersions(base.decal)) {
+    const b = document.createElement("button"); b.type = "button"; b.className = "cfg-opt";
+    b.setAttribute("aria-pressed", String(state.look[1] === W.decal));
+    const sw = document.createElement("span"); sw.className = "sw starsw"; sw.setAttribute("style", swatchStyle(1, W.decal)); sw.textContent = W.num;
+    const t = document.createElement("span"); t.innerHTML = `<b></b><small></small>`; t.querySelector("b").textContent = `${W.name} ${W.num}`; t.querySelector("small").textContent = W.club;
+    b.append(sw, t);
+    b.addEventListener("click", () => {
+      audio();
+      if (isOwned(1, W.decal)) { garage.preview = null; state.look[1] = W.decal; persist(); updatePlate(); sfx.pad(false); }
+      else { garage.preview = state.look.slice(); garage.preview[1] = W.decal; }
+      openWrapCfg(W.decal); if (state.screen === "garage") renderGarageUI(); else renderShop();
+    });
+    list.appendChild(b);
+  }
+  $("wrapcfg").hidden = false;
+}
+function closeWrapCfg() { $("wrapcfg").hidden = true; }
 function equip(part, i) {
   if (!isOwned(part, i)) {                                 // locked: preview it, a second tap buys it
     const it = SHOP.find((x) => x.part === part && x.idx === i);
@@ -5644,7 +5755,7 @@ function equip(part, i) {
   garage.preview = null; state.pendingBuy = null; $("ghint").textContent = GHINT;
   state.look[part] = i; persist(); renderGarageUI(); updatePlate();
   sfx.pad(part === 0);
-  const sel = $("gitems").children[i]; if (sel) sel.scrollIntoView({ block: "nearest" });
+  const sel = $("gitems").querySelector('[aria-selected="true"]'); if (sel) sel.scrollIntoView({ block: "nearest" });
 }
 const GHINT = "Left / Right to browse · Tab to switch part · drag the car to spin it";
 function toGarage() { garage.preview = null; show("garage"); renderGarageUI(); }
@@ -5663,6 +5774,7 @@ function act(name) {
   else if (name === "rankedmenu") setPanel("ranked");
   else if (name === "shop") setPanel("shop");
   else if (name === "redeem") redeemCode();
+  else if (name === "cfgclose") closeWrapCfg();
   else if (name === "ranked1" || name === "ranked3") startRanked(name === "ranked1" ? 1 : 3);
   else if (name === "requeue") { if (net.ranked) { const sz = net.ranked; netSend({ t: "leave" }); endOnline(); startRanked(sz); } }
   else if (name === "quick5" || name === "create5") pickBall(() => netJoin({ t: name.slice(0, -1), size: 5 }));
@@ -5766,6 +5878,7 @@ window.addEventListener("keydown", (e) => {
     if (e.target.id === "code-input") { if (e.code === "Enter") redeemCode(); else if (e.code === "Escape") { e.target.blur(); act("home"); } return; }
     if (e.code === "Enter") act("quick"); return;
   }
+  if (!$("wrapcfg").hidden) { if (e.code === "Escape" || e.code === "Enter") closeWrapCfg(); e.preventDefault(); return; }
   if (!$("controls").hidden) {
     if (e.repeat) return;
     const t = { Digit1: "pc", Digit2: "pad", Digit3: "touch", ArrowLeft: "<", ArrowRight: ">" }[e.code], order = ["pc", "pad", "touch"];
