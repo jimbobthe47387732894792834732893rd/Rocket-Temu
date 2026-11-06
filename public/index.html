@@ -424,6 +424,11 @@
   .or-track { flex-basis: 100%; height: 8px; border-radius: 4px; background: rgba(255,255,255,.12); overflow: hidden; }
   #or-bar { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #8a6cff, #7dffb0); }
   .nav-btn.shop::before { background: var(--gold); }
+  .code-box { display: grid; gap: 6px; }
+  .code-row { display: flex; gap: 8px; }
+  .code-row input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: rgba(10,8,22,.85); color: #fff; font: 800 15px inherit; letter-spacing: .04em; }
+  .code-row input:focus { outline: 2px solid var(--temu); outline-offset: 1px; }
+  #code-msg.ok { color: #6be39a; } #code-msg.bad { color: #ff8a8a; }
   .coins-big { margin: 0; display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 24px; }
   /* Mechanic nut: a steel hexagon with a hole */
   .nut { display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; clip-path: polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0 50%);
@@ -574,6 +579,11 @@
     <nav class="nav" id="nav-shop" aria-label="Shop" hidden>
       <h2 class="nav-title">SHOP</h2>
       <p class="coins-big"><span class="nut big" aria-hidden="true"></span><span class="coin-count">300</span> nuts</p>
+      <div class="code-box">
+        <h3 class="shop-h">CODES</h3>
+        <div class="code-row"><input id="code-input" maxlength="24" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Type a secret code" aria-label="Secret code"><button class="btn primary" type="button" data-act="redeem">Redeem</button></div>
+        <p class="rank-note" id="code-msg" role="status"></p>
+      </div>
       <div id="shop-list"></div>
       <p class="rank-note" id="shop-boost">Not active</p>
       <p class="rank-note" id="shop-msg" role="status"></p>
@@ -3675,6 +3685,83 @@ function drawWrap(g, w, h, decal, accent, top) {
   g.restore();
 }
 const carMatCache = new Map();
+// ---- Star wraps: drawn over every panel of the car ----
+function outlined(g, text, x, y, size, fill, edge, gold) {
+  g.font = `italic 900 ${size}px ${FONT}`; g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round";
+  if (gold) { g.lineWidth = size * 0.26; g.strokeStyle = "rgba(0,0,0,0.85)"; g.strokeText(text, x, y); g.lineWidth = size * 0.13; g.strokeStyle = gold; g.strokeText(text, x, y); }
+  else { g.lineWidth = size * 0.16; g.strokeStyle = edge; g.strokeText(text, x, y); }
+  g.fillStyle = fill; g.fillText(text, x, y);
+}
+function wrapSheen(g, w, h) {                                              // glossy highlight and a faint carbon weave
+  const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, "rgba(255,255,255,0.22)"); gr.addColorStop(0.35, "rgba(255,255,255,0)"); gr.addColorStop(1, "rgba(0,0,0,0.28)");
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.fillStyle = "rgba(255,255,255,0.035)"; for (let y = 0; y < h; y += 8) for (let x = (y / 8) % 2 ? 4 : 0; x < w; x += 8) g.fillRect(x, y, 4, 4);
+}
+const GOLD = "#e8b84a";
+function starWrapSide(g, w, h, W) {
+  const [c1, c2, c3] = W.cols;
+  if (W.code === "POR") {
+    // Portugal: deep red body, a green nose section, a gold double chevron between them, gold pinstripes
+    const red = g.createLinearGradient(0, 0, w, 0); red.addColorStop(0, "#8e0b1f"); red.addColorStop(1, "#d3142f"); g.fillStyle = red; g.fillRect(0, 0, w, h);
+    g.fillStyle = "#035c30"; g.beginPath(); g.moveTo(w, 0); g.lineTo(w * 0.7, 0); g.lineTo(w * 0.64, h * 0.5); g.lineTo(w * 0.7, h); g.lineTo(w, h); g.closePath(); g.fill();
+    g.strokeStyle = GOLD; g.lineWidth = 14; g.lineJoin = "miter";
+    for (const dx of [0, 0.04]) { g.beginPath(); g.moveTo(w * (0.68 - dx), -4); g.lineTo(w * (0.62 - dx), h * 0.5); g.lineTo(w * (0.68 - dx), h + 4); g.stroke(); }
+    g.fillStyle = GOLD; g.fillRect(0, h * 0.86, w, 6); g.fillRect(0, h * 0.06, w, 4);
+    g.globalAlpha = 0.12; g.fillStyle = "#ffffff";                           // little stars along the red
+    for (let k = 0; k < 7; k++) star5(g, w * (0.08 + k * 0.07), h * (k % 2 ? 0.2 : 0.78), 10);
+    g.globalAlpha = 1;
+  } else if (W.code === "ARG") {
+    g.fillStyle = "#2a78c4"; g.fillRect(0, 0, w, h);
+    g.fillStyle = "#dfe8f2"; for (let x = 40; x < w; x += 150) g.fillRect(x, 0, 56, h);
+    g.fillStyle = GOLD; g.fillRect(0, h * 0.86, w, 6);
+    g.save(); g.translate(w * 0.13, h * 0.5); g.fillStyle = c3;                 // a golden sun
+    for (let k = 0; k < 16; k++) { g.rotate(Math.PI / 8); g.beginPath(); g.moveTo(-6, 34); g.lineTo(0, 64); g.lineTo(6, 34); g.fill(); }
+    g.beginPath(); g.arc(0, 0, 32, 0, Math.PI * 2); g.fill(); g.restore();
+  } else if (W.code === "FRA") {
+    g.fillStyle = "#0d1f6e"; g.fillRect(0, 0, w, h);
+    for (const [col, off] of [["#ffffff", 0], [c2, 70]]) { g.fillStyle = col; g.beginPath(); g.moveTo(w * 0.05 + off, h); g.lineTo(w * 0.05 + off + 70, h); g.lineTo(w * 0.2 + off + 70, 0); g.lineTo(w * 0.2 + off, 0); g.closePath(); g.fill(); }
+    g.fillStyle = GOLD; g.fillRect(0, h * 0.86, w, 6);
+  } else {                                                                 // Brazil
+    g.fillStyle = "#ffd400"; g.fillRect(0, 0, w, h);
+    g.fillStyle = c2; g.beginPath(); g.moveTo(0, h * 0.55); g.quadraticCurveTo(w * 0.5, h * 0.25, w, h * 0.62); g.lineTo(w, h); g.lineTo(0, h); g.closePath(); g.fill();
+    g.strokeStyle = c3; g.lineWidth = 8; g.beginPath(); g.moveTo(0, h * 0.52); g.quadraticCurveTo(w * 0.5, h * 0.22, w, h * 0.59); g.stroke();
+  }
+  wrapSheen(g, w, h);
+  const dark = W.code === "ARG" ? "#13235b" : "#ffffff";
+  // name and number together on the door, between the wheel arches
+  const ns = W.name.length > 7 ? 48 : 58, nm = "#ffffff", ne = W.code === "ARG" ? "#0f1d4f" : "rgba(0,0,0,0.85)";
+  g.font = `italic 900 ${ns}px ${FONT}`; const nw = g.measureText(W.name).width; g.font = `italic 900 84px ${FONT}`; const mw = g.measureText(W.num).width;
+  const x0 = w / 2 - (nw + 22 + mw) / 2;                                   // centred exactly, so neither wheel arch covers it
+  outlined(g, W.name, x0 + nw / 2, h * 0.42, ns, nm, ne, W.code === "POR" ? GOLD : null);
+  outlined(g, W.num, x0 + nw + 22 + mw / 2, h * 0.42, 84, dark, ne, W.code === "POR" ? GOLD : null);
+  g.fillStyle = "#111218"; g.fillRect(0, h * 0.95, w, h * 0.05);              // a thin black sill
+}
+function star5(g, x, y, r) {
+  g.beginPath();
+  for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + (k * Math.PI) / 5, rr = k % 2 ? r * 0.45 : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+  g.closePath(); g.fill();
+}
+function starWrapTop(g, w, h, W) {
+  const [c1, c2, c3] = W.cols;
+  if (W.code === "POR") {
+    g.fillStyle = "#b8102a"; g.fillRect(0, 0, w, h); g.fillStyle = "#035c30"; g.fillRect(0, h * 0.62, w, h * 0.38);
+    g.fillStyle = GOLD; g.fillRect(0, h * 0.6, w, 10); g.fillRect(w * 0.14, 0, 8, h); g.fillRect(w * 0.84, 0, 8, h);
+  } else if (W.code === "ARG") { g.fillStyle = "#dfe8f2"; g.fillRect(0, 0, w, h); g.fillStyle = "#2a78c4"; g.fillRect(0, 0, w * 0.3, h); g.fillRect(w * 0.7, 0, w * 0.3, h); }
+  else if (W.code === "FRA") { g.fillStyle = "#0d1f6e"; g.fillRect(0, 0, w, h); g.fillStyle = "#ffffff"; g.fillRect(w * 0.4, 0, w * 0.1, h); g.fillStyle = c2; g.fillRect(w * 0.5, 0, w * 0.1, h); }
+  else { g.fillStyle = "#ffd400"; g.fillRect(0, 0, w, h); g.fillStyle = c2; g.fillRect(0, 0, w * 0.18, h); g.fillRect(w * 0.82, 0, w * 0.18, h); g.fillStyle = c3; g.fillRect(w * 0.18, 0, 8, h); g.fillRect(w * 0.82 - 8, 0, 8, h); }
+  wrapSheen(g, w, h);
+  g.save(); g.translate(w / 2, h * 0.42);
+  outlined(g, W.num, 0, 0, W.num.length > 1 ? 230 : 300, W.code === "ARG" ? "#13235b" : "#ffffff", W.code === "ARG" ? "#ffffff" : "rgba(0,0,0,0.85)", W.code === "POR" ? GOLD : null);
+  g.rotate(-Math.PI / 2); outlined(g, W.name, -h * 0.3, 0, W.name.length > 7 ? 64 : 80, "#ffffff", "rgba(0,0,0,0.85)", W.code === "POR" ? GOLD : null);
+  g.restore();
+}
+function starWrapEnd(g, w, h, W, back) {                                    // nose and tail
+  const [c1, c2] = W.cols;
+  g.fillStyle = W.code === "POR" ? (back ? "#b8102a" : "#035c30") : W.code === "ARG" ? "#2a78c4" : W.code === "FRA" ? "#0d1f6e" : back ? c2 : "#ffd400"; g.fillRect(0, 0, w, h);
+  g.fillStyle = GOLD; g.fillRect(0, h * 0.08, w, 6); g.fillRect(0, h * 0.86, w, 6);
+  wrapSheen(g, w, h);
+  if (back) { g.save(); g.translate(w, 0); g.scale(-1, 1); outlined(g, W.num, w / 2, h * 0.42, 130, W.code === "ARG" ? "#13235b" : "#ffffff", W.code === "ARG" ? "#ffffff" : "rgba(0,0,0,0.85)", W.code === "POR" ? GOLD : null); g.restore(); }
+}
 function carMats(team, look) {
   const key = team + ":" + look[1] + ":" + look[5];
   if (carMatCache.has(key)) return carMatCache.get(key);
@@ -3708,6 +3795,23 @@ function carMats(team, look) {
     g.fillStyle = "#16171d"; g.fillRect(0, h * 0.9, w, h * 0.1);
   }) });
   const topM = paintMat({ map: top }), plain = paintMat({ color: paintHex });
+  const star = starWrapOf(decal);
+  if (star) {                                                              // a star wrap covers the whole car
+    const W = star, sideT = (mirror) => canvasTex(1024, 256, (g, w, h) => {
+      if (mirror) { g.translate(w, 0); g.scale(-1, 1); }
+      starWrapSide(g, w, h, W, mirror);
+    });
+    const mats = {
+      body: [paintMat({ map: sideT(true), emissive: glow, emissiveMap: sideGlow }), paintMat({ map: sideT(false), emissive: glow, emissiveMap: sideGlow }),
+        paintMat({ map: canvasTex(512, 1024, (g, w, h) => starWrapTop(g, w, h, W)) }), MAT.dark,
+        paintMat({ map: canvasTex(512, 256, (g, w, h) => starWrapEnd(g, w, h, W, false)) }), paintMat({ map: canvasTex(512, 256, (g, w, h) => starWrapEnd(g, w, h, W, true)) })],
+      trim: paintMat({ color: W.code === "ARG" ? 0x2a78c4 : new THREE.Color(W.cols[1]).getHex() }),
+      accent: glowMat(acc === 0x22232a ? (team ? 0xff9a50 : 0x7ab4ff) : acc, GLOW * 0.85),
+      rimAccent: std(acc, { metalness: 0.6, roughness: 0.35 }),
+      star: true,
+    };
+    carMatCache.set(key, mats); return mats;
+  }
   const mats = {
     body: [sidesR, sides, topM, MAT.dark, plain, plain],                          // box faces: +x, -x, +y, -y, +z, -z
     trim: paintMat({ color: paintHex }),
@@ -3772,6 +3876,10 @@ const PLATE_TEX = canvasTex(128, 40, (g, w, h) => {
   g.fillStyle = "#141414"; g.font = `900 26px ${FONT}`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("TEMU 1", w / 2, h / 2 + 1);
 });
 // Build the 3D car for a car (or a look preview). `where` is the scene it goes in.
+const GLOW_POOL = canvasTex(128, 128, (g, w) => {
+  const gr = g.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); gr.addColorStop(0, "rgba(255,255,255,0.9)"); gr.addColorStop(0.5, "rgba(255,255,255,0.35)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = gr; g.fillRect(0, 0, w, w);
+});
 function makeCarView(car, where = scene) {
   const team = car.team, look = car.look || DEFAULT_LOOK, B = BODIES[look[0]], G = bodyGeos(look[0]), M = carMats(team, look);
   const g = new THREE.Group(), body = new THREE.Group();
@@ -3846,6 +3954,19 @@ function makeCarView(car, where = scene) {
   flame.rotation.x = -Math.PI / 2; flame.position.set(0, -0.08, -B.len - 0.85); body.add(flame);
   const core = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.7, 10), glowMat(BS.core, GLOW, { transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
   core.rotation.x = -Math.PI / 2; core.position.set(0, -0.08, -B.len - 0.5); flame.userData.core = core; body.add(core);
+  if (M.star) {                                                            // a star wrap: a team-coloured glow all round the car
+    const col = team ? 0xff9a2e : 0x3d9bff, t0 = Math.random() * 6;
+    for (const [geo, sc] of [[G.body, [1.14, 1.34, 1.08]], [G.body, [1.3, 1.7, 1.18]], [G.cabin, [1.14, 1.2, 1.12]]]) {
+      const hull = geo.clone(); hull.computeBoundingBox(); const c = hull.boundingBox.getCenter(new THREE.Vector3()); hull.translate(-c.x, -c.y, -c.z);
+      const mat = new THREE.MeshBasicMaterial({ color: col, side: THREE.BackSide, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false });
+      const m = new THREE.Mesh(hull, mat); m.position.copy(c); m.scale.set(...sc); m.renderOrder = 2;
+      const k = sc[0] > 1.2 ? 0.3 : 1;                                     // a bright inner glow and a soft outer haze
+      m.onBeforeRender = () => { mat.opacity = k * (0.7 + 0.25 * Math.sin(performance.now() / 260 + t0)); };
+      body.add(m);
+    }
+    const pool = new THREE.Mesh(new THREE.PlaneGeometry(5, 7), new THREE.MeshBasicMaterial({ map: GLOW_POOL, color: col, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false }));
+    pool.rotation.x = -Math.PI / 2; pool.position.y = -0.68; pool.renderOrder = 1; g.add(pool);
+  }
   const label = labelSprite(car.name, team ? "#ffb070" : "#8fb8ff"); if (where === scene) where.add(label);
   where.add(g);
   const shadow = makeShadow(where); shadow.visible = !quality.high || where !== scene;
@@ -4715,6 +4836,23 @@ function renderShop() {
   }
   $("shop-boost").textContent = state.boost > 0 ? `2X rank points active: ${state.boost} ranked game${state.boost > 1 ? "s" : ""} left` : "";
 }
+// Secret codes. Only a fingerprint of each code is kept here, so the code itself isn't sitting in the page.
+const codeHash = (t) => { let h = 0x811c9dc5; for (const ch of t) { h ^= ch.charCodeAt(0); h = Math.imul(h, 0x01000193) >>> 0; } return h; };
+const CODES = { 3094147066: "everything" };
+function redeemCode() {
+  const inp = $("code-input"), msg = $("code-msg"), code = inp.value.trim().toLowerCase().replace(/\s+/g, "");
+  if (!code) return;
+  const what = CODES[codeHash(code)];
+  msg.className = "rank-note " + (what ? "ok" : "bad");
+  if (!what) { msg.textContent = "That code didn't work. Check the spelling."; sfx.pad(false); return; }
+  let n = 0;
+  for (let part = 0; part < LOOK_SIZES.length; part++) for (let i = FREE_LOOK[part]; i < LOOK_SIZES[part]; i++) {
+    const k = itemKey(part, i); if (!state.owned.includes(k)) { state.owned.push(k); n++; }
+  }
+  inp.value = ""; persist(); sfx.pad(true); renderShop(); updateCoins();
+  msg.textContent = n ? `Code accepted! ${n} item${n > 1 ? "s" : ""} unlocked: every wrap (the star wraps too), boost trail and topper.` : "Code accepted, but you already have everything.";
+  showShopToast("Everything unlocked!");
+}
 function buy(it) {
   if (state.nuts < it.cost) return;
   state.nuts -= it.cost;
@@ -5505,6 +5643,7 @@ function act(name) {
   if (name === "bot" || name === "bot5" || name === "duel" || name === "2p" || name === "watch" || name === "practice") pickArena(() => pickBall(() => startMatch(name)));
   else if (name === "rankedmenu") setPanel("ranked");
   else if (name === "shop") setPanel("shop");
+  else if (name === "redeem") redeemCode();
   else if (name === "ranked1" || name === "ranked3") startRanked(name === "ranked1" ? 1 : 3);
   else if (name === "requeue") { if (net.ranked) { const sz = net.ranked; netSend({ t: "leave" }); endOnline(); startRanked(sz); } }
   else if (name === "quick5" || name === "create5") pickBall(() => netJoin({ t: name.slice(0, -1), size: 5 }));
@@ -5604,7 +5743,10 @@ document.querySelectorAll("[data-ctab]").forEach((b) => b.addEventListener("clic
 $("b-help").addEventListener("click", () => act("controls"));
 const GAME_KEYS = new Set(["Space", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter", "Slash", "Comma", "Period"]);
 window.addEventListener("keydown", (e) => {
-  if (e.target && e.target.tagName === "INPUT") { if (e.code === "Enter") act("quick"); return; }
+  if (e.target && e.target.tagName === "INPUT") {
+    if (e.target.id === "code-input") { if (e.code === "Enter") redeemCode(); else if (e.code === "Escape") { e.target.blur(); act("home"); } return; }
+    if (e.code === "Enter") act("quick"); return;
+  }
   if (!$("controls").hidden) {
     if (e.repeat) return;
     const t = { Digit1: "pc", Digit2: "pad", Digit3: "touch", ArrowLeft: "<", ArrowRight: ">" }[e.code], order = ["pc", "pad", "touch"];
