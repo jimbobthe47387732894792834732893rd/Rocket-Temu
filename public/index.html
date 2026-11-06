@@ -4676,7 +4676,9 @@ const SHOP = [
   { part: 3, idx: 6, cost: 300 }, { part: 3, idx: 7, cost: 300 },
   { part: 4, idx: 7, cost: 250 }, { part: 4, idx: 6, cost: 400 },
 ];
-const SHOP_SECTIONS = [["RANK BOOSTS", (it) => it.boost], ["WRAPS", (it) => it.part === 1], ["BOOST TRAILS", (it) => it.part === 3], ["TOPPERS", (it) => it.part === 4]];
+// The copy shared as a Claude artifact also sells the star wraps, free, so you can pick any of them
+if (PICK_SPECIALS) for (const W of STAR_WRAPS) SHOP.push({ part: 1, idx: W.decal, cost: 0, star: true });
+const SHOP_SECTIONS = [["RANK BOOSTS", (it) => it.boost], ...(PICK_SPECIALS ? [["STAR WRAPS", (it) => it.star]] : []), ["WRAPS", (it) => it.part === 1 && !it.star], ["BOOST TRAILS", (it) => it.part === 3], ["TOPPERS", (it) => it.part === 4]];
 const itemKey = (part, idx) => part + ":" + idx;
 const priceOf = (part, idx) => { const it = SHOP.find((x) => x.part === part && x.idx === idx); return it ? it.cost : 0; };
 function isOwned(part, idx) { return idx < FREE_LOOK[part] || state.owned.includes(itemKey(part, idx)); }
@@ -4699,12 +4701,13 @@ function renderShop() {
       if (it.boost) { sw.className += " boostsw"; sw.textContent = "2X"; } else { sw.setAttribute("style", swatchStyle(it.part, it.idx)); if (it.part === 4) sw.textContent = SWATCH_GLYPH[4][it.idx]; }
       const txt = document.createElement("div");
       const b = document.createElement("b"); b.textContent = it.boost ? it.name : LOOK_PARTS[it.part].names[it.idx];
-      const sm = document.createElement("small"); sm.textContent = it.boost ? it.desc : ["", "Wrap", "", "Boost trail", "Topper"][it.part] + " · tap to preview on your car";
+      const sm = document.createElement("small"); sm.textContent = it.boost ? it.desc : it.star ? `${CUP_COMPS[0].teams.find((t) => t[1] === starWrapOf(it.idx).code)[0]} star wrap · tap to preview on your car` : ["", "Wrap", "", "Boost trail", "Topper"][it.part] + " · tap to preview on your car";
       txt.append(b, sm);
       const btn = document.createElement("button"); btn.type = "button"; btn.className = "btn primary";
       const owned = !it.boost && isOwned(it.part, it.idx), equipped = owned && state.look[it.part] === it.idx;
       if (equipped) { btn.textContent = "EQUIPPED"; btn.disabled = true; }
       else if (owned) { btn.textContent = "EQUIP"; btn.addEventListener("click", (e) => { e.stopPropagation(); garage.preview = null; equip(it.part, it.idx); renderShop(); }); }
+      else if (it.star) { btn.textContent = "GET FREE"; btn.addEventListener("click", (e) => { e.stopPropagation(); buy(it); }); }
       else { btn.innerHTML = NUT + " " + it.cost; btn.disabled = state.nuts < it.cost; btn.addEventListener("click", (e) => { e.stopPropagation(); buy(it); }); }
       if (!it.boost) row.addEventListener("click", () => { garage.preview = state.look.slice(); garage.preview[it.part] = it.idx; garage.boostPreview = it.part === 3; });
       row.append(sw, txt, btn); box.appendChild(row);
@@ -5470,6 +5473,7 @@ function equip(part, i) {
     const it = SHOP.find((x) => x.part === part && x.idx === i);
     garage.preview = state.look.slice(); garage.preview[part] = i;
     const star = part === 1 && starWrapOf(i);
+    if (star && PICK_SPECIALS) { showShopToast("Get this wrap free in the Shop."); renderGarageUI(); return; }
     if (star) {                                            // can't be bought: it's won in the World Tournament
       const team = CUP_COMPS[0].teams.find((t) => t[1] === star.code)[0];
       showShopToast(`Prize wrap. Play ${team} in the Temu World Tournament: each game has a 1 in ${Math.round(1 / star.chance)} chance to drive it. Win that game to keep it.`);
