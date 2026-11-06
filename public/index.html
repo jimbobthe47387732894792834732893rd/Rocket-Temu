@@ -130,6 +130,33 @@
   html.app-mode .gauge, html.app-mode .tbtns, html.app-mode #chat-row { margin-bottom: env(safe-area-inset-bottom, 0px); }
   html.app-mode .showroom .fine { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
 
+
+  /* ---- Controls screen ---- */
+  .card.controls-card { width: min(700px, 100%); align-items: stretch; gap: 0; text-align: left; padding: 18px 18px 14px; border-radius: 18px; background: rgba(14,12,30,.96); border: 1px solid var(--line); box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+  .controls-card .row { margin-top: 6px; }
+  .ctitle { margin: 0 0 10px; font-weight: 900; font-style: italic; font-size: clamp(28px, 4.5vw, 44px); text-align: center; }
+  .ctabs { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .ctabs button { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 8px 14px; font-weight: 900; font-size: 13px; }
+  .ctabs button[aria-selected="true"] { background: var(--temu); border-color: var(--temu); color: #fff; }
+  .cpane { display: grid; gap: 4px; }
+  .crow { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: center; padding: 6px 8px; border-radius: 8px; background: rgba(255,255,255,.04); font-weight: 700; font-size: 14px; }
+  .ckeys { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+  .ckeys kbd { min-width: 28px; padding: 3px 7px; border-radius: 6px; background: #2a2640; border: 1px solid rgba(255,255,255,.18); border-bottom-width: 3px; font: 900 12px var(--font, inherit); text-align: center; color: #fff; }
+  .csub { margin: 10px 0 2px; font-size: 12px; letter-spacing: .1em; color: var(--muted); font-weight: 900; }
+  .cnote { color: var(--muted); font-size: 12px; font-weight: 700; margin: 10px 0 4px; }
+  .pad-pic { position: relative; width: 300px; height: 150px; margin: 0 auto 10px; border-radius: 70px 70px 90px 90px; background: linear-gradient(#2c2945, #1b1830); border: 2px solid rgba(255,255,255,.15); }
+  .pad-pic .pb { position: absolute; display: grid; place-items: center; font-weight: 900; font-size: 12px; color: #fff; }
+  .pb.lt, .pb.rt, .pb.lb, .pb.rb { width: 54px; height: 20px; border-radius: 8px; background: #3b3757; top: -26px; }
+  .pb.lb, .pb.rb { top: -4px; height: 16px; font-size: 10px; background: #4a4570; }
+  .pb.lt, .pb.lb { left: 30px; } .pb.rt, .pb.rb { right: 30px; }
+  .pb.ls { left: 46px; top: 34px; width: 46px; height: 46px; border-radius: 50%; background: #121022; box-shadow: inset 0 0 0 6px #2a2640; }
+  .pb.dp { left: 92px; top: 88px; width: 40px; height: 40px; font-size: 26px; color: #8a86a8; }
+  .pb.st { left: 128px; top: 38px; width: 44px; height: 16px; border-radius: 8px; background: #3b3757; font-size: 9px; }
+  .pb.a, .pb.b, .pb.x, .pb.y { width: 28px; height: 28px; border-radius: 50%; }
+  .pb.y { right: 52px; top: 26px; background: #e8b81a; } .pb.x { right: 82px; top: 54px; background: #2a6bff; }
+  .pb.b { right: 22px; top: 54px; background: #e0302c; } .pb.a { right: 52px; top: 82px; background: #2fb350; }
+  @media (max-width: 560px) { .crow { grid-template-columns: 96px 1fr; font-size: 13px; } .pad-pic { transform: scale(.85); } }
+  .sw.starsw { color: #fff; text-shadow: 0 2px 3px rgba(0,0,0,.8); }
   /* ---- Competitions ---- */
   .nav-btn.cupbtn { background: linear-gradient(120deg, rgba(255,196,40,.22), rgba(16,13,34,.86) 60%); border-color: rgba(255,196,40,.45); }
   .cup-screen { position: absolute; inset: 0; overflow: auto; padding: 18px clamp(14px, 3vw, 36px); touch-action: pan-y;
@@ -479,6 +506,7 @@
         <button id="b-cam" type="button">BALL CAM: ON</button>
         <button id="b-sound" type="button">SOUND: ON</button>
         <button id="b-pause" type="button">PAUSE</button>
+        <button id="b-help" type="button" aria-label="Controls">CONTROLS</button>
         <button id="b-menu" type="button">MENU</button>
       </div>
     </div>
@@ -520,6 +548,7 @@
       <button class="nav-btn cupbtn" type="button" data-act="cup"><span>COMPETITION</span><small>World Tournament or Champions Cup. 16 teams</small><kbd>C</kbd></button>
       <button class="nav-btn" type="button" data-act="garage"><span>GARAGE</span><small>Change your car</small><kbd>G</kbd></button>
       <button class="nav-btn shop" type="button" data-act="shop"><span>SHOP</span><small><span class="coin-count">300</span> mechanic nuts</small><kbd>S</kbd></button>
+      <button class="nav-btn" type="button" data-act="controls"><span>CONTROLS</span><small>Keyboard, controller and touch</small><kbd>H</kbd></button>
       <button class="nav-btn" type="button" data-act="settings"><span>SETTINGS</span><small>Bots, graphics, controls</small></button>
     </nav>
     <nav class="nav" id="nav-play" aria-label="Play" hidden>
@@ -672,7 +701,29 @@
     <div class="card">
       <h2 class="win">PAUSED</h2>
       <p class="tag">Your game is buffering...</p>
-      <div class="row"><button class="btn primary" type="button" data-act="pause">Resume (P)</button><button class="btn" type="button" data-act="menu">Main menu (Esc)</button></div>
+      <div class="row"><button class="btn primary" type="button" data-act="pause">Resume (P)</button><button class="btn" type="button" data-act="controls">Controls (H)</button><button class="btn" type="button" data-act="menu">Main menu (Esc)</button></div>
+    </div>
+  </div>
+
+  <div id="controls" class="overlay" hidden>
+    <div class="card controls-card">
+      <h2 class="ctitle">CONTROLS</h2>
+      <div class="ctabs" role="tablist">
+        <button type="button" role="tab" data-ctab="pc" aria-selected="true">KEYBOARD (PC)</button>
+        <button type="button" role="tab" data-ctab="pad" aria-selected="false">CONTROLLER</button>
+        <button type="button" role="tab" data-ctab="touch" aria-selected="false">TOUCH</button>
+      </div>
+      <div class="cpane" data-cpane="pc"><div class="crow"><span class="ckeys"><kbd>W</kbd></span><span>Drive forward</span></div><div class="crow"><span class="ckeys"><kbd>S</kbd></span><span>Brake and reverse</span></div><div class="crow"><span class="ckeys"><kbd>A</kbd><kbd>D</kbd></span><span>Steer</span></div><div class="crow"><span class="ckeys"><kbd>Space</kbd></span><span>Jump. Tap for a hop, hold to jump higher, press again to double jump or flip</span></div><div class="crow"><span class="ckeys"><kbd>Shift</kbd></span><span>Boost (left Shift)</span></div><div class="crow"><span class="ckeys"><kbd>W</kbd><kbd>S</kbd></span><span>In the air: tip the nose down or up</span></div><div class="crow"><span class="ckeys"><kbd>Q</kbd><kbd>E</kbd></span><span>Air roll left or right</span></div><div class="crow"><span class="ckeys"><kbd>X</kbd></span><span>Powerslide and drift</span></div><div class="crow"><span class="ckeys"><kbd>C</kbd></span><span>Ball cam on or off</span></div><div class="crow"><span class="ckeys"><kbd>P</kbd></span><span>Pause</span></div><div class="crow"><span class="ckeys"><kbd>M</kbd></span><span>Sound on or off</span></div><div class="crow"><span class="ckeys"><kbd>H</kbd></span><span>This controls screen</span></div><div class="crow"><span class="ckeys"><kbd>Esc</kbd></span><span>Main menu</span></div><div class="crow"><span class="ckeys"><kbd>1 to 6</kbd></span><span>Online: quick chat</span></div><h3 class="csub">PLAYER 2 IN SPLIT SCREEN</h3><div class="crow"><span class="ckeys"><kbd>↑</kbd><kbd>↓</kbd></span><span>Drive and reverse</span></div><div class="crow"><span class="ckeys"><kbd>←</kbd><kbd>→</kbd></span><span>Steer</span></div><div class="crow"><span class="ckeys"><kbd>Enter</kbd></span><span>Jump (or right Ctrl)</span></div><div class="crow"><span class="ckeys"><kbd>R Shift</kbd></span><span>Boost</span></div><div class="crow"><span class="ckeys"><kbd>,</kbd><kbd>.</kbd></span><span>Air roll</span></div><div class="crow"><span class="ckeys"><kbd>/</kbd></span><span>Powerslide</span></div></div>
+      <div class="cpane" data-cpane="pad" hidden>
+        <div class="pad-pic" aria-hidden="true">
+          <span class="pb lt">LT</span><span class="pb rt">RT</span><span class="pb lb">LB</span><span class="pb rb">RB</span>
+          <span class="pb ls">L</span><span class="pb dp">✚</span><span class="pb st">START</span>
+          <span class="pb y">Y</span><span class="pb x">X</span><span class="pb b">B</span><span class="pb a">A</span>
+        </div>
+        <div class="crow"><span class="ckeys"><kbd>RT</kbd></span><span>Drive forward</span></div><div class="crow"><span class="ckeys"><kbd>LT</kbd></span><span>Brake and reverse</span></div><div class="crow"><span class="ckeys"><kbd>L stick</kbd></span><span>Steer, and tip the nose in the air</span></div><div class="crow"><span class="ckeys"><kbd>A</kbd></span><span>Jump. Tap for a hop, hold to jump higher, press again to double jump or flip</span></div><div class="crow"><span class="ckeys"><kbd>B</kbd></span><span>Boost</span></div><div class="crow"><span class="ckeys"><kbd>X</kbd></span><span>Powerslide and drift. Hold it in the air to air roll with the stick</span></div><div class="crow"><span class="ckeys"><kbd>LB</kbd><kbd>RB</kbd></span><span>Air roll left or right</span></div><div class="crow"><span class="ckeys"><kbd>Y</kbd></span><span>Ball cam on or off</span></div><div class="crow"><span class="ckeys"><kbd>START</kbd></span><span>Pause</span></div><div class="crow"><span class="ckeys"><kbd>D-pad</kbd></span><span>Online: quick chat. Practice: ball to me, preset shot, boost</span></div><div class="crow"><span class="ckeys"><kbd>A</kbd></span><span>Skip a goal replay</span></div><div class="crow"><span class="ckeys"><kbd>Stick</kbd><kbd>A</kbd><kbd>B</kbd></span><span>Menus: move, choose, go back</span></div><p class="cnote">Xbox button names. On PlayStation: A is ✕, B is ○, X is □, Y is △, LB/RB are L1/R1 and LT/RT are L2/R2.</p></div>
+      <div class="cpane" data-cpane="touch" hidden><div class="crow"><span class="ckeys"><kbd>Stick</kbd></span><span>Push up to drive, down to reverse, sideways to steer. Let go to stop</span></div><div class="crow"><span class="ckeys"><kbd>Stick</kbd></span><span>Where the stick points when you hit the ball is where the shot goes</span></div><div class="crow"><span class="ckeys"><kbd>JUMP</kbd></span><span>Tap for a hop, hold to jump higher, tap again to double jump or flip</span></div><div class="crow"><span class="ckeys"><kbd>BOOST</kbd></span><span>Hold to boost</span></div><div class="crow"><span class="ckeys"><kbd>DRIFT</kbd></span><span>Hold while steering to drift. Hold with the stick let go to brake</span></div><div class="crow"><span class="ckeys"><kbd>II</kbd></span><span>Pause (top right)</span></div></div>
+      <p class="cnote">In the air: drive off a wall without jumping and you keep your flip. Wheels on the ball in the air give you a flip back. Upside down? Press jump to roll back over.</p>
+      <div class="row"><button class="btn primary" type="button" data-act="controls">Close (Esc)</button></div>
     </div>
   </div>
 
@@ -895,7 +946,7 @@ function predictBall(ball, mods, secs = 3, step = 1 / 30) {
 
 // ---- Car loadouts (looks only; every body has the same hitbox) ----------------------------------
 // [body, decal, wheels, boost trail, topper, accent colour]
-const LOOK_SIZES = [4, 12, 5, 8, 8, 10];
+const LOOK_SIZES = [4, 16, 5, 8, 8, 10];                // decals 12-15 are the World Tournament star wraps
 const FREE_LOOK = [4, 6, 5, 6, 6, 10];                // the rest are sold in the shop
 const DEFAULT_LOOK = [0, 0, 0, 0, 0, 0];
 function cleanLook(a) {
@@ -3423,7 +3474,17 @@ const BODIES = [
     cabin: { y0: 0.34, h: 0.36, front: [0.4, 0.22], rear: [-1.0, -0.96], w: [0.72, 0.66], power: 7 },
     wheels: [0.78, 0.42, -0.78, 0.42], spoiler: null, head: [0.12, 1.2, -0.1], tail: [0.24, -1.21] },
 ];
-const DECALS = ["RACING STRIPES", "FLAMES", "CHECKERED", "LIGHTNING", "BARCODE", "CLEAN", "CAMO", "TIGER", "GALAXY", "PIXELS", "HEX GRID", "GOLD LEAF"];
+// Star fan wraps (decals 12 to 15): won in the World Tournament. Play as the team and each game has a chance to
+// give you that star's wrap for the game; win the game and you keep it. Name, number and national colours only.
+const STAR_WRAPS = [
+  { decal: 12, code: "POR", chance: 1 / 7, name: "RONALDO", num: "7", cols: ["#c8102e", "#046a38", "#ffd23a"] },
+  { decal: 13, code: "ARG", chance: 1 / 5, name: "MESSI", num: "10", cols: ["#75aadb", "#ffffff", "#f6b40e"] },
+  { decal: 14, code: "FRA", chance: 1 / 3, name: "MBAPPÉ", num: "10", cols: ["#002395", "#ed2939", "#ffffff"] },
+  { decal: 15, code: "BRA", chance: 1 / 7, name: "NEYMAR JR", num: "10", cols: ["#ffdf00", "#009c3b", "#1b3fa0"] },
+];
+const starWrapOf = (decal) => STAR_WRAPS.find((w) => w.decal === decal);
+const DECALS = ["RACING STRIPES", "FLAMES", "CHECKERED", "LIGHTNING", "BARCODE", "CLEAN", "CAMO", "TIGER", "GALAXY", "PIXELS", "HEX GRID", "GOLD LEAF",
+  ...STAR_WRAPS.map((w) => `${w.name} ${w.num}`)];
 const RIMS = ["STOCK 5-SPOKE", "DISH", "TRI-BLADE", "MESH", "OFF-ROAD"];
 const BOOSTS = [
   { name: "STANDARD FIRE", flame: 0xff7a18, core: 0xffd27a, parts: [0xff7a10, 0xffb030, 0xffe08a] },
@@ -3579,6 +3640,31 @@ function drawWrap(g, w, h, decal, accent, top) {
       const cx = col * R * 1.73 + (row % 2) * R * 0.866, cy = row * R * 1.5;
       g.beginPath(); for (let k = 0; k < 6; k++) { const a = Math.PI / 6 + k * Math.PI / 3; g[k ? "lineTo" : "moveTo"](cx + Math.cos(a) * R * 0.9, cy + Math.sin(a) * R * 0.9); } g.closePath(); g.stroke();
     }
+  } else if (starWrapOf(decal)) {                                          // a star's fan wrap
+    const W = starWrapOf(decal), [c1, c2, c3] = W.cols;
+    g.save();
+    if (top) {
+      g.fillStyle = c1; g.fillRect(w * 0.12, 0, w * 0.76, h);
+      if (W.code === "ARG") { g.fillStyle = c2; for (let x = 0.12; x < 0.88; x += 0.152) g.fillRect(w * (x + 0.076), 0, w * 0.076, h); }
+      else { g.fillStyle = c2; g.fillRect(w * 0.12, 0, w * 0.14, h); g.fillRect(w * 0.74, 0, w * 0.14, h); }
+      g.fillStyle = c3; g.fillRect(w * 0.26, 0, w * 0.025, h); g.fillRect(w * 0.715, 0, w * 0.025, h);
+      g.translate(w / 2, h * 0.56); g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round";
+      g.font = `italic 900 ${W.num.length > 1 ? 120 : 150}px ${FONT}`; g.lineWidth = 12; g.strokeStyle = "rgba(0,0,0,0.75)"; g.strokeText(W.num, 0, 0);
+      g.fillStyle = W.code === "ARG" ? "#13235b" : "#ffffff"; g.fillText(W.num, 0, 0);
+      g.rotate(-Math.PI / 2); g.font = `italic 900 ${W.name.length > 7 ? 30 : 38}px ${FONT}`; g.lineWidth = 7;
+      g.strokeText(W.name, h * 0.3, 0); g.fillStyle = "#ffffff"; g.fillText(W.name, h * 0.3, 0);
+    } else {
+      g.fillStyle = c1; g.fillRect(0, 0, w, h * 0.7);
+      if (W.code === "ARG") { g.fillStyle = c2; for (let x = 0; x < w; x += 64) g.fillRect(x + 32, 0, 32, h * 0.7); }
+      else { g.fillStyle = c2; g.beginPath(); g.moveTo(w * 0.62, 0); g.lineTo(w, 0); g.lineTo(w, h * 0.7); g.lineTo(w * 0.5, h * 0.7); g.closePath(); g.fill(); }
+      g.fillStyle = c3; g.fillRect(0, h * 0.64, w, h * 0.04);
+      g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round"; g.strokeStyle = "rgba(0,0,0,0.8)";
+      g.font = `italic 900 ${W.name.length > 7 ? 40 : 52}px ${FONT}`; g.lineWidth = 8;
+      g.strokeText(W.name, w * 0.36, h * 0.34); g.fillStyle = "#ffffff"; g.fillText(W.name, w * 0.36, h * 0.34);
+      g.font = `italic 900 84px ${FONT}`; g.lineWidth = 10;
+      g.strokeText(W.num, w * 0.8, h * 0.36); g.fillStyle = W.code === "ARG" ? "#13235b" : "#ffffff"; g.fillText(W.num, w * 0.8, h * 0.36);
+    }
+    g.restore();
   } else if (decal === 11) {                                               // gold leaf
     const gr = g.createLinearGradient(0, 0, w, h * 0.6);
     gr.addColorStop(0, "#8a6410"); gr.addColorStop(0.3, "#ffd86a"); gr.addColorStop(0.5, "#b8860b"); gr.addColorStop(0.7, "#fff0a8"); gr.addColorStop(1, "#9a7012");
@@ -3612,9 +3698,18 @@ function carMats(team, look) {
   });
   const glow = new THREE.Color(1, 1, 1).multiplyScalar(GLOW * 0.75);
   const sides = paintMat({ map: side, emissive: glow, emissiveMap: sideGlow });
+  // A star wrap has writing on it, so the other side of the car gets a mirrored copy that reads the right way round
+  const sidesR = !starWrapOf(decal) ? sides : paintMat({ emissive: glow, emissiveMap: sideGlow, map: canvasTex(512, 128, (g, w, h) => {
+    g.fillStyle = base; g.fillRect(0, 0, w, h);
+    g.save(); g.translate(w, 0); g.scale(-1, 1);                          // drawn back to front: this face shows it flipped
+    drawDecal(g, w, h, decal, accent, false);
+    g.restore();
+    g.fillStyle = dark; g.fillRect(0, h * 0.74, w, h * 0.26);
+    g.fillStyle = "#16171d"; g.fillRect(0, h * 0.9, w, h * 0.1);
+  }) });
   const topM = paintMat({ map: top }), plain = paintMat({ color: paintHex });
   const mats = {
-    body: [sides, sides, topM, MAT.dark, plain, plain],                          // box faces: +x, -x, +y, -y, +z, -z
+    body: [sidesR, sides, topM, MAT.dark, plain, plain],                          // box faces: +x, -x, +y, -y, +z, -z
     trim: paintMat({ color: paintHex }),
     accent: glowMat(acc === 0x22232a ? (team ? 0xff9a50 : 0x7ab4ff) : acc, GLOW * 0.85),
     rimAccent: std(acc, { metalness: 0.6, roughness: 0.35 }),
@@ -4051,7 +4146,8 @@ function padUi() {
   if (!pads.list.length) return;
   const any = (b) => pads.list.some((g) => pressed(g, b));
   const overOpen = !$("over").hidden, pauseOpen = !$("pause").hidden, arenaOpen = !$("arenapick").hidden, voteOpen = !$("vote").hidden;
-  const pickOpen = !$("ballpick").hidden || arenaOpen || voteOpen;
+  const ctrlOpen = !$("controls").hidden;
+  const pickOpen = !$("ballpick").hidden || arenaOpen || voteOpen || ctrlOpen;
   if (state.screen === "match" && !overOpen && !pauseOpen && !pickOpen) {
     if (replay.active && any(PB.A)) { skipReplay(); return; }
     if (any(PB.START)) act("pause");
@@ -4061,6 +4157,14 @@ function padUi() {
     return;
   }
   // Menus: move between the buttons that are showing, A presses, B goes back
+  if (ctrlOpen) {                                          // the controls screen: left/right flips the tabs, A or B closes it
+    const nav = pads.nav, now = performance.now();
+    let hd = 0; for (const g of pads.list) { const [lx] = stick(g.axes[0], g.axes[1]); if (holding(g, PB.LEFT) || lx < -0.6) hd = -1; else if (holding(g, PB.RIGHT) || lx > 0.6) hd = 1; }
+    if (hd && (hd !== nav.dir || now >= nav.next)) { const order = ["pc", "pad", "touch"]; ctab(order[(order.indexOf(state.ctab) + hd + 3) % 3]); nav.next = now + 380; }
+    nav.dir = hd;
+    if (any(PB.A) || any(PB.B) || any(PB.START)) act("controls");
+    return;
+  }
   const root = arenaOpen ? $("arenapick") : voteOpen ? $("vote") : pickOpen ? $("ballpick") : overOpen ? $("over") : pauseOpen ? $("pause") : $(state.screen === "match" ? "pause" : state.screen);
   if (!root) return;
   let dir = 0;
@@ -4973,6 +5077,7 @@ function hudButtons() {
   setText($("b-cam"), "cam", (compact ? "CAM " : "BALL CAM: ") + (state.ballCam[0] ? "ON" : "OFF"));
   setText($("b-sound"), "snd", compact ? (sound.on ? "SOUND" : "MUTED") : "SOUND: " + (sound.on ? "ON" : "OFF"));
   setText($("b-pause"), "bpause", compact ? "II" : "PAUSE");
+  setText($("b-help"), "bhelp", compact ? "?" : "CONTROLS");
   setText($("b-menu"), "bmenu", state.online ? "LEAVE" : "MENU");
 }
 function show(screen) {
@@ -4984,6 +5089,7 @@ function show(screen) {
   updatePlate();
   $("online").hidden = screen !== "online";
   $("cup").hidden = screen !== "cup";
+  $("controls").hidden = true;
   hud.hidden = screen !== "match";
   $("pause").hidden = !(screen === "match" && state.paused);
   $("over").hidden = true; $("vote").hidden = true; $("queue").hidden = true; $("over-rank").hidden = true;
@@ -4999,6 +5105,7 @@ function startMatch(kind, extra) {
   for (const k of ["teamNames", "cupOpp", "cupKey", "cupStage"]) if (preset[k] != null) state.match[k] = preset[k];
   state.local = preset.humans.slice();
   for (const i of state.local) { state.match.cars[i].look = state.look.slice(); state.match.cars[i].assist = state.assist; }
+  if (preset.starWrap != null) { state.match.cars[0].look[1] = preset.starWrap; state.match.starWrap = preset.starWrap; }   // a wrap just for this game
   const sp = preset.arena != null || state.arena >= NORMAL_ARENAS ? -1 : rollSpecial();      // a chosen special map just plays as itself
   setArena(preset.arena != null ? preset.arena : sp >= 0 ? sp : state.arena || 0);
   if (sp >= 0) setTimeout(() => showPop("SPECIAL MAP: " + ARENAS[sp].name + "!"), 600);
@@ -5107,9 +5214,13 @@ function startCupMatch() {
   const opp = f[0] === cup.team ? f[1] : f[0], r = tRate(opp);
   const skill = Math.max(0, Math.min(BOT_SKILLS.length - 1, state.skill + (r >= 4.5 ? 1 : r < 3.8 ? -1 : 0)));
   const label = cup.stage === "group" ? `GROUP ${"ABCD"[cup.groups.findIndex((g) => g.includes(cup.team))]} · MATCHDAY ${cup.md + 1}` : CUP_ROUND_NAMES[cup.stage];
-  startMatch("cup", { teamSize: cup.size, humans: [0], skill, arena: cup.stage === "group" ? (Math.random() * NORMAL_ARENAS) | 0 : 0,
+  // Playing as Portugal, Argentina, France or Brazil: a chance at that star's wrap for this game
+  const star = cup.comp === 0 && STAR_WRAPS.find((w) => w.code === tCode(cup.team));
+  const starWrap = star && !isOwned(1, star.decal) && (state.forceStar || Math.random() < star.chance) ? star.decal : null;
+  startMatch("cup", { starWrap, teamSize: cup.size, humans: [0], skill, arena: cup.stage === "group" ? (Math.random() * NORMAL_ARENAS) | 0 : 0,
     teamNames: [tCode(cup.team), tCode(opp)], time: cup.len, cupOpp: opp, cupKey: f[2], cupStage: cup.stage });
   setTimeout(() => showPop(`${label}: ${tName(cup.team)} vs ${tName(opp)}`), 400);
+  if (starWrap != null) setTimeout(() => showPop(`LUCKY! ${star.name} ${star.num} WRAP FOR THIS GAME. WIN TO KEEP IT!`), 2600);
 }
 function cupRecord(m) {
   if (!cup || m.cupDone || m.cupKey == null) return;
@@ -5117,6 +5228,12 @@ function cupRecord(m) {
   const f = myFixture(); if (!f || f[2] !== m.cupKey) return;
   const [a, , key] = f, you = m.score[0], opp = m.score[1], ot = !!m.overtime, won = you > opp, stage = cup.stage;
   cup.res[key] = a === cup.team ? [you, opp, ot] : [opp, you, ot];
+  let starLine = "";
+  if (m.starWrap != null) {
+    const W = starWrapOf(m.starWrap);
+    if (won) { if (!state.owned.includes(itemKey(1, W.decal))) state.owned.push(itemKey(1, W.decal)); persist(); starLine = ` You keep the ${W.name} ${W.num} wrap! Equip it in the Garage.`; }
+    else starLine = ` The ${W.name} ${W.num} wrap goes back. Win next time to keep it.`;
+  }
   finishRound();
   if (stage === "group") {
     const gi = cup.groups.findIndex((g) => g.includes(cup.team)), T = cupTable(gi), pos = T.findIndex((r) => r.t === cup.team) + 1, me = T[pos - 1];
@@ -5126,6 +5243,7 @@ function cupRecord(m) {
     m.overLine = won ? "CHAMPIONS!" : `So close. ${tName(m.cupOpp)} win the ${CUP_COMPS[cup.comp].name}.`;
     if (won) { trophies[cup.comp] = (trophies[cup.comp] || 0) + 1; state.nuts += 500; persist(); updateCoins(); cupSave(); m.cupChampion = true; }
   } else m.overLine = won ? `Through to the ${CUP_STAGE_NAMES[cup.stage].toLowerCase()}!` : `Knocked out in the ${CUP_STAGE_NAMES[stage].toLowerCase()}.`;
+  m.overLine = (m.overLine || "") + starLine;
 }
 function setTeamNames(names) {
   TEAM_NAMES[0] = names[0]; TEAM_NAMES[1] = names[1];
@@ -5317,7 +5435,8 @@ function swatchStyle(part, i) {
       `radial-gradient(circle at 30% 40%, ${acc} 18%, transparent 19%), radial-gradient(circle at 70% 60%, #1b2216 20%, transparent 21%), radial-gradient(circle at 55% 20%, #1b2216 14%, transparent 15%), ${team}`,
       `repeating-linear-gradient(100deg, ${team} 0 9px, #111 9px 13px)`, `radial-gradient(circle at 70% 40%, ${acc}, #1e0a46 60%)`,
       `repeating-conic-gradient(${acc} 0 25%, #1a1733 0 50%, ${team} 0 75%, ${team} 0) 0 0 / 10px 10px`, `repeating-linear-gradient(60deg, ${team} 0 7px, ${acc} 7px 9px)`,
-      `linear-gradient(135deg, #8a6410, #ffd86a 40%, #b8860b 60%, #fff0a8)`][i];
+      `linear-gradient(135deg, #8a6410, #ffd86a 40%, #b8860b 60%, #fff0a8)`,
+      ...STAR_WRAPS.map((W) => `linear-gradient(120deg, ${W.cols[0]} 55%, ${W.cols[1]} 55%)`)][i];
     return `background:${pat}`;
   }
   return `background:linear-gradient(135deg, ${team}, #1a1733)`;
@@ -5336,10 +5455,11 @@ function renderGarageUI() {
     const b = document.createElement("button"); b.type = "button"; b.className = "item"; b.role = "option";
     b.setAttribute("aria-selected", String(state.look[tab] === i));
     const sw = document.createElement("span"); sw.className = "sw"; sw.setAttribute("style", swatchStyle(tab, i));
-    const g = SWATCH_GLYPH[tab]; sw.textContent = Array.isArray(g) ? g[i] : tab === 0 ? String(i + 1) : tab === 2 ? "◎" : "";
+    const g = SWATCH_GLYPH[tab], star = tab === 1 && starWrapOf(i); sw.textContent = star ? star.num : Array.isArray(g) ? g[i] : tab === 0 ? String(i + 1) : tab === 2 ? "◎" : "";
+    if (star) sw.classList.add("starsw");
     const label = document.createElement("span"); label.textContent = nm;
     b.append(sw, label);
-    if (!isOwned(tab, i)) { b.classList.add("locked"); const pr = document.createElement("span"); pr.className = "price"; pr.innerHTML = NUT + " " + priceOf(tab, i); b.appendChild(pr); }
+    if (!isOwned(tab, i)) { b.classList.add("locked"); const pr = document.createElement("span"); pr.className = "price"; if (star) pr.textContent = "CUP PRIZE"; else pr.innerHTML = NUT + " " + priceOf(tab, i); b.appendChild(pr); }
     b.addEventListener("click", () => equip(tab, i));
     items.appendChild(b);
   });
@@ -5349,6 +5469,12 @@ function equip(part, i) {
   if (!isOwned(part, i)) {                                 // locked: preview it, a second tap buys it
     const it = SHOP.find((x) => x.part === part && x.idx === i);
     garage.preview = state.look.slice(); garage.preview[part] = i;
+    const star = part === 1 && starWrapOf(i);
+    if (star) {                                            // can't be bought: it's won in the World Tournament
+      const team = CUP_COMPS[0].teams.find((t) => t[1] === star.code)[0];
+      showShopToast(`Prize wrap. Play ${team} in the Temu World Tournament: each game has a 1 in ${Math.round(1 / star.chance)} chance to drive it. Win that game to keep it.`);
+      renderGarageUI(); return;
+    }
     if (state.pendingBuy === itemKey(part, i) && state.nuts >= it.cost) { state.pendingBuy = null; buy(it); renderGarageUI(); return; }
     state.pendingBuy = itemKey(part, i);
     $("ghint").innerHTML = state.nuts >= it.cost ? `Tap again to buy for ${NUT} ${it.cost}` : `Locked. Costs ${NUT} ${it.cost}. You have ${fmt(state.nuts)}. Earn nuts by playing.`;
@@ -5401,6 +5527,14 @@ function act(name) {
   else if (name === "skill") { state.skill = (state.skill + 1) % BOT_SKILLS.length; updateSettings(); persist(); }
   else if (name === "menu" && state.match && state.match.mode === "cup" && !state.online) act("cupnext");
   else if (name === "menu") { if (state.online && net.ranked) { netSend({ t: "leave" }); endOnline(); toMenu(); } else if (state.online) toOnline(); else toMenu(); }
+  else if (name === "controls") {
+    const open = $("controls").hidden;
+    $("controls").hidden = !open;
+    if (open) {
+      ctab(pads.lastDevice === "pad" ? "pad" : matchMedia("(pointer: coarse)").matches ? "touch" : "pc");
+      if (state.screen === "match" && !state.online && state.match && state.match.state !== "over" && !state.paused) { state.paused = true; $("pause").hidden = false; }
+    }
+  }
   else if (name === "pause") { if (!state.online && state.match && state.match.state !== "over") { state.paused = !state.paused; $("pause").hidden = !state.paused; } }
   else if (name === "rematch" && state.match && !state.online) { if (state.match.mode === "cup") act("cupnext"); else startMatch(state.match.mode); }
   else if (name === "cup") { state.cupArm = false; show("cup"); renderCup(); }
@@ -5457,9 +5591,24 @@ function renderScoreboard(m, box = $("scoreboard"), hi = -1, hiOwn = false) {
   }
 }
 
+function ctab(t) {
+  state.ctab = t;
+  document.querySelectorAll("[data-ctab]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.ctab === t)));
+  document.querySelectorAll("[data-cpane]").forEach((p) => { p.hidden = p.dataset.cpane !== t; });
+}
+document.querySelectorAll("[data-ctab]").forEach((b) => b.addEventListener("click", () => ctab(b.dataset.ctab)));
+$("b-help").addEventListener("click", () => act("controls"));
 const GAME_KEYS = new Set(["Space", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter", "Slash", "Comma", "Period"]);
 window.addEventListener("keydown", (e) => {
   if (e.target && e.target.tagName === "INPUT") { if (e.code === "Enter") act("quick"); return; }
+  if (!$("controls").hidden) {
+    if (e.repeat) return;
+    const t = { Digit1: "pc", Digit2: "pad", Digit3: "touch", ArrowLeft: "<", ArrowRight: ">" }[e.code], order = ["pc", "pad", "touch"];
+    if (e.code === "Escape" || e.code === "KeyH" || e.code === "Enter") act("controls");
+    else if (t === "<" || t === ">") ctab(order[(order.indexOf(state.ctab) + (t === ">" ? 1 : 2)) % 3]);
+    else if (t) ctab(t);
+    e.preventDefault(); return;
+  }
   if (!$("arenapick").hidden || !$("vote").hidden) {
     if (e.repeat) return;
     const d = /^(Digit|Numpad)([1-9])$/.exec(e.code), voting = !$("vote").hidden;
@@ -5489,7 +5638,7 @@ window.addEventListener("keydown", (e) => {
     const ranked = state.panel === "ranked";
     const map = ranked ? { Digit1: "ranked1", Digit2: "ranked3", Numpad1: "ranked1", Numpad2: "ranked3" }
       : { Digit1: "online", Digit2: "rankedmenu", Digit3: "bot", Digit4: "bot5", Digit5: "duel", Digit6: "2p", Digit7: "practice", Digit8: "watch",
-        Numpad1: "online", Numpad2: "rankedmenu", Numpad3: "bot", Numpad4: "bot5", Numpad5: "duel", Numpad6: "2p", Numpad7: "practice", Numpad8: "watch", KeyD: "skill", KeyG: "garage", KeyC: "cup" };
+        Numpad1: "online", Numpad2: "rankedmenu", Numpad3: "bot", Numpad4: "bot5", Numpad5: "duel", Numpad6: "2p", Numpad7: "practice", Numpad8: "watch", KeyD: "skill", KeyG: "garage", KeyC: "cup", KeyH: "controls" };
     if (map[e.code]) act(map[e.code]);
     else if (e.code === "Escape") act(state.panel === "ranked" ? "play" : "home");
     else if (e.code === "KeyS" && state.panel === "home") act("shop");
@@ -5510,6 +5659,7 @@ window.addEventListener("keydown", (e) => {
   } else {
     if (e.code === "Escape") act("menu");
     else if (e.code === "KeyP") act("pause");
+    else if (e.code === "KeyH") act("controls");
     else if (state.match && state.match.practice && e.code === "KeyR") act("pball");
     else if (state.match && state.match.practice && e.code === "KeyT") act("preset");
     else if (state.match && state.match.practice && e.code === "KeyU") act("pboost");
@@ -5898,7 +6048,7 @@ if (app_.pwa && "serviceWorker" in navigator && (location.protocol === "https:" 
 updateInstall();
 // Installed app (or a phone): use the whole screen, keeping clear of the notch and status bar
 if (app_.standalone || /[?&]app=1/.test(location.search) || matchMedia("(pointer: coarse)").matches) document.documentElement.classList.add("app-mode");
-window.rocketTemu = { state, act, net, replay, setArena, invasion, mob, startMob, cupApi: { get cup() { return cup; }, setup: cupSetup, newCup, startCupMatch, finishRound, startTrophy, lift, renderCup }, mobStep(s) { for (let i = 0; i < s * 60; i++) updateMob(1 / 60); }, applyRankResult, dbg: () => ({ resizes: resize.n, ratio: renderer.getPixelRatio(), dyn }), views: () => views, skids: () => skidN, addSkid, advance(secs) { for (let i = 0; i < secs * FPS; i++) step(1 / FPS); } };
+window.rocketTemu = { state, act, garage, net, replay, setArena, invasion, mob, startMob, cupApi: { get cup() { return cup; }, setup: cupSetup, newCup, startCupMatch, finishRound, startTrophy, lift, renderCup }, mobStep(s) { for (let i = 0; i < s * 60; i++) updateMob(1 / 60); }, applyRankResult, dbg: () => ({ resizes: resize.n, ratio: renderer.getPixelRatio(), dyn }), views: () => views, skids: () => skidN, addSkid, advance(secs) { for (let i = 0; i < secs * FPS; i++) step(1 / FPS); } };
 })();
 </script>
 </body>

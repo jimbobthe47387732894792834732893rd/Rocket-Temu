@@ -189,7 +189,7 @@ function predictBall(ball, mods, secs = 3, step = 1 / 30) {
 
 // ---- Car loadouts (looks only; every body has the same hitbox) ----------------------------------
 // [body, decal, wheels, boost trail, topper, accent colour]
-const LOOK_SIZES = [4, 12, 5, 8, 8, 10];
+const LOOK_SIZES = [4, 16, 5, 8, 8, 10];                // decals 12-15 are the World Tournament star wraps
 const FREE_LOOK = [4, 6, 5, 6, 6, 10];                // the rest are sold in the shop
 const DEFAULT_LOOK = [0, 0, 0, 0, 0, 0];
 function cleanLook(a) {
