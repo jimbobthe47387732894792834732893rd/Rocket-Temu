@@ -4843,13 +4843,24 @@ function renderShop() {
   }
   $("shop-boost").textContent = state.boost > 0 ? `2X rank points active: ${state.boost} ranked game${state.boost > 1 ? "s" : ""} left` : "";
 }
-// Secret codes. Only a fingerprint of each code is kept here, so the code itself isn't sitting in the page.
-const codeHash = (t) => { let h = 0x811c9dc5; for (const ch of t) { h ^= ch.charCodeAt(0); h = Math.imul(h, 0x01000193) >>> 0; } return h; };
-const CODES = { 3094147066: "everything" };
-function redeemCode() {
+// Codes are checked against a slow, salted fingerprint (PBKDF2-SHA256, 210,000 rounds), so the code is never in
+// the page and can't practically be worked out from it.
+const REWARD_SALT = "7807ce65113ed40e21b7078555d10178", REWARD_KEYS = ["bb91bc91e1dec321a4ebcab6154f002990259865a2a380f967827fb4d8b83c5f"];
+async function rewardKey(t) {
+  const hex = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
+  const salt = new Uint8Array(REWARD_SALT.match(/../g).map((h) => parseInt(h, 16)));
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(t), "PBKDF2", false, ["deriveBits"]);
+  return hex(await crypto.subtle.deriveBits({ name: "PBKDF2", salt, iterations: 210000, hash: "SHA-256" }, base, 256));
+}
+let redeeming = false;
+async function redeemCode() {
   const inp = $("code-input"), msg = $("code-msg"), code = inp.value.trim().toLowerCase().replace(/\s+/g, "");
-  if (!code) return;
-  const what = CODES[codeHash(code)];
+  if (!code || redeeming) return;
+  if (!(window.crypto && crypto.subtle)) { msg.className = "rank-note bad"; msg.textContent = "Codes can't be checked in this browser."; return; }
+  redeeming = true; msg.className = "rank-note"; msg.textContent = "Checking...";
+  let what = false;
+  try { what = REWARD_KEYS.includes(await rewardKey(code)); } catch (_) {}
+  redeeming = false;
   msg.className = "rank-note " + (what ? "ok" : "bad");
   if (!what) { msg.textContent = "That code didn't work. Check the spelling."; sfx.pad(false); return; }
   let n = 0;
