@@ -2662,7 +2662,10 @@ const ARENAS = [
 const NORMAL_ARENAS = 4;                       // the ones you can vote for; the rest are special maps
 // Special maps turn up by chance in games that aren't ranked: 1 in 10 games, then a 50/50 between them.
 // (The version of the game shared as a Claude artifact can also pick them directly.)
-const PICK_SPECIALS = !!window.ROCKET_TEMU_PICK_SPECIALS;
+// The copy shared as a Claude artifact picks special maps and gets the star wraps free. On the website the secret
+// code switches the same extras on (remembered on this device).
+let PICK_SPECIALS = !!window.ROCKET_TEMU_PICK_SPECIALS;
+try { if (JSON.parse(localStorage.getItem("rocket-temu-3d") || "{}").vip) PICK_SPECIALS = true; } catch (_) {}
 function rollSpecial() { return Math.random() < 0.1 ? NORMAL_ARENAS + (Math.random() < 0.5 ? 0 : 1) : -1; }
 // Painting helpers: everything is drawn in field metres, so the same painter works at any texture size
 function noiseCanvas(cw, ch, lo = 0, hi = 255) {
@@ -4145,7 +4148,7 @@ try {
   if (!(state.ball >= 0 && state.ball < BALLS.length)) state.ball = 0;
   if (Number.isInteger(saved.arena) && saved.arena >= 0 && saved.arena < (PICK_SPECIALS ? ARENAS.length : NORMAL_ARENAS)) state.arena = saved.arena;
 } catch (_) {}
-function persist() { try { localStorage.setItem("rocket-temu-3d", JSON.stringify({ skill: state.skill, ballCam: state.ballCam[0], sound: sound.on, nick: state.nick, look: state.look, ball: state.ball || 0, ballv: 2, assist: state.assist, invaders: !!state.invaders, rank: state.rank, nuts: state.nuts, boost: state.boost, owned: state.owned, arena: state.arena || 0, gfx: quality.chosen ? (quality.high ? "high" : "low") : undefined })); } catch (_) {} }
+function persist() { try { localStorage.setItem("rocket-temu-3d", JSON.stringify({ skill: state.skill, ballCam: state.ballCam[0], sound: sound.on, nick: state.nick, look: state.look, ball: state.ball || 0, ballv: 2, vip: PICK_SPECIALS && !window.ROCKET_TEMU_PICK_SPECIALS ? true : undefined, assist: state.assist, invaders: !!state.invaders, rank: state.rank, nuts: state.nuts, boost: state.boost, owned: state.owned, arena: state.arena || 0, gfx: quality.chosen ? (quality.high ? "high" : "low") : undefined })); } catch (_) {} }
 
 const K = (...codes) => codes.some((c) => state.keys.has(c));
 const dead = (v) => (Math.abs(v) < 0.14 ? 0 : clamp((v - Math.sign(v) * 0.14) / 0.76, -1, 1));
@@ -4798,8 +4801,12 @@ const SHOP = [
   { part: 4, idx: 7, cost: 250 }, { part: 4, idx: 6, cost: 400 },
 ];
 // The copy shared as a Claude artifact also sells the star wraps, free, so you can pick any of them
-if (PICK_SPECIALS) for (const W of STAR_WRAPS) SHOP.push({ part: 1, idx: W.decal, cost: 0, star: true });
-const SHOP_SECTIONS = [["RANK BOOSTS", (it) => it.boost], ...(PICK_SPECIALS ? [["STAR WRAPS", (it) => it.star]] : []), ["WRAPS", (it) => it.part === 1 && !it.star], ["BOOST TRAILS", (it) => it.part === 3], ["TOPPERS", (it) => it.part === 4]];
+let SHOP_SECTIONS = [];
+function shopExtras() {
+  if (PICK_SPECIALS && !SHOP.some((it) => it.star)) for (const W of STAR_WRAPS) SHOP.push({ part: 1, idx: W.decal, cost: 0, star: true });
+  SHOP_SECTIONS = [["RANK BOOSTS", (it) => it.boost], ...(PICK_SPECIALS ? [["STAR WRAPS", (it) => it.star]] : []), ["WRAPS", (it) => it.part === 1 && !it.star], ["BOOST TRAILS", (it) => it.part === 3], ["TOPPERS", (it) => it.part === 4]];
+}
+shopExtras();
 const itemKey = (part, idx) => part + ":" + idx;
 const priceOf = (part, idx) => { const it = SHOP.find((x) => x.part === part && x.idx === idx); return it ? it.cost : 0; };
 function isOwned(part, idx) { return idx < FREE_LOOK[part] || state.owned.includes(itemKey(part, idx)); }
@@ -4849,8 +4856,9 @@ function redeemCode() {
   for (let part = 0; part < LOOK_SIZES.length; part++) for (let i = FREE_LOOK[part]; i < LOOK_SIZES[part]; i++) {
     const k = itemKey(part, i); if (!state.owned.includes(k)) { state.owned.push(k); n++; }
   }
+  PICK_SPECIALS = true; shopExtras();                                   // and the artifact copy's extras: pick any map, star wraps in the shop
   inp.value = ""; persist(); sfx.pad(true); renderShop(); updateCoins();
-  msg.textContent = n ? `Code accepted! ${n} item${n > 1 ? "s" : ""} unlocked: every wrap (the star wraps too), boost trail and topper.` : "Code accepted, but you already have everything.";
+  msg.textContent = `Code accepted! Everything is unlocked${n ? ` (${n} item${n > 1 ? "s" : ""})` : ""}, you can pick the Hardwood and Fall Leaves maps yourself, and the star wraps are in the Shop.`;
   showShopToast("Everything unlocked!");
 }
 function buy(it) {
