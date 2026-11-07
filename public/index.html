@@ -4740,8 +4740,9 @@ function serverUrl() {
 }
 function netStatus(msg, bad = false) { net.status = msg; net.bad = bad; const el = $("net-status"); el.textContent = msg; el.classList.toggle("bad", bad); }
 function netSend(o) { if (net.ws && net.ws.readyState === 1) net.ws.send(JSON.stringify(o)); }
-function netConnect() {
+function netConnect(attempt = 0) {
   if (net.ws && net.ws.readyState <= 1) return;
+  clearTimeout(net.retryT);
   const url = serverUrl();
   const noServer = "Online play needs the Rocket Temu server. This copy of the game can only play offline.";
   if (!url) { netStatus(noServer, true); return; }
@@ -4755,7 +4756,11 @@ function netConnect() {
     const wasPlaying = state.online;
     net.ws = null;
     if (wasPlaying) { endOnline(); show("online"); }
-    if (state.screen === "online") netStatus(opened ? "Disconnected from the server. Check your connection and try again." : "Can't reach the game server. " + (location.hostname.endsWith("onrender.com") ? "It may be waking up; try again in a minute." : noServer), true);
+    if (state.screen !== "online") return;
+    if (opened) { netStatus("Disconnected from the server. Check your connection and try again.", true); return; }
+    // The free server goes to sleep when nobody plays and takes up to a minute to wake: keep knocking
+    if (/onrender\.com/.test(url) && attempt < 8) { netStatus("Waking up the game server. This can take up to a minute..."); net.retryT = setTimeout(() => { if (state.screen === "online") netConnect(attempt + 1); }, 7000); return; }
+    netStatus("Can't reach the game server. " + (/onrender\.com/.test(url) ? "Check your internet connection and try again." : noServer), true);
   };
   ws.onerror = () => {};
 }
